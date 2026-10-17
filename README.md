@@ -55,6 +55,22 @@ If you wish to build or modify the runtime from source:
 
 ---
 
+## Credits
+
+This repository includes or depends on open-source components that must be credited under their respective licenses:
+
+- **Dear ImGui** — MIT License  
+  Source: `third_party/imgui`  
+  License: `third_party/imgui/LICENSE.txt`
+- **SMAA** — MIT-style license  
+  Source: `third_party/smaa`  
+  License: `third_party/smaa/LICENSE.txt`
+- **Baloo 2 Font** — SIL Open Font License 1.1  
+  License text: `Baloo2-OFL.txt`
+- **SDL3**, **FFmpeg (LGPL builds)**, **Vulkan loader**, and related runtime libraries are used by build/runtime pipelines; licensing obligations remain with their original projects and distributors.
+
+___
+
 ##  Legal Notice
 
 This project is an independent open-source recreation created for educational and interoperability purposes. It is not affiliated with, endorsed by, or sponsored by Nintendo. *The Legend of Zelda* and *The Legend of Zelda: Skyward Sword* are registered trademarks of Nintendo. No copyrighted material or proprietary game assets are hosted or distributed in this repository.
