@@ -11,7 +11,7 @@
 
 ---
 
-## 🚀 Port Features
+## Port Features
 
 - **Native C/C++ Execution**: This is NOT an emulator (no JIT or dynamic interpretation). Guest AArch64 (ARM64) machine instructions are statically decompiled and lifted to native C code (`-march=x86-64-v3` with AVX2 and FMA).
 - **Vulkan 1.3/1.4 Graphics Backend**: Graphics API calls and shaders are translated directly into high-performance Vulkan pipelines for NVIDIA, AMD, and Intel GPUs.
@@ -40,7 +40,7 @@
 
 ---
 
-## 🎮 Getting Started
+## Getting Started
 
 ### System Requirements
 - **Operating System**: Windows 10/11 64-bit
@@ -69,13 +69,13 @@ If you wish to build or modify the runtime from source:
 
 ---
 
-## 🙏 Acknowledgments & Special Thanks
+## Acknowledgments & Special Thanks
 
 Sky Recomp was made possible thanks to the groundbreaking work of the **[LAS Recomp](https://github.com/peiikai/LASRecomp)** project by [@peiikai](https://github.com/peiikai) and contributors. Much of the architectural design, ARM64-to-C static recompilation pipeline, Maxwell NVN translation layer, Vulkan/SDL3 compatibility runtime, and launcher UI framework were originally developed by LAS Recomp and readapted for *The Legend of Zelda: Skyward Sword HD*. We extend our deepest gratitude to the LAS Recomp project and its community for proving the power and feasibility of native Nintendo Switch static recompilations.
 
 ---
 
-## 🎖️ Credits
+## Credits
 
 ### Projects & Foundations
 - **[LAS Recomp](https://github.com/peiikai/LASRecomp)** — Static recompiler architecture, NVN translation layer, Vulkan runtime, and launcher framework (MIT License).
@@ -97,7 +97,7 @@ Sky Recomp was made possible thanks to the groundbreaking work of the **[LAS Rec
 
 ---
 
-## ⚖️ Legal & License
+## Legal & License
 
 Sky Recomp is an unofficial, community-driven fan project. It is not affiliated with, endorsed by, or sponsored by Nintendo. *The Legend of Zelda* and *Skyward Sword* are registered trademarks of Nintendo. **No copyrighted game files, binaries, textures, models, music, or fonts are included** in this repository or in release archives. Users must supply their own legally obtained game files.
 
@@ -105,7 +105,7 @@ Sky Recomp's original code is licensed under the **[MIT License](LICENSE)**. Bun
 
 ---
 
-## 📦 Source Code of Bundled Third-Party Components
+## Source Code of Bundled Third-Party Components
 
 Release builds distribute pre-compiled binaries and dynamic libraries of open-source third-party dependencies. In compliance with open-source licensing requirements (LGPL, GPL, Apache 2.0, zlib, MIT, OFL), the corresponding source code for the exact versions bundled or used to build release artifacts is available at the links below:
 
