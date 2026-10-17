@@ -218,7 +218,7 @@ static std::string seed_id_decode(const char *text, GenOpts &o) {
     x.n = 0;
     int ver = (int)x.get(4);
     if (bits == SEED_ID_BITS ? ver != SEED_ID_VERSION : ver != 2 && ver != 3)
-        return "made by another LAS Recomp version (ID format " + std::to_string(ver) + ")";
+        return "made by another Sky Recomp version (ID format " + std::to_string(ver) + ")";
     GenOpts t = o;
     t.rng = x.get(36);
     t.logic = (int)x.get(3); t.dungeon_items = (int)x.get(2); t.keysanity = (int)x.get(2); t.traps = (int)x.get(3);
@@ -600,7 +600,7 @@ extern "C" void rando_tab_draw(float scale) {
         static std::string id_msg;
         if (!g_opts.rng) g_opts.rng = new_rng();
         if (!opt_text_editing("Seed ID")) seed_id_encode(g_opts, idbuf, sizeof idbuf);
-        std::string d = "A seed ID holds the random seed and every option below: the same ID on the same LAS Recomp "
+        std::string d = "A seed ID holds the random seed and every option below: the same ID on the same Sky Recomp "
                         "version makes the same seed. Enter a shared ID here to load its options.";
         if (!id_msg.empty()) d += "\n\n" + id_msg;
         if (opt_text("Seed ID", idbuf, sizeof idbuf, "", d.c_str())) {

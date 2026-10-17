@@ -91,8 +91,8 @@ static const uint8_t BUILD_ID[8] = {0xd8, 0x24, 0xd4, 0xb1, 0xbb, 0xd4, 0x5d, 0x
 // The start screen asks GitHub for the project's releases once per launch (a background curl, which macOS and
 // Windows 10+ ship) and offers the best one if it outranks this build: any v1.0.0+ above every beta, betas by
 // number; other tags (the alpha_* ones) are ignored. Offline / no curl / anything unexpected: nothing is shown.
-#define RELEASES_URL "https://api.github.com/repos/peiikai/LASRecomp/releases?per_page=100"
-#define RELEASE_PAGE "https://github.com/peiikai/LASRecomp/releases/tag/"
+#define RELEASES_URL "https://api.github.com/repos/Apolinario-coder/SkyRecomp/releases?per_page=100"
+#define RELEASE_PAGE "https://github.com/Apolinario-coder/SkyRecomp/releases/tag/"
 
 static long long tag_rank(const std::string &t) {
     int n, a, b, c;
@@ -133,7 +133,7 @@ static void *update_thread(void *) {
         std::string out = std::string(rt_data_root()) + "/cache/releases.json";
         mkdir((std::string(rt_data_root()) + "/cache").c_str(), 0755);
         const char *av[] = {curl.c_str(), "-fsSL", "--max-time", "15", "-H", "Accept: application/vnd.github+json",
-                            "-A", "LASRecomp/" LARECOMP_VERSION, RELEASES_URL, NULL};
+                            "-A", "SkyRecomp/" LARECOMP_VERSION, RELEASES_URL, NULL};
         PlatProc p = plat_spawn(av, out.c_str(), false);
         if (!p || plat_proc_wait(p, true) != 0) { remove(out.c_str()); return NULL; }
         if (FILE *f = fopen(out.c_str(), "rb")) {
@@ -177,14 +177,14 @@ static std::string check_copied_files(const std::string &root) {
     size_t n = fread(id, 1, 8, f);
     fclose(f);
     if (n != 8 || memcmp(id, BUILD_ID, 8)) return "Wrong game version (needs v1.0.0)";
-    if (!file_exists(root + "/romfs.bin") && !file_exists(root + "/romfs/Object")) return "Game data missing";
+    if (!file_exists(root + "/romfs.bin") && !file_exists(root + "/romfs/region_common") && !file_exists(root + "/romfs/Object")) return "Game data missing";
     return "";
 }
 
 // "" = ready to play, else what is wrong
 static std::string check_game_files(const std::string &root) {
     std::string why = check_copied_files(root);
-    if (why.empty() && !gamelib_present(root.c_str())) return "Game code not built yet";
+    if (why.empty() && !gamelib_present(root.c_str()) && !file_exists(root + "/skygame.dll") && !file_exists("extracted/skygame.dll")) return "Game code not built yet";
     return why;
 }
 
@@ -280,18 +280,27 @@ static float extract_progress(void) {
     return f < 0 ? 0 : f > 0.99f ? 0.99f : f;
 }
 
-// Builds the game code from the copied files (a few minutes); false = failed (the job line says so)
+// Verifies the precompiled game code exists (skygame.dll); false = missing
 static bool build_game_code(void) {
-    int cores = SDL_GetNumLogicalCPUCores(), ram_gb = SDL_GetSystemRAM() / 1024;
-    GameBuildOpts o = {build_progress, cores < ram_gb - 2 ? cores : ram_gb - 2 > 1 ? ram_gb - 2 : 1};
-    char why[256] = "";
-    g_build_frac = 0;
-    bool ok = gamebuild_run(g_root.c_str(), &o, why, sizeof why);
-    if (!ok) {
-        fprintf(stderr, "[launcher] game code: %s\n", why);
-        set_failure(FAIL_BUILD);
+    if (file_exists(g_root + "/skygame.dll") || gamelib_present(g_root.c_str()) ||
+        file_exists("extracted/skygame.dll") || file_exists("skygame.dll")) {
+        return true;
     }
-    return ok;
+    // If skygame.dll is in extracted/ but not yet in g_root:
+    if (file_exists("extracted/skygame.dll") && !file_exists(g_root + "/skygame.dll")) {
+        FILE *in = fopen("extracted/skygame.dll", "rb");
+        FILE *out = fopen((g_root + "/skygame.dll").c_str(), "wb");
+        if (in && out) {
+            char buf[1024 * 1024];
+            size_t n;
+            while ((n = fread(buf, 1, sizeof buf, in)) > 0) fwrite(buf, 1, n, out);
+        }
+        if (in) fclose(in);
+        if (out) fclose(out);
+        return true;
+    }
+    set_job("Game library (skygame.dll) is missing from extracted folder.", true, "Please ensure skygame.dll is present.");
+    return false;
 }
 
 static void *extract_thread(void *) {
