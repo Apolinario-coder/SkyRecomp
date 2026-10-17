@@ -3,7 +3,7 @@
 **Sky Recomp** is a native PC port (Windows x86-64 with Vulkan) based on static AArch64 -> C recompilation of *The Legend of Zelda: Skyward Sword HD*.
 
 > [!IMPORTANT]
-> ** No game files are included. Sky Recomp needs your own legally obtained copy of the extracted game files of Skyward Sword v1.0.0, with no updates applied. When setting up, choose a folder that contains the exefs and romfs folders, or their contents. Instructions on how to obtain these files will NOT be provided..**
+> No game files are included. Sky Recomp needs your own legally obtained copy of the extracted game files of Skyward Sword v1.0.0, with no updates applied. When setting up, choose a folder that contains the exefs and romfs folders, or their contents. Instructions on how to obtain these files will NOT be provided!
 > This project consists exclusively of the open-source static recompiler tooling and the Vulkan/SDL3 compatibility runtime.
 
 ![The Legend of Zelda: Skyward Sword HD running natively on PC via Vulkan](docs/gameplay.png)
