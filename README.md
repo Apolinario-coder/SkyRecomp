@@ -23,7 +23,7 @@
 
 ---
 
-## 📐 Architecture & Pipeline
+## Architecture & Pipeline
 
 ```
 [ User-Provided Game Files Folder ]
