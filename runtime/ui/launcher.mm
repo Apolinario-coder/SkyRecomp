@@ -216,11 +216,11 @@ static void set_failure(int k) {
                                        "The game code didn't build"};
     static const char *const hint[] = {
         "",
-        "Choose the folder that holds your dumped game files (with exefs/ and romfs/).",
-        "Raw ROMs (.nsp/.xci) cannot be used directly. Provide the folder with extracted game files.",
+        "Choose the folder that holds your game files.",
+        "Raw package images cannot be used directly. Provide the folder with your game files.",
         "Make sure there's enough free disk space and try again.",
         "Sky Recomp needs version 1.0.0 of the game, without updates.",
-        "Some files are missing. Make sure your dump has exefs (main) and romfs.",
+        "Some files are missing. Make sure your game files are complete.",
         "The game code could not be verified. Report it on Discord or GitHub."};
     if (k >= 1 && k <= 6) set_job(head[k], true, hint[k]);
 }
@@ -354,7 +354,7 @@ static void *extract_thread(void *) {
 
         {
             mkdir(g_root.c_str(), 0755);
-            set_job("Copying ExeFS game files...");
+            set_job("Copying game files...");
             mkdir((g_root + "/exefs").c_str(), 0755);
             if (!romfs_copy_tree(exefs.c_str(), (g_root + "/exefs").c_str(), NULL)) {
                 set_failure(FAIL_COPY);
@@ -362,7 +362,7 @@ static void *extract_thread(void *) {
             }
 
             if (file_exists(romfs) && !is_dir(romfs)) {
-                set_job("Copying RomFS image...");
+                set_job("Copying game data...");
                 FILE *in = fopen(romfs.c_str(), "rb");
                 FILE *out = fopen((g_root + "/romfs.bin").c_str(), "wb");
                 if (in && out) {
@@ -373,7 +373,7 @@ static void *extract_thread(void *) {
                 if (in) fclose(in);
                 if (out) fclose(out);
             } else if (file_exists(romfs + "/romfs.bin")) {
-                set_job("Copying RomFS image...");
+                set_job("Copying game data...");
                 FILE *in = fopen((romfs + "/romfs.bin").c_str(), "rb");
                 FILE *out = fopen((g_root + "/romfs.bin").c_str(), "wb");
                 if (in && out) {
@@ -386,7 +386,7 @@ static void *extract_thread(void *) {
             } else if (romfs != g_root && is_dir(romfs)) {
                 unsigned long long rbytes = romfs_dir_bytes(romfs.c_str());
                 g_total = 2 * rbytes;
-                set_job("Copying RomFS game files...");
+                set_job("Copying game assets...");
                 if (!romfs_copy_tree(romfs.c_str(), (g_root + "/romfs").c_str(), setup_progress)) {
                     set_failure(FAIL_COPY);
                     goto done;
@@ -1366,8 +1366,8 @@ extern "C" void launcher_run(const char *root) {
                     dl->AddLine(ImVec2(x + u * 0.35f, cy + u * 0.35f), ImVec2(x + u, cy - u * 0.4f), g, fs * 0.11f);
                 };
 
-                std::string src_d = "The folder with your own dumped game files (exefs and romfs) of The Legend of Zelda: Skyward Sword HD "
-                                    "for Nintendo Switch, version 1.0.0. No copyrighted Nintendo files are bundled with Sky Recomp.";
+                std::string src_d = "The folder with your own legally obtained game files of The Legend of Zelda: Skyward Sword HD "
+                                    "version 1.0.0. No copyrighted game files or assets are bundled with Sky Recomp.";
                 if (!src.empty()) src_d += "\n\nChosen: " + src;
 
                 // the step that's running / its result, under the rows and in the Set up row's explanation

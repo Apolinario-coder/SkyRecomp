@@ -3,9 +3,9 @@
 **Sky Recomp** is a native PC port (Windows x86-64 with Vulkan) based on static AArch64 -> C recompilation of *The Legend of Zelda: Skyward Sword HD*.
 
 > [!IMPORTANT]
-> **No game files are included.** Sky Recomp needs your own legally obtained copy of the extracted game files of *Skyward Sword HD* **v1.0.0**, with no updates applied.
-> When setting up, choose a folder that contains the `exefs` and `romfs` folders, or their contents. Instructions on how to obtain these files will **NOT** be provided!
-> This project consists exclusively of the open-source static recompiler tooling and the Vulkan/SDL3 compatibility runtime.
+> **No game files are included.** Sky Recomp requires your own legally obtained copy of the game files for *The Legend of Zelda: Skyward Sword HD* (**v1.0.0**, without updates).
+> Instructions on how to obtain these files will **NOT** be provided.
+> This project consists exclusively of the open-source static recompiler tooling, compatibility layers, and the Vulkan/SDL3 native runtime.
 
 ![The Legend of Zelda: Skyward Sword HD running natively on PC via Vulkan](docs/gameplay.png)
 
@@ -14,11 +14,11 @@
 ## 🚀 Port Features
 
 - **Native C/C++ Execution**: This is NOT an emulator (no JIT or dynamic interpretation). Guest AArch64 (ARM64) machine instructions are statically decompiled and lifted to native C code (`-march=x86-64-v3` with AVX2 and FMA).
-- **Vulkan 1.3/1.4 Graphics Backend**: Nintendo Switch NVN (Nvidia Maxwell Tegra) API calls and shaders are translated directly into high-performance Vulkan pipelines for NVIDIA, AMD, and Intel GPUs.
-- **1:1 Virtual Memory Layout**: The runtime reserves a 12.5 GB window at `0x7000000000` matching the 39-bit guest address space, enabling pointer operations with zero address-translation overhead.
+- **Vulkan 1.3/1.4 Graphics Backend**: Graphics API calls and shaders are translated directly into high-performance Vulkan pipelines for NVIDIA, AMD, and Intel GPUs.
+- **1:1 Virtual Memory Layout**: The runtime reserves a 12.5 GB virtual address window matching the 39-bit guest address space, enabling pointer operations with zero address-translation overhead.
 - **SDL3 Input & Controller Support**: Seamless support for modern gamepads (Xbox, DualSense/DualShock, Nintendo Pro Controller) and keyboard/mouse. Includes standard button-controls mapping (right stick sword combat).
 - **Solid 60 FPS Performance**: Harnesses modern multi-core CPUs and dedicated desktop GPUs for rock-solid 60.0 FPS gameplay at native resolutions (1080p, 1440p, 4K, and Ultrawide).
-- **In-Game Settings Menu**: Press **`ESC`** at any time while playing to open the overlay menu (adjust graphics, toggle fullscreen/windowed, change aspect ratio, or quit).
+- **In-Game Settings Menu**: Press **`ESC`** at any time while playing to open the overlay menu (adjust graphics, toggle fullscreen/windowed, change aspect ratio, audio volume, or quit).
 - **Embedded Setup GUI**: No batch scripts or command-line steps required. The standalone launcher GUI allows picking your game files folder on first launch and boots directly to PLAY on subsequent launches.
 
 ---
@@ -26,16 +26,16 @@
 ## 📐 Architecture & Pipeline
 
 ```
-[ User Extracted Game Files Folder (exefs/ and romfs/) ]
+[ User-Provided Game Files Folder ]
                   │
-                  ▼ (Setup in ~10s: copies exefs & mounts romfs.bin)
-[ extracted/exefs (main, sdk, subsdk0, subsdk1) + extracted/romfs.bin ]
+                  ▼ (One-time setup in ~10s)
+[ Local Game Data & Assets Directory ]
                   │
-                  ▼ (Pre-compiled Native Library ~274 MB)
-[ extracted/skygame.dll ]
+                  ▼ (Pre-compiled Native Recompiled Library)
+[ skygame.dll ]
                   │
                   ▼ (skyrecomp.exe)
-[ Game running natively on PC via Vulkan at 60 FPS! ]
+[ Native PC Execution via Vulkan at 60 FPS! ]
 ```
 
 ---
@@ -50,14 +50,14 @@
 - **Storage**: ~15 GB free space for game assets
 
 ### How to Play (Release Package)
-1. Download the release `.zip` package and extract it to a folder.
-2. Dump your copy of *The Legend of Zelda: Skyward Sword HD* (v1.0.0) from your Switch using standard dumping tools (e.g. DBI or NXDumpTool) into a folder containing `exefs` and `romfs`.
-3. Double-click `skyrecomp.exe`.
+1. Download the latest release `.zip` package and extract it to a folder.
+2. Prepare your own legally obtained, uncompressed game files of *The Legend of Zelda: Skyward Sword HD* (v1.0.0) in a folder on your PC.
+3. Launch `skyrecomp.exe`.
 4. On the **Game Files** setup screen:
-   - Click **Game files folder** and select the folder holding your dumped game files (`exefs/` and `romfs/`).
+   - Click **Game files folder** and select the folder containing your game files.
 5. Click **Set up game files**.
-   - The launcher copies the required game files and prepares the game data in seconds.
-6. Click **PLAY** to start the game! (Press `ESC` at any time to open the settings menu).
+   - The launcher automatically prepares and validates the game files in seconds.
+6. Click **PLAY** to start the game! (Press **`ESC`** at any time while playing to open the settings menu).
 
 ### Developer Setup (Compiling from Source)
 If you wish to build or modify the runtime from source:
@@ -99,7 +99,7 @@ Sky Recomp was made possible thanks to the groundbreaking work of the **[LAS Rec
 
 ## ⚖️ Legal & License
 
-Sky Recomp is an unofficial, community-driven fan project. It is not affiliated with, endorsed by, or sponsored by Nintendo. *The Legend of Zelda* and *Skyward Sword* are registered trademarks of Nintendo. **No copyrighted game files, binaries, textures, models, music, or fonts are included** in this repository or in release archives. Users must supply their own legally obtained game files dumped from their own console.
+Sky Recomp is an unofficial, community-driven fan project. It is not affiliated with, endorsed by, or sponsored by Nintendo. *The Legend of Zelda* and *Skyward Sword* are registered trademarks of Nintendo. **No copyrighted game files, binaries, textures, models, music, or fonts are included** in this repository or in release archives. Users must supply their own legally obtained game files.
 
 Sky Recomp's original code is licensed under the **[MIT License](LICENSE)**. Bundled and linked third-party components maintain their respective original licenses.
 
