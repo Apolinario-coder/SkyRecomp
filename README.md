@@ -21,26 +21,6 @@
 
 ---
 
-##  Architecture & Pipeline
-
-```
-[ User ROM (.nsp / .xci) + prod.keys ]
-                  │
-                  ▼ (extract_nsp.py)
-[ extracted/exefs (main, sdk, subsdk0, subsdk1) + extracted/romfs.bin ]
-                  │
-                  ▼ (tools/gen.py - AArch64 -> C Lifter)
-[ ssh_generated/ (1,400+ C translation units with 155,000+ functions) ]
-                  │
-                  ▼ (build_game.py - Clang C11)
-[ extracted/skygame.dll (Native game library ~274 MB) ]
-                  │
-                  ▼ (skyrecomp.exe)
-[ Game running natively on PC via Vulkan! ]
-```
-
----
-
 ##  Getting Started
 
 ### System Requirements
@@ -54,10 +34,9 @@
 1. Download the release `.zip` package and extract it to a folder.
 2. Double-click `skyrecomp.exe`.
 3. On the Setup screen:
-   - Click **Nintendo Switch ROM** and select your dumped `.nsp` or `.xci` file.
-   - Click **Switch Keys** and select your dumped `prod.keys` file.
-4. Click **Extract & Play**.
-   - The launcher will extract the game data (`romfs.bin`) in ~15 seconds and launch the game automatically.
+   - Click **Nintendo Switch ROM** and select your `.nsp` or `.xci` file.
+4. Click **Play**.
+   - The launcher will  the run in ~15 seconds and launch the game automatically.
 5. On subsequent runs, `skyrecomp.exe` opens directly with the **PLAY** button.
 
 ### Developer Setup (Compiling from Source)
