@@ -409,6 +409,81 @@ static const char *builtin_src(const char *name, int *stage) {
                "  o = vec4((lobe * (b + d + f + h) + e) / (4.0 * lobe + 1.0), 1.0);\n"
                "}\n";
     }
+    // NVIDIA Image Scaling (NIS): 6-tap directional spatial upscale.
+    // pc.a = (in / out scale xy, offset zw), pc.b.xy = input size.
+    if (!strcmp(name, "nis_easu.frag")) {
+        *stage = STAGE_FRAGMENT;
+        return "#version 450\n"
+               "layout(set = 0, binding = 0) uniform sampler2D t;\n"
+               "layout(push_constant) uniform P { vec4 a; vec4 b; } pc;\n"
+               "layout(location = 0) out vec4 o;\n"
+               "vec3 fetch(ivec2 p) { return texelFetch(t, clamp(p, ivec2(0), ivec2(pc.b.xy) - 1), 0).rgb; }\n"
+               "float lum(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }\n"
+               "void main() {\n"
+               "  vec2 pp = floor(gl_FragCoord.xy) * pc.a.xy + pc.a.zw;\n"
+               "  vec2 fpf = floor(pp);\n"
+               "  vec2 f = pp - fpf;\n"
+               "  ivec2 p = ivec2(fpf);\n"
+               "  vec3 c00 = fetch(p + ivec2(0, 0)), c10 = fetch(p + ivec2(1, 0));\n"
+               "  vec3 c01 = fetch(p + ivec2(0, 1)), c11 = fetch(p + ivec2(1, 1));\n"
+               "  vec3 cN = fetch(p + ivec2(0, -1)), cS = fetch(p + ivec2(0, 2));\n"
+               "  vec3 cW = fetch(p + ivec2(-1, 0)), cE = fetch(p + ivec2(2, 0));\n"
+               "  float l00 = lum(c00), l10 = lum(c10), l01 = lum(c01), l11 = lum(c11);\n"
+               "  float lN = lum(cN), lS = lum(cS), lW = lum(cW), lE = lum(cE);\n"
+               "  float gh = abs(l10 - l00) + abs(lE - l10) + abs(l00 - lW);\n"
+               "  float gv = abs(l01 - l00) + abs(lS - l01) + abs(l00 - lN);\n"
+               "  float gd1 = abs(l11 - l00), gd2 = abs(l10 - l01);\n"
+               "  vec2 dir = vec2(gh - gv, gd1 - gd2);\n"
+               "  float len = length(dir);\n"
+               "  vec2 d = (len > 1e-5) ? dir / len : vec2(0.0);\n"
+               "  vec3 b_top = mix(c00, c10, f.x);\n"
+               "  vec3 b_bot = mix(c01, c11, f.x);\n"
+               "  vec3 b_col = mix(b_top, b_bot, f.y);\n"
+               "  vec3 d1 = (abs(d.x) > abs(d.y)) ? mix(mix(cW, c00, f.x), mix(c10, cE, f.x), f.y)\n"
+               "                                  : mix(mix(cN, c00, f.y), mix(c01, cS, f.y), f.x);\n"
+               "  vec3 d2 = (abs(d.x) > abs(d.y)) ? mix(mix(cN, c01, f.x), mix(c11, cS, f.x), f.y)\n"
+               "                                  : mix(mix(cW, c10, f.y), mix(c11, cE, f.y), f.x);\n"
+               "  vec3 d_col = mix(b_col, mix(d1, d2, 0.5), min(len * 2.0, 1.0));\n"
+               "  vec3 cmin = min(min(c00, c10), min(c01, c11));\n"
+               "  vec3 cmax = max(max(c00, c10), max(c01, c11));\n"
+               "  o = vec4(clamp(d_col, cmin, cmax), 1.0);\n"
+               "}\n";
+    }
+    // NVIDIA Image Scaling (NIS): contrast-adaptive directional sharpening at output resolution.
+    // pc.a.x = sharpness (0.35 default), pc.b.xy = image size.
+    if (!strcmp(name, "nis_rcas.frag")) {
+        *stage = STAGE_FRAGMENT;
+        return "#version 450\n"
+               "layout(set = 0, binding = 0) uniform sampler2D t;\n"
+               "layout(push_constant) uniform P { vec4 a; vec4 b; } pc;\n"
+               "layout(location = 0) out vec4 o;\n"
+               "vec3 fetch(ivec2 p) { return texelFetch(t, clamp(p, ivec2(0), ivec2(pc.b.xy) - 1), 0).rgb; }\n"
+               "float lum(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }\n"
+               "void main() {\n"
+               "  ivec2 ip = ivec2(gl_FragCoord.xy);\n"
+               "  vec3 c = fetch(ip);\n"
+               "  vec3 n = fetch(ip + ivec2(0, -1)), s = fetch(ip + ivec2(0, 1));\n"
+               "  vec3 w = fetch(ip + ivec2(-1, 0)), e = fetch(ip + ivec2(1, 0));\n"
+               "  vec3 nw = fetch(ip + ivec2(-1, -1)), ne = fetch(ip + ivec2(1, -1));\n"
+               "  vec3 sw = fetch(ip + ivec2(-1, 1)), se = fetch(ip + ivec2(1, 1));\n"
+               "  float lc = lum(c);\n"
+               "  float ln = lum(n), ls = lum(s), lw = lum(w), le = lum(e);\n"
+               "  float lnw = lum(nw), lne = lum(ne), lsw = lum(sw), lse = lum(se);\n"
+               "  float lmin = min(min(min(min(lc, ln), ls), lw), le);\n"
+               "  float lmax = max(max(max(max(lc, ln), ls), lw), le);\n"
+               "  float lmin_d = min(min(min(lnw, lne), lsw), lse);\n"
+               "  float lmax_d = max(max(max(lnw, lne), lsw), lse);\n"
+               "  lmin = min(lmin, lmin_d); lmax = max(lmax, lmax_d);\n"
+               "  float contrast = lmax - lmin;\n"
+               "  float sharpness = pc.a.x;\n"
+               "  float weight = sharpness * (1.0 - smoothstep(0.1, 0.7, contrast));\n"
+               "  vec3 lap = (n + s + w + e) * 0.25 - c;\n"
+               "  vec3 sharp = c - lap * weight;\n"
+               "  vec3 cmin = min(min(min(min(c, n), s), w), e);\n"
+               "  vec3 cmax = max(max(max(max(c, n), s), w), e);\n"
+               "  o = vec4(clamp(sharp, cmin, cmax), 1.0);\n"
+               "}\n";
+    }
     if (!strcmp(name, "clear.vert")) {
         *stage = STAGE_VERTEX;
         return "#version 450\n"

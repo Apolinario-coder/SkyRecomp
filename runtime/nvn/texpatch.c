@@ -23,9 +23,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <SDL3/SDL.h>
 
 #include "../hle.h"
 #include "../input_bind.h"
+#include "../platform.h"
 #include "../rando.h"
 #include "../settings.h"
 #include "astc.h"
@@ -35,12 +37,40 @@
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "../../third_party/imgui/imstb_truetype.h"
 
-enum { K_BC5, K_BC3, K_ASTC4, K_RGBA8, K_BC1 };
-enum { R_A = 1, R_B, R_X, R_Y, R_L, R_R, R_ZL, R_ZR, R_PLUS, R_MINUS, R_HERO, R_SHEET, R_BOTTLE, R_BOTTLE_MODEL, R_FAIRY_MODEL,
+enum { K_BC5, K_BC3, K_ASTC4, K_RGBA8, K_BC1, K_RG8 };
+enum { R_A = 1, R_B, R_X, R_Y, R_L, R_R, R_ZL, R_ZR, R_PLUS, R_MINUS, R_HERO, R_SHEET,
+       R_SHEET_1, R_SHEET_3, R_SHEET_4,
+       R_BOTTLE, R_BOTTLE_MODEL, R_FAIRY_MODEL,
        R_ITEM_CURSOR, R_TUNIC, R_TUNIC_RED, R_TUNIC_BLUE, R_HEART, R_POWDER_MODEL };
-enum { STYLE_NINTENDO, STYLE_XBOX, STYLE_PS };
+enum { STYLE_NINTENDO, STYLE_XBOX, STYLE_PS, STYLE_KEYBOARD };
 // labels: R_A..R_MINUS = the button that role is on by default; or these
 enum { L_LS = 32, L_RS, L_DUP, L_DDOWN, L_DLEFT, L_DRIGHT, L_OTHER };
+
+static const char *r_name(int role) {
+    switch (role) {
+    case R_A: return "A";
+    case R_B: return "B";
+    case R_X: return "X";
+    case R_Y: return "Y";
+    case R_L: return "L";
+    case R_R: return "R";
+    case R_ZL: return "ZL";
+    case R_ZR: return "ZR";
+    case R_PLUS: return "PLUS";
+    case R_MINUS: return "MINUS";
+    case R_SHEET_1: return "SHEET_1";
+    case R_SHEET_3: return "SHEET_3";
+    case R_SHEET_4: return "SHEET_4";
+    default: return "other";
+    }
+}
+
+typedef struct {
+    float body[4];
+    float body_rim[4];
+    float lab[4];
+    bool is_face_button;
+} ButtonLook;
 
 typedef struct {
     uint8_t role, kind, srgb;
@@ -50,7 +80,7 @@ typedef struct {
     char name[32];
 } Ref;
 
-static Ref g_refs[96];
+static Ref g_refs[512];
 static int g_nrefs;
 static pthread_once_t g_once = PTHREAD_ONCE_INIT;
 
@@ -76,11 +106,23 @@ static uint8_t *read_all(const char *rel, size_t *len) {  // (the game's own fil
 static uint16_t rd16(const uint8_t *p) { return (uint16_t)(p[0] | p[1] << 8); }
 static uint32_t rd32(const uint8_t *p) { return p[0] | p[1] << 8 | p[2] << 16 | (uint32_t)p[3] << 24; }
 static uint64_t rd64(const uint8_t *p) { return rd32(p) | (uint64_t)rd32(p + 4) << 32; }
+static uint16_t rd16_be(const uint8_t *p) { return (uint16_t)(p[0] << 8 | p[1]); }
+static uint32_t rd32_be(const uint8_t *p) { return (uint32_t)p[0] << 24 | (uint32_t)p[1] << 16 | (uint32_t)p[2] << 8 | (uint32_t)p[3]; }
 
 static int role_of(const char *name) {
     static const struct { const char *prefix; int role; } m[] = {
         {"BtnA_", R_A}, {"BtnB_", R_B}, {"BtnX_", R_X}, {"BtnY_", R_Y}, {"BtnL_", R_L}, {"BtnR_", R_R},
         {"BtnZL_", R_ZL}, {"BtnZR_", R_ZR}, {"BtnPlus_", R_PLUS}, {"BtnMinus_", R_MINUS},
+        // Skyward Sword HD button names
+        {"tr_aBtn_", R_A}, {"tr_bBtn_", R_B}, {"tr_xBtn_", R_X}, {"tr_yBtn_", R_Y},
+        {"tr_lBtn_", R_L}, {"tr_rBtn_", R_R}, {"tr_rBtnSmall_", R_R},
+        {"tr_zlBtn_", R_ZL}, {"tr_zrBtn_", R_ZR}, {"tr_zrBtnSmall_", R_ZR},
+        {"tr_plusBtn_", R_PLUS}, {"tr_minusBtn_", R_MINUS}, {"tr_minusBtnSmall_", R_MINUS},
+        {"tr_crossBtnBasicD_", L_DDOWN}, {"tr_crossBtnBasicL_", L_DLEFT},
+        {"tr_crossBtnBasicR_", L_DRIGHT}, {"tr_crossBtnBasicT_", L_DUP},
+        {"tr_crossBtnBasic_", L_OTHER},
+        {"tr_lStick_", L_LS}, {"tr_rStick_", L_RS},
+        {"th_zBtn_", R_ZL}, {"th_nunchakuBtn_", L_LS}, {"tr_nunchakuBtn_", L_LS}, {"tr_cBtn_", R_L},
         {"Spicy_00^t", R_HERO},  // Ld_Spicy (StartUp.arc): the HUD's Hero Mode icon (the file select uses Spicy_00^f)
         // the empty bottle's item icon and its 3D model's colour map (ItemBottle.bfres): identified only, never edited
         // (the gold Escape Bottle's draws are tinted: runtime/hle/escape.c)
@@ -161,8 +203,200 @@ static void scan_sarc(const char *rel) {
     free(d);
 }
 
+static uint8_t *romfs_read_file(const char *path, size_t *out_len) {
+    extern bool romfs_find_file(const char *rel, int *out_fd, uint64_t *out_off, uint64_t *out_size);
+    int fd;
+    uint64_t off, sz;
+    if (!romfs_find_file(path, &fd, &off, &sz)) return NULL;
+    uint8_t *d = malloc(sz ? sz : 1);
+    if (!d) return NULL;
+    if (pread(fd, d, sz, off) != (ssize_t)sz) { free(d); return NULL; }
+    if (out_len) *out_len = (size_t)sz;
+    return d;
+}
+
+static uint8_t *decode_tpl(const uint8_t *tpl, size_t len, uint32_t *out_w, uint32_t *out_h) {
+    if (len < 0x28 || tpl[0] != 0x00 || tpl[1] != 0x20 || tpl[2] != 0xaf || tpl[3] != 0x30) return NULL;
+    uint32_t tex_tab = rd32_be(tpl + 8);
+    if (tex_tab + 4 > len) return NULL;
+    uint32_t im_hdr = rd32_be(tpl + tex_tab);
+    if (im_hdr + 12 > len) return NULL;
+    uint16_t h = rd16_be(tpl + im_hdr), w = rd16_be(tpl + im_hdr + 2);
+    uint32_t fmt = rd32_be(tpl + im_hdr + 4), d_off = rd32_be(tpl + im_hdr + 8);
+    if (d_off >= len || !w || !h) return NULL;
+    const uint8_t *raw = tpl + d_off;
+    size_t raw_len = len - d_off;
+    uint8_t *px = malloc((size_t)w * h * 4);
+    if (!px) return NULL;
+    memset(px, 0, (size_t)w * h * 4);
+    if (fmt == 6) {  // RGBA8 (4x4 tiles of 32 bytes AR + 32 bytes GB)
+        size_t src_idx = 0;
+        for (uint32_t by = 0; by < h; by += 4) {
+            for (uint32_t bx = 0; bx < w; bx += 4) {
+                if (src_idx + 64 > raw_len) break;
+                const uint8_t *ar = raw + src_idx, *gb = raw + src_idx + 32;
+                src_idx += 64;
+                int k = 0;
+                for (uint32_t y = 0; y < 4; y++) {
+                    for (uint32_t x = 0; x < 4; x++, k++) {
+                        if (bx + x < w && by + y < h) {
+                            uint8_t *p = px + ((by + y) * w + bx + x) * 4;
+                            p[0] = ar[k * 2 + 1];  // R
+                            p[1] = gb[k * 2];      // G
+                            p[2] = gb[k * 2 + 1];  // B
+                            p[3] = ar[k * 2];      // A
+                        }
+                    }
+                }
+            }
+        }
+    } else if (fmt == 3) {  // IA8
+        size_t src_idx = 0;
+        for (uint32_t by = 0; by < h; by += 4) {
+            for (uint32_t bx = 0; bx < w; bx += 4) {
+                if (src_idx + 32 > raw_len) break;
+                for (uint32_t y = 0; y < 4; y++) {
+                    for (uint32_t x = 0; x < 4; x++) {
+                        if (bx + x < w && by + y < h) {
+                            uint8_t a = raw[src_idx], i = raw[src_idx + 1];
+                            uint8_t *p = px + ((by + y) * w + bx + x) * 4;
+                            p[0] = i; p[1] = i; p[2] = i; p[3] = a;
+                        }
+                        src_idx += 2;
+                    }
+                }
+            }
+        }
+    } else if (fmt == 5) {  // RGB5A3
+        size_t src_idx = 0;
+        for (uint32_t by = 0; by < h; by += 4) {
+            for (uint32_t bx = 0; bx < w; bx += 4) {
+                if (src_idx + 32 > raw_len) break;
+                for (uint32_t y = 0; y < 4; y++) {
+                    for (uint32_t x = 0; x < 4; x++) {
+                        uint16_t v = (uint16_t)(raw[src_idx] << 8 | raw[src_idx + 1]);
+                        src_idx += 2;
+                        if (bx + x < w && by + y < h) {
+                            uint8_t *p = px + ((by + y) * w + bx + x) * 4;
+                            if (v & 0x8000) {
+                                p[0] = ((v >> 10) & 0x1f) * 255 / 31;
+                                p[1] = ((v >> 5) & 0x1f) * 255 / 31;
+                                p[2] = (v & 0x1f) * 255 / 31;
+                                p[3] = 255;
+                            } else {
+                                p[3] = ((v >> 12) & 7) * 255 / 7;
+                                p[0] = ((v >> 8) & 0xf) * 255 / 15;
+                                p[1] = ((v >> 4) & 0xf) * 255 / 15;
+                                p[2] = (v & 0xf) * 255 / 15;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        free(px);
+        return NULL;
+    }
+    *out_w = w;
+    *out_h = h;
+    return px;
+}
+
+static void scan_u8_arc(const uint8_t *b, size_t len) {
+    if (len < 0x20 || b[0] != 0x55 || b[1] != 0xaa || b[2] != 0x38 || b[3] != 0x2d) return;
+    uint32_t root_node = rd32_be(b + 4);
+    if (root_node + 12 > len) return;
+    uint32_t num_nodes = rd32_be(b + root_node + 8);
+    uint32_t string_pool = root_node + num_nodes * 12;
+    if (string_pool > len) return;
+    for (uint32_t i = 1; i < num_nodes; i++) {
+        const uint8_t *node = b + root_node + i * 12;
+        if ((size_t)(root_node + i * 12 + 12) > len || node[0]) continue;  // directory
+        uint32_t name_off = (uint32_t)(node[1] << 16 | node[2] << 8 | node[3]);
+        if (string_pool + name_off >= len) continue;
+        const char *name = (const char *)b + string_pool + name_off;
+        int role = role_of(name);
+        if (!role) continue;
+        uint32_t data_off = rd32_be(node + 4), sz = rd32_be(node + 8);
+        if (data_off + sz > len) continue;
+        uint32_t w = 0, h = 0;
+        uint8_t *rgba = decode_tpl(b + data_off, sz, &w, &h);
+        if (rgba) {
+            add_ref(role, K_RGBA8, 0, w, h, 1, rgba, w * h * 4, name);
+            uint8_t *rg8 = malloc((size_t)w * h * 2);
+            for (uint32_t p = 0; p < w * h; p++) {
+                rg8[p * 2] = rgba[p * 4];          // Intensity
+                rg8[p * 2 + 1] = rgba[p * 4 + 3];  // Alpha
+            }
+            add_ref(role, K_RG8, 0, w, h, 1, rg8, w * h * 2, name);
+            free(rg8);
+            free(rgba);
+        }
+    }
+}
+
 static void load_refs(void) {
-    if (!g_is_las) return;
+    if (!g_is_las) {
+        static const char *const arcs[] = {
+            "Layout/DoButton.arc", "Layout/FileSelect.arc", "Layout/Shop.arc", "Layout/System2D.arc",
+            "Layout/Map2D.arc", "Layout/MenuOptions.arc", "Layout/MenuPause.arc", "Layout/MenuHelp.arc",
+            "Layout/SeekerStone.arc", "Layout/SoftwareKeyboard.arc", "Layout/Title2D.arc",
+            "Layout/Main2D.arc", "Layout/CursorStick.arc", "Layout/CommonArrow.arc"
+        };
+        for (unsigned i = 0; i < sizeof arcs / sizeof *arcs; i++) {
+            size_t len = 0;
+            uint8_t *d = romfs_read_file(arcs[i], &len);
+            if (d) {
+                scan_u8_arc(d, len);
+                free(d);
+            }
+        }
+        // Load message box / dialogue font icons from Font/picture_00.brfnt
+        size_t flen = 0;
+        uint8_t *brfnt = romfs_read_file("Font/picture_00.brfnt", &flen);
+        if (brfnt && flen > 0x50) {
+            uint32_t sheet_off = 0x30 + rd32_be(brfnt + 0x30 + 28);
+            uint32_t sheet_size = 131072;
+            for (int s = 0; s < 5; s++) {
+                if (sheet_off + (s + 1) * sheet_size <= flen) {
+                    const uint8_t *raw = brfnt + sheet_off + s * sheet_size;
+                    uint8_t *lin_rg8 = malloc(256 * 256 * 2);
+                    uint8_t *lin_rgba = malloc(256 * 256 * 4);
+                    size_t p = 0;
+                    for (uint32_t by = 0; by < 256; by += 4) {
+                        for (uint32_t bx = 0; bx < 256; bx += 4) {
+                            for (uint32_t y = 0; y < 4; y++) {
+                                for (uint32_t x = 0; x < 4; x++) {
+                                    uint8_t a = raw[p], i = raw[p + 1];
+                                    p += 2;
+                                    uint32_t idx = (by + y) * 256 + bx + x;
+                                    lin_rg8[idx * 2] = i;
+                                    lin_rg8[idx * 2 + 1] = a;
+                                    lin_rgba[idx * 4] = i;
+                                    lin_rgba[idx * 4 + 1] = i;
+                                    lin_rgba[idx * 4 + 2] = i;
+                                    lin_rgba[idx * 4 + 3] = a;
+                                }
+                            }
+                        }
+                    }
+                    int role = (s == 1) ? R_SHEET_1 : (s == 3) ? R_SHEET_3 : (s == 4) ? R_SHEET_4 : 0;
+                    if (role) {
+                        char nm[32];
+                        snprintf(nm, sizeof nm, "picture_00_%d.brfnt", s);
+                        add_ref(role, K_RG8, 0, 256, 256, 1, lin_rg8, 256 * 256 * 2, nm);
+                        add_ref(role, K_RGBA8, 0, 256, 256, 1, lin_rgba, 256 * 256 * 4, nm);
+                    }
+                    free(lin_rg8);
+                    free(lin_rgba);
+                }
+            }
+            free(brfnt);
+        }
+        LOG("[texpatch] Skyward Sword HD: %d known button prompt textures\n", g_nrefs);
+        return;
+    }
     scan_sarc("region_common/ui/Game.arc");
     scan_sarc("region_common/ui/StartUp.arc");
     scan_sarc("regionUS/common/ui/GameRegionCommon.arc");
@@ -242,6 +476,39 @@ int texpatch_identify(const NvnTexture *t) {
     pthread_once(&g_once, load_refs);
     if (!t->addr || t->depth > 1) return -1;
     uint64_t total = tegra_total_size(&t->layout);
+    if (!g_is_las && t->width <= 256 && t->height <= 256 && t->layout.fmt) {
+        uint32_t bpb = t->layout.fmt->bpb;
+        if (bpb == 4 || bpb == 2) {
+            uint8_t lin[256 * 256 * 4];
+            LevelLayout l = tegra_level(&t->layout, 0);
+            bool linear = (t->flags & 0x10) != 0;
+            if (linear) {
+                uint32_t row = l.wb * bpb;
+                for (uint32_t y = 0; y < l.hb; y++)
+                    memcpy(lin + (uint64_t)y * row, (const uint8_t *)(uintptr_t)t->addr + (uint64_t)y * t->stride, row);
+            } else {
+                tegra_deswizzle((const uint8_t *)(uintptr_t)t->addr, lin, l.wb, l.hb, 1, bpb, l.block_height_log2, l.block_depth_log2);
+            }
+            for (int i = 0; i < g_nrefs; i++) {
+                const Ref *r = &g_refs[i];
+                if (r->w == t->width && r->h == t->height) {
+                    if (r->kind == K_RGBA8 && bpb == 4) {
+                        if (!memcmp(lin, r->data, (size_t)t->width * t->height * 4)) {
+                            static int nlog;
+                            if (nlog++ < 64) LOG("[texpatch] %s (%ux%u role %d) identified\n", r->name, r->w, r->h, r->role);
+                            return i;
+                        }
+                    } else if (r->kind == K_RG8 && bpb == 2) {
+                        if (!memcmp(lin, r->data, (size_t)t->width * t->height * 2)) {
+                            static int nlog;
+                            if (nlog++ < 64) LOG("[texpatch] %s (%ux%u role %d) identified\n", r->name, r->w, r->h, r->role);
+                            return i;
+                        }
+                    }
+                }
+            }
+        }
+    }
     for (int i = 0; i < g_nrefs; i++) {
         const Ref *r = &g_refs[i];
         // (only the bottle model's and the tunic's maps have mip levels: compared in full, all levels)
@@ -271,12 +538,13 @@ int texpatch_identify(const NvnTexture *t) {
 }
 
 static int prompt_style(void) {
-    // LARECOMP_PROMPTS=nintendo|xbox|playstation: test override, until frame LARECOMP_PROMPTS_UNTIL (then the setting)
+    // LARECOMP_PROMPTS=nintendo|xbox|playstation|keyboard: test override, until frame LARECOMP_PROMPTS_UNTIL (then the setting)
     static int env = -2;
     static long until;
     if (env == -2) {
         const char *e = getenv("LARECOMP_PROMPTS");
         env = !e ? -1 : !strcmp(e, "xbox") ? PROMPTS_XBOX : !strcmp(e, "playstation") ? PROMPTS_PLAYSTATION :
+              !strcmp(e, "keyboard") ? PROMPTS_KEYBOARD :
               !strcmp(e, "nintendo") ? PROMPTS_NINTENDO : PROMPTS_AUTO;
         until = getenv("LARECOMP_PROMPTS_UNTIL") ? atol(getenv("LARECOMP_PROMPTS_UNTIL")) : -1;
     }
@@ -284,6 +552,7 @@ static int prompt_style(void) {
     int p = env >= 0 && (until < 0 || (long)renderer_present_count() < until) ? env : g_settings.prompts;
     if (p == PROMPTS_XBOX) return STYLE_XBOX;
     if (p == PROMPTS_PLAYSTATION) return STYLE_PS;
+    if (p == PROMPTS_KEYBOARD) return STYLE_KEYBOARD;
     if (p == PROMPTS_NINTENDO) return STYLE_NINTENDO;
     extern int input_pad_family(void);  // runtime/hle/input.c: the controller SDL reports
     int f = input_pad_family();
@@ -323,9 +592,65 @@ static int prompt_label(int role) {
     }
 }
 
+static int role_to_slot(int role) {
+    switch (role) {
+    case R_A: return BIND_A;
+    case R_B: return BIND_B;
+    case R_X: return BIND_X;
+    case R_Y: return BIND_Y;
+    case R_L: return BIND_L;
+    case R_R: return BIND_R;
+    case R_ZL: return BIND_ZL;
+    case R_ZR: return BIND_ZR;
+    case R_PLUS: return BIND_PLUS;
+    case R_MINUS: return BIND_MINUS;
+    case L_LS: return BIND_LSTICK;
+    case L_RS: return BIND_RSTICK;
+    case L_DUP: return BIND_UP;
+    case L_DDOWN: return BIND_DOWN;
+    case L_DLEFT: return BIND_LEFT;
+    case L_DRIGHT: return BIND_RIGHT;
+    default: return -1;
+    }
+}
+
+static const char *keyboard_key_name(int sc) {
+    if (sc <= 0 || sc >= SDL_SCANCODE_COUNT) return "";
+    switch (sc) {
+    case SDL_SCANCODE_RETURN: case SDL_SCANCODE_KP_ENTER: return "Enter";
+    case SDL_SCANCODE_ESCAPE: return "Esc";
+    case SDL_SCANCODE_BACKSPACE: return "Bksp";
+    case SDL_SCANCODE_TAB: return "Tab";
+    case SDL_SCANCODE_SPACE: return "Space";
+    case SDL_SCANCODE_LSHIFT: case SDL_SCANCODE_RSHIFT: return "Shift";
+    case SDL_SCANCODE_LCTRL: case SDL_SCANCODE_RCTRL: return "Ctrl";
+    case SDL_SCANCODE_LALT: case SDL_SCANCODE_RALT: return "Alt";
+    case SDL_SCANCODE_CAPSLOCK: return "Caps";
+    case SDL_SCANCODE_PAGEUP: return "PgUp";
+    case SDL_SCANCODE_PAGEDOWN: return "PgDn";
+    case SDL_SCANCODE_DELETE: return "Del";
+    case SDL_SCANCODE_INSERT: return "Ins";
+    case SDL_SCANCODE_KP_0: return "0";
+    case SDL_SCANCODE_KP_1: return "1";
+    case SDL_SCANCODE_KP_2: return "2";
+    case SDL_SCANCODE_KP_3: return "3";
+    case SDL_SCANCODE_KP_4: return "4";
+    case SDL_SCANCODE_KP_5: return "5";
+    case SDL_SCANCODE_KP_6: return "6";
+    case SDL_SCANCODE_KP_7: return "7";
+    case SDL_SCANCODE_KP_8: return "8";
+    case SDL_SCANCODE_KP_9: return "9";
+    default: {
+        const char *name = SDL_GetScancodeName((SDL_Scancode)sc);
+        return (name && *name) ? name : "?";
+    }
+    }
+}
+
 static uint32_t labels_hash(void) {
     uint32_t h = 0;
     for (int r = R_A; r <= R_MINUS; r++) h = h * 41 + (uint32_t)(prompt_label(r) - r + 64);
+    for (int i = 0; i < BIND_KEY_COUNT; i++) h = h * 31 + (uint32_t)g_bind_key[i];
     return h;
 }
 
@@ -450,6 +775,17 @@ static void astc_encode4(const uint8_t px[16][4], bool srgb, uint8_t *b) {
 static void decode_image(const Ref *r, const uint8_t *src, uint32_t row, uint8_t *img) {
     uint32_t W = r->w, H = r->h, bw = (W + 3) / 4, bh = (H + 3) / 4;
     if (r->kind == K_RGBA8) { for (uint32_t y = 0; y < H; y++) memcpy(img + y * W * 4, src + y * row, W * 4); return; }
+    if (r->kind == K_RG8) {
+        for (uint32_t y = 0; y < H; y++) {
+            const uint8_t *s = src + y * row;
+            uint8_t *d = img + y * W * 4;
+            for (uint32_t x = 0; x < W; x++) {
+                uint8_t i = s[x * 2], a = s[x * 2 + 1];
+                d[x * 4] = i; d[x * 4 + 1] = i; d[x * 4 + 2] = i; d[x * 4 + 3] = a;
+            }
+        }
+        return;
+    }
     if (r->kind == K_ASTC4) {
         uint8_t *blocks = malloc((size_t)bw * bh * 16);
         for (uint32_t y = 0; y < bh; y++) memcpy(blocks + y * bw * 16, src + y * row, bw * 16);
@@ -478,6 +814,18 @@ static void decode_image(const Ref *r, const uint8_t *src, uint32_t row, uint8_t
 static void encode_image(const Ref *r, const uint8_t *img, const uint8_t *dirty, uint8_t *dst, uint32_t row) {
     uint32_t W = r->w, H = r->h, bw = (W + 3) / 4, bh = (H + 3) / 4;
     if (r->kind == K_RGBA8) { for (uint32_t y = 0; y < H; y++) memcpy(dst + y * row, img + y * W * 4, W * 4); return; }
+    if (r->kind == K_RG8) {
+        for (uint32_t y = 0; y < H; y++) {
+            const uint8_t *s = img + y * W * 4;
+            uint8_t *d = dst + y * row;
+            for (uint32_t x = 0; x < W; x++) {
+                uint8_t i = (uint8_t)((s[x * 4] * 299 + s[x * 4 + 1] * 587 + s[x * 4 + 2] * 114) / 1000);
+                d[x * 2] = i;
+                d[x * 2 + 1] = s[x * 4 + 3];
+            }
+        }
+        return;
+    }
     for (uint32_t by = 0; by < bh; by++)
         for (uint32_t bx = 0; bx < bw; bx++) {
             if (!dirty[by * bw + bx]) continue;
@@ -566,14 +914,26 @@ static void draw_rect(float *cv, float x0, float y0, float x1, float y1, float t
 }
 
 static bool draw_text(float *cv, const char *text) {
-    if (!g_font_ok) return false;
-    float sc = stbtt_ScaleForPixelHeight(&g_font, 200);
-    float x = 8;
+    if (!g_font_ok || !text || !*text) return false;
+    float sc = stbtt_ScaleForPixelHeight(&g_font, 180.0f);
+    float total_w = 0;
+    for (const char *p = text; *p; p++) {
+        int adv, lsb;
+        stbtt_GetCodepointHMetrics(&g_font, *p, &adv, &lsb);
+        total_w += adv * sc;
+        if (p[1]) total_w += stbtt_GetCodepointKernAdvance(&g_font, p[0], p[1]) * sc;
+    }
+    if (total_w > 220.0f) {
+        float f = 220.0f / total_w;
+        sc *= f;
+        total_w *= f;
+    }
+    float x = (CV - total_w) / 2.0f;
     for (const char *p = text; *p; p++) {
         int adv, lsb, x0, y0, x1, y1;
         stbtt_GetCodepointHMetrics(&g_font, *p, &adv, &lsb);
         stbtt_GetCodepointBitmapBox(&g_font, *p, sc, sc, &x0, &y0, &x1, &y1);
-        int w = x1 - x0, h = y1 - y0, ox = (int)x + x0, oy = 200 + y0;
+        int w = x1 - x0, h = y1 - y0, ox = (int)x + x0, oy = (int)(CV * 0.78f) + y0;
         if (w > 0 && h > 0) {
             unsigned char *bm = malloc((size_t)w * h);
             stbtt_MakeCodepointBitmap(&g_font, bm, w, h, w, sc, sc, *p);
@@ -594,6 +954,46 @@ static bool draw_text(float *cv, const char *text) {
 // height).
 static bool draw_label(int role, int style, float *cv, bool *symbol) {
     memset(cv, 0, sizeof(float) * CV * CV);
+    if (style == STYLE_KEYBOARD) {
+        int slot = role_to_slot(role);
+        int sc = (slot >= 0 && slot < BIND_KEY_COUNT) ? g_bind_key[slot] : 0;
+        if (sc == SDL_SCANCODE_UP) {
+            static const float up[3][4] = {{128, 228, 128, 40}, {128, 34, 46, 116}, {128, 34, 210, 116}};
+            Seg s[3];
+            for (int i = 0; i < 3; i++) s[i] = (Seg){up[i][0], up[i][1], up[i][2], up[i][3]};
+            draw_segs(cv, s, 3, 16);
+            *symbol = true;
+            return true;
+        }
+        if (sc == SDL_SCANCODE_DOWN) {
+            static const float up[3][4] = {{128, 228, 128, 40}, {128, 34, 46, 116}, {128, 34, 210, 116}};
+            Seg s[3];
+            for (int i = 0; i < 3; i++) s[i] = (Seg){256 - up[i][0], 256 - up[i][1], 256 - up[i][2], 256 - up[i][3]};
+            draw_segs(cv, s, 3, 16);
+            *symbol = true;
+            return true;
+        }
+        if (sc == SDL_SCANCODE_LEFT) {
+            static const float up[3][4] = {{128, 228, 128, 40}, {128, 34, 46, 116}, {128, 34, 210, 116}};
+            Seg s[3];
+            for (int i = 0; i < 3; i++) s[i] = (Seg){up[i][1], 256 - up[i][0], up[i][3], 256 - up[i][2]};
+            draw_segs(cv, s, 3, 16);
+            *symbol = true;
+            return true;
+        }
+        if (sc == SDL_SCANCODE_RIGHT) {
+            static const float up[3][4] = {{128, 228, 128, 40}, {128, 34, 46, 116}, {128, 34, 210, 116}};
+            Seg s[3];
+            for (int i = 0; i < 3; i++) s[i] = (Seg){256 - up[i][1], up[i][0], 256 - up[i][3], up[i][2]};
+            draw_segs(cv, s, 3, 16);
+            *symbol = true;
+            return true;
+        }
+        const char *txt = keyboard_key_name(sc);
+        if (!txt || !*txt) txt = "?";
+        *symbol = false;
+        return draw_text(cv, txt);
+    }
     *symbol = role == R_PLUS || role == R_MINUS || (style == STYLE_PS && role <= R_Y) || role >= L_DUP;
     if (role >= L_DUP && role <= L_DRIGHT) {  // d-pad: an arrow (drawn pointing up, then turned)
         static const float up[3][4] = {{128, 228, 128, 40}, {128, 34, 46, 116}, {128, 34, 210, 116}};
@@ -656,12 +1056,83 @@ static bool draw_label(int role, int style, float *cv, bool *symbol) {
     return draw_text(cv, style == STYLE_XBOX ? xbox[role] : style == STYLE_PS ? ps[role] : nin[role]);
 }
 
+static ButtonLook get_button_look(int role, int style) {
+    ButtonLook look = {0};
+    int label = prompt_label(role);
+    look.body[3] = 255.0f;
+    look.body_rim[3] = 255.0f;
+    look.lab[3] = 255.0f;
+
+    if (style == STYLE_KEYBOARD) {
+        look.is_face_button = false;
+        // Premium Dark Graphite Mechanical Keycap
+        look.body[0] = 34.0f;  look.body[1] = 36.0f;  look.body[2] = 42.0f;
+        look.body_rim[0] = 18.0f; look.body_rim[1] = 20.0f; look.body_rim[2] = 24.0f;
+        look.lab[0] = 255.0f; look.lab[1] = 255.0f; look.lab[2] = 255.0f;
+    } else if (style == STYLE_XBOX) {
+        if (label == R_B) { // Xbox "A"
+            look.is_face_button = true;
+            // Vibrant Xbox Green
+            look.body[0] = 16.0f;  look.body[1] = 175.0f; look.body[2] = 32.0f;
+            look.body_rim[0] = 10.0f; look.body_rim[1] = 110.0f; look.body_rim[2] = 20.0f;
+            look.lab[0] = 255.0f; look.lab[1] = 255.0f; look.lab[2] = 255.0f;
+        } else if (label == R_A) { // Xbox "B"
+            look.is_face_button = true;
+            // Vibrant Xbox Red
+            look.body[0] = 230.0f; look.body[1] = 32.0f;  look.body[2] = 45.0f;
+            look.body_rim[0] = 140.0f; look.body_rim[1] = 18.0f; look.body_rim[2] = 25.0f;
+            look.lab[0] = 255.0f; look.lab[1] = 255.0f; look.lab[2] = 255.0f;
+        } else if (label == R_Y) { // Xbox "X"
+            look.is_face_button = true;
+            // Vibrant Xbox Blue
+            look.body[0] = 0.0f;   look.body[1] = 125.0f; look.body[2] = 245.0f;
+            look.body_rim[0] = 0.0f;   look.body_rim[1] = 70.0f;  look.body_rim[2] = 150.0f;
+            look.lab[0] = 255.0f; look.lab[1] = 255.0f; look.lab[2] = 255.0f;
+        } else if (label == R_X) { // Xbox "Y"
+            look.is_face_button = true;
+            // Vibrant Xbox Amber-Yellow
+            look.body[0] = 255.0f; look.body[1] = 185.0f; look.body[2] = 0.0f;
+            look.body_rim[0] = 175.0f; look.body_rim[1] = 115.0f; look.body_rim[2] = 0.0f;
+            look.lab[0] = 255.0f; look.lab[1] = 255.0f; look.lab[2] = 255.0f;
+        } else {
+            // Shoulders (LB, RB, LT, RT), Menu, View, D-pad, Sticks
+            look.is_face_button = false;
+            look.body[0] = 48.0f;  look.body[1] = 52.0f;  look.body[2] = 58.0f;
+            look.body_rim[0] = 30.0f; look.body_rim[1] = 32.0f; look.body_rim[2] = 36.0f;
+            look.lab[0] = 255.0f; look.lab[1] = 255.0f; look.lab[2] = 255.0f;
+        }
+    } else if (style == STYLE_PS) {
+        look.is_face_button = (label <= R_Y);
+        // Sleek PlayStation controller dark disc
+        look.body[0] = 38.0f;  look.body[1] = 42.0f;  look.body[2] = 50.0f;
+        look.body_rim[0] = 22.0f; look.body_rim[1] = 24.0f; look.body_rim[2] = 28.0f;
+
+        if (label == R_B) { // Cross (✕): Electric Blue
+            look.lab[0] = 45.0f;  look.lab[1] = 140.0f; look.lab[2] = 255.0f;
+        } else if (label == R_A) { // Circle (○): Vibrant Red
+            look.lab[0] = 255.0f; look.lab[1] = 65.0f;  look.lab[2] = 75.0f;
+        } else if (label == R_X) { // Triangle (△): Vibrant Green
+            look.lab[0] = 0.0f;   look.lab[1] = 225.0f; look.lab[2] = 130.0f;
+        } else if (label == R_Y) { // Square (□): Vibrant Pink
+            look.lab[0] = 255.0f; look.lab[1] = 100.0f; look.lab[2] = 180.0f;
+        } else {
+            look.lab[0] = 255.0f; look.lab[1] = 255.0f; look.lab[2] = 255.0f;
+        }
+    } else {
+        look.is_face_button = (label <= R_Y);
+        look.body[0] = 48.0f;  look.body[1] = 52.0f;  look.body[2] = 58.0f;
+        look.body_rim[0] = 30.0f; look.body_rim[1] = 32.0f; look.body_rim[2] = 36.0f;
+        look.lab[0] = 255.0f; look.lab[1] = 255.0f; look.lab[2] = 255.0f;
+    }
+    return look;
+}
+
 // Relabel one glyph: img (W x H RGBA8, alpha channel `ach` = the shape), region x0,y0 w,h. flip: the region is
 // stored upside down (font sheets).
 static void relabel(uint8_t *img, int W, int x0, int y0, int w, int h, int ach, bool flip, int role, int style,
                     uint8_t *dirty, int bw) {
     int n = w * h;
-    uint8_t *px = malloc((size_t)n * 4), *S = calloc((size_t)n, 1), *I = calloc((size_t)n, 1), *L = calloc((size_t)n, 1);
+    uint8_t *px = malloc((size_t)n * 4), *S = calloc((size_t)n, 1), *I = calloc((size_t)n, 1);
     int *stack = malloc(sizeof(int) * (size_t)n * 4);
     float *cv = malloc(sizeof(float) * CV * CV);
     for (int y = 0; y < h; y++) {
@@ -691,136 +1162,92 @@ static void relabel(uint8_t *img, int W, int x0, int y0, int w, int h, int ach, 
             if (y < sy0) sy0 = y;
             if (y > sy1) sy1 = y;
         }
-    if (area < 30) goto done;
-    for (int i = 0; i < n; i++) {  // interior: 2 pixels in from the shape's edge
+    if (area < 25) goto done;
+    int inset = w >= 150 ? 12 : (w >= 70 ? 6 : (w >= 40 ? 3 : 2));
+    for (int i = 0; i < n; i++) {
         int x = i % w, y = i / w, ok = S[i];
-        for (int dy = -2; dy <= 2 && ok; dy++)
-            for (int dx = -2; dx <= 2 && ok; dx++) {
+        for (int dy = -inset; dy <= inset && ok; dy++)
+            for (int dx = -inset; dx <= inset && ok; dx++) {
                 int xx = x + dx, yy = y + dy;
                 ok = xx >= 0 && yy >= 0 && xx < w && yy < h && S[yy * w + xx];
             }
         I[i] = (uint8_t)ok;
     }
-    // body colour = the most common colour inside, label colour = the most common one that clearly differs
-    {
-        static uint16_t hist[1 << 16];
-        int best = -1, bc = 0;
-        memset(hist, 0, sizeof hist);
-        for (int i = 0; i < n; i++)
-            if (I[i]) {
-                const uint8_t *p = px + i * 4;
-                int q = (p[0] >> 4) << 12 | (p[1] >> 4) << 8 | (p[2] >> 4) << 4 | p[3] >> 4;
-                if (++hist[q] > bc) { bc = hist[q]; best = q; }
-            }
-        if (best < 0) goto done;
-        float body[4] = {0}, lab[4] = {0};
-        int nb = 0;
-        for (int i = 0; i < n; i++) {
-            const uint8_t *p = px + i * 4;
-            if (I[i] && ((p[0] >> 4) << 12 | (p[1] >> 4) << 8 | (p[2] >> 4) << 4 | p[3] >> 4) == best) {
-                for (int k = 0; k < 4; k++) body[k] += p[k];
-                nb++;
-            }
+
+    ButtonLook look = get_button_look(role, style);
+    bool symbol = false;
+    int label = (style == STYLE_KEYBOARD) ? role : prompt_label(role);
+    if (!draw_label(label, style, cv, &symbol)) goto done;
+
+    int cx0 = CV, cy0 = CV, cx1 = -1, cy1 = -1;
+    for (int i = 0; i < CV * CV; i++)
+        if (cv[i] > 0.02f) {
+            int x = i % CV, y = i / CV;
+            if (x < cx0) cx0 = x;
+            if (x > cx1) cx1 = x;
+            if (y < cy0) cy0 = y;
+            if (y > cy1) cy1 = y;
         }
-        for (int k = 0; k < 4; k++) body[k] /= nb;
-        memset(hist, 0, sizeof hist);
-        best = -1, bc = 0;
-        int lx0 = w, ly0 = h, lx1 = -1, ly1 = -1;
-        for (int i = 0; i < n; i++) {
-            const uint8_t *p = px + i * 4;
-            float d = 0;
-            for (int k = 0; k < 4; k++) d += fabsf(p[k] - body[k]);
-            if (!I[i] || d < 64) continue;
-            L[i] = 1;
-            int x = i % w, y = i / w;
-            if (x < lx0) lx0 = x;
-            if (x > lx1) lx1 = x;
-            if (y < ly0) ly0 = y;
-            if (y > ly1) ly1 = y;
-            int q = (p[0] >> 4) << 12 | (p[1] >> 4) << 8 | (p[2] >> 4) << 4 | p[3] >> 4;
-            if (++hist[q] > bc) { bc = hist[q]; best = q; }
-        }
-        if (best < 0) goto done;
-        int nl = 0;
-        for (int i = 0; i < n; i++) {
-            const uint8_t *p = px + i * 4;
-            if (L[i] && ((p[0] >> 4) << 12 | (p[1] >> 4) << 8 | (p[2] >> 4) << 4 | p[3] >> 4) == best) {
-                for (int k = 0; k < 4; k++) lab[k] += p[k];
-                nl++;
-            }
-        }
-        for (int k = 0; k < 4; k++) lab[k] /= nl;
-        bool symbol;
-        if (!draw_label(prompt_label(role), style, cv, &symbol)) goto done;
-        // paint the old label (and its anti-aliased fringe) over with the body colour
-        for (int i = 0; i < n; i++) {
-            int x = i % w, y = i / w, near = 0, in = S[i];
-            for (int dy = -2; dy <= 2 && !near; dy++)
-                for (int dx = -2; dx <= 2 && !near; dx++) {
-                    int xx = x + dx, yy = y + dy;
-                    near = xx >= 0 && yy >= 0 && xx < w && yy < h && L[yy * w + xx];
-                }
-            for (int dy = -1; dy <= 1 && in; dy++)
-                for (int dx = -1; dx <= 1 && in; dx++) {
-                    int xx = x + dx, yy = y + dy;
-                    in = xx >= 0 && yy >= 0 && xx < w && yy < h && S[yy * w + xx];
-                }
-            if (near && in) for (int k = 0; k < 4; k++) px[i * 4 + k] = (uint8_t)lroundf(body[k]);
-        }
-        // fit the new label: text at the old label's height (narrower than the shape), symbols by the old label's size
-        int cx0 = CV, cy0 = CV, cx1 = -1, cy1 = -1;
-        for (int i = 0; i < CV * CV; i++)
-            if (cv[i] > 0.02f) {
-                int x = i % CV, y = i / CV;
-                if (x < cx0) cx0 = x;
-                if (x > cx1) cx1 = x;
-                if (y < cy0) cy0 = y;
-                if (y > cy1) cy1 = y;
-            }
-        if (cx1 < 0) goto done;
-        float lw = (float)(lx1 - lx0 + 1), lh = (float)(ly1 - ly0 + 1), iw = (float)(sx1 - sx0 + 1), ih = (float)(sy1 - sy0 + 1);
-        float cw = (float)(cx1 - cx0 + 1), ch = (float)(cy1 - cy0 + 1);
-        float tcx = (lx0 + lx1 + 1) / 2.0f, tcy = (ly0 + ly1 + 1) / 2.0f, th;
-        if (symbol) {
-            float s = fmaxf(lw, lh);
-            if (role == R_PLUS || role == R_MINUS) s = lw;  // ("-" has almost no height)
-            s = fminf(s, fminf(iw, ih) * 0.62f);
-            th = s * ch / fmaxf(cw, ch);
-            tcx = (sx0 + sx1 + 1) / 2.0f, tcy = (sy0 + sy1 + 1) / 2.0f;
-        } else {
-            th = role == R_PLUS || role == R_MINUS ? fminf(lw, ih * 0.6f) : lh;  // (remapped Plus / Minus: by "+"'s width)
-            if (th * cw / ch > iw * 0.78f) th = iw * 0.78f * ch / cw;
-        }
-        float tw = th * cw / ch, k = ch / th;  // canvas pixels per glyph pixel
-        float bx0 = tcx - tw / 2, by0 = tcy - th / 2;
-        for (int y = (int)floorf(by0); y <= (int)ceilf(by0 + th); y++)
-            for (int x = (int)floorf(bx0); x <= (int)ceilf(bx0 + tw); x++) {
-                if (x < 0 || y < 0 || x >= w || y >= h || !S[y * w + x]) continue;
-                float a = 0;  // 4x4 samples of the canvas over this pixel
-                for (int sy = 0; sy < 4; sy++)
-                    for (int sx = 0; sx < 4; sx++) {
-                        float u = cx0 + (x + (sx + 0.5f) / 4 - bx0) * k, v = cy0 + (y + (sy + 0.5f) / 4 - by0) * k;
-                        int iu = (int)u, iv = (int)v;
-                        if (iu >= cx0 && iv >= cy0 && iu <= cx1 && iv <= cy1) a += cv[iv * CV + iu];
-                    }
-                a /= 16;
-                if (a <= 0) continue;
-                uint8_t *p = px + (y * w + x) * 4;
-                for (int c = 0; c < 4; c++) p[c] = (uint8_t)lroundf(p[c] + (lab[c] - p[c]) * a);
-            }
-        // write back, marking changed blocks
-        for (int y = 0; y < h; y++) {
-            int sy = flip ? h - 1 - y : y;
-            uint8_t *d = img + ((y0 + sy) * W + x0) * 4;
-            for (int x = 0; x < w; x++)
-                if (memcmp(d + x * 4, px + (y * w + x) * 4, 4)) {
-                    memcpy(d + x * 4, px + (y * w + x) * 4, 4);
-                    dirty[((y0 + sy) / 4) * bw + (x0 + x) / 4] = 1;
-                }
+    if (cx1 < 0) goto done;
+
+    float tcx = (sx0 + sx1 + 1) / 2.0f, tcy = (sy0 + sy1 + 1) / 2.0f;
+    float rad = fminf(sx1 - sx0 + 1, sy1 - sy0 + 1) / 2.0f;
+    if (rad < 1.0f) rad = 1.0f;
+
+    // Repaint the button interior with authentic controller colors
+    for (int i = 0; i < n; i++) {
+        if (!I[i]) continue;
+        int x = i % w, y = i / w;
+        float dist = hypotf(x + 0.5f - tcx, y + 0.5f - tcy);
+        float norm_d = dist / rad;
+        if (norm_d > 1.0f) norm_d = 1.0f;
+        float shade_factor = look.is_face_button ? 0.35f : 0.20f;
+        for (int k = 0; k < 3; k++) {
+            px[i * 4 + k] = (uint8_t)lroundf(look.body[k] * (1.0f - norm_d * shade_factor) + look.body_rim[k] * (norm_d * shade_factor));
         }
     }
+
+    float iw = (float)(sx1 - sx0 + 1), ih = (float)(sy1 - sy0 + 1);
+    float cw = (float)(cx1 - cx0 + 1), ch = (float)(cy1 - cy0 + 1);
+    float th;
+    if (symbol) {
+        float s = fminf(iw, ih) * (style == STYLE_PS && prompt_label(role) <= R_Y ? 0.54f : 0.60f);
+        th = s * ch / fmaxf(cw, ch);
+    } else {
+        th = fminf(ih * 0.55f, iw * 0.72f * ch / cw);
+    }
+    float tw = th * cw / ch, k = ch / th;
+    float bx0 = tcx - tw / 2.0f, by0 = tcy - th / 2.0f;
+    for (int y = (int)floorf(by0); y <= (int)ceilf(by0 + th); y++)
+        for (int x = (int)floorf(bx0); x <= (int)ceilf(bx0 + tw); x++) {
+            if (x < 0 || y < 0 || x >= w || y >= h || !S[y * w + x]) continue;
+            float a = 0;
+            for (int sy = 0; sy < 4; sy++)
+                for (int sx = 0; sx < 4; sx++) {
+                    float u = cx0 + (x + (sx + 0.5f) / 4.0f - bx0) * k;
+                    float v = cy0 + (y + (sy + 0.5f) / 4.0f - by0) * k;
+                    int iu = (int)u, iv = (int)v;
+                    if (iu >= cx0 && iv >= cy0 && iu <= cx1 && iv <= cy1) a += cv[iv * CV + iu];
+                }
+            a /= 16.0f;
+            if (a <= 0.0f) continue;
+            uint8_t *p = px + (y * w + x) * 4;
+            for (int c = 0; c < 3; c++) p[c] = (uint8_t)lroundf(p[c] * (1.0f - a) + look.lab[c] * a);
+        }
+
+    // write back, marking changed blocks
+    for (int y = 0; y < h; y++) {
+        int sy = flip ? h - 1 - y : y;
+        uint8_t *d = img + ((y0 + sy) * W + x0) * 4;
+        for (int x = 0; x < w; x++)
+            if (memcmp(d + x * 4, px + (y * w + x) * 4, 4)) {
+                memcpy(d + x * 4, px + (y * w + x) * 4, 4);
+                dirty[((y0 + sy) / 4) * bw + (x0 + x) / 4] = 1;
+            }
+    }
+
 done:
-    free(px); free(S); free(I); free(L); free(stack); free(cv); free(out);
+    free(px); free(S); free(I); free(stack); free(cv); free(out);
 }
 
 // ------------------------------------------------------------------ cosmetics (Cosmetics tab): tunic and heart colours
@@ -1023,13 +1450,29 @@ void texpatch_apply(int id, uint32_t lv, uint8_t *blocks, uint32_t w, uint32_t h
         for (int rl = R_A; rl <= R_MINUS; rl++) any |= restyled(rl, style);
         if (!any) return;
     }
+    LOG("[texpatch] apply: %s (%dx%d role %d) style %d\n", r->name, w, h, r->role, style);
     static pthread_once_t font_once = PTHREAD_ONCE_INIT;
     pthread_once(&font_once, load_font);
     int bw = (int)(w + 3) / 4;
     uint8_t *img = malloc((size_t)w * h * 4), *dirty = calloc((size_t)bw * ((h + 3) / 4), 1);
     decode_image(r, blocks, row, img);
     int ach = r->kind == K_BC5 ? 1 : 3;
-    if (r->role == R_SHEET) {
+    if (r->role == R_SHEET_1) {
+        if (restyled(R_B, style)) relabel(img, (int)w, 160, 0, 80, 80, ach, false, R_B, style, dirty, bw);
+        if (restyled(R_A, style)) relabel(img, (int)w, 0, 80, 80, 80, ach, false, R_A, style, dirty, bw);
+    } else if (r->role == R_SHEET_3) {
+        if (restyled(R_L, style)) relabel(img, (int)w, 0, 0, 80, 80, ach, false, R_L, style, dirty, bw);
+        if (restyled(R_R, style)) relabel(img, (int)w, 80, 0, 80, 80, ach, false, R_R, style, dirty, bw);
+        if (restyled(R_ZL, style)) relabel(img, (int)w, 160, 0, 80, 80, ach, false, R_ZL, style, dirty, bw);
+        if (restyled(R_ZR, style)) relabel(img, (int)w, 0, 80, 80, 80, ach, false, R_ZR, style, dirty, bw);
+        if (restyled(R_X, style)) relabel(img, (int)w, 80, 80, 80, 80, ach, false, R_X, style, dirty, bw);
+        if (restyled(R_Y, style)) relabel(img, (int)w, 160, 80, 80, 80, ach, false, R_Y, style, dirty, bw);
+        if (restyled(R_PLUS, style)) relabel(img, (int)w, 0, 160, 80, 80, ach, false, R_PLUS, style, dirty, bw);
+        if (restyled(R_MINUS, style)) relabel(img, (int)w, 80, 160, 80, 80, ach, false, R_MINUS, style, dirty, bw);
+    } else if (r->role == R_SHEET_4) {
+        if (restyled(L_LS, style)) relabel(img, (int)w, 0, 80, 80, 80, ach, false, L_LS, style, dirty, bw);
+        if (restyled(L_RS, style)) relabel(img, (int)w, 80, 80, 80, 80, ach, false, L_RS, style, dirty, bw);
+    } else if (r->role == R_SHEET) {
         for (int g = 0; g < (int)sizeof k_sheet_roles; g++) {
             int y0 = (int)h - (g / 4 + 1) * 64;
             if (k_sheet_roles[g] && y0 >= 0 && (g % 4 + 1) * 64 <= (int)w && restyled(k_sheet_roles[g], style))

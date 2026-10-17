@@ -475,19 +475,25 @@ static void tab_display(void) {
         static const char *ups[] = {"Bilinear", "MetalFX"};
         const char *ud = "How the image is scaled up to the window when it renders at a lower resolution. MetalFX: Apple's "
                          "upscaler, sharper. Bilinear: plain and soft.";
-#else
-        static const char *ups[] = {"Bilinear", "AMD FSR 1"};
-        const char *ud = "How the image is scaled up to the window when it renders at a lower resolution. AMD FSR 1: "
-                         "edge-aware upscaling and sharpening, sharper. Bilinear: plain and soft.";
-#endif
         int ui = g_settings.upscaler == UPSCALE_BILINEAR ? 0 : 1;
+#else
+        static const char *ups[] = {"Bilinear", "AMD FSR 1", "NVIDIA NIS"};
+        const char *ud = "How the image is scaled up to the window when it renders at a lower resolution. AMD FSR 1: "
+                         "AMD FidelityFX edge-aware upscaling and sharpening. NVIDIA NIS: NVIDIA Image Scaling with "
+                         "directional 6-tap filtering and adaptive sharpening. Bilinear: plain and soft.";
+        int ui = g_settings.upscaler == UPSCALE_BILINEAR ? 0 : g_settings.upscaler == UPSCALE_NIS ? 2 : 1;
+#endif
         char udm[512];
         if (g_settings.res_mode == RES_MATCH) {  // (renders at the window's size: nothing to scale up)
             snprintf(udm, sizeof udm, "%s\n\nNot used at Match display: the game already renders at your display's resolution.", ud);
             ud = udm;
             opt_disable_next();
         }
+#ifdef __APPLE__
         if (opt_choice("Upscaler", &ui, ups, 2, 1, ud)) g_settings.upscaler = ui ? UPSCALE_SHARP : UPSCALE_BILINEAR;
+#else
+        if (opt_choice("Upscaler", &ui, ups, 3, 1, ud)) g_settings.upscaler = ui == 2 ? UPSCALE_NIS : ui == 1 ? UPSCALE_FSR1 : UPSCALE_BILINEAR;
+#endif
     }
     static const char *aa[] = {"Off", "SMAA"};
     opt_choice("Anti-aliasing", &g_settings.antialias, aa, 2, AA_OFF,
@@ -577,8 +583,8 @@ static void tab_about(void) {
         static const char *const fam[] = {"Nintendo", "Xbox", "PlayStation"};
         char autol[64];
         snprintf(autol, sizeof autol, "Auto (%s)", fam[input_pad_family() % 3]);
-        const char *names[] = {autol, "Nintendo", "Xbox", "PlayStation"};
-        choice("Button icons", &g_settings.prompts, names, 4);
+        const char *names[] = {autol, "Nintendo", "Xbox", "PlayStation", "Keyboard"};
+        choice("Button icons", &g_settings.prompts, names, 5);
     }
     ImGui::Spacing();
     header("System language");

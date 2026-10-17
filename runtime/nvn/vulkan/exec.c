@@ -3308,8 +3308,8 @@ static VkPipelineLayout post_layout;
 static VkDescriptorSetLayout post_set_layout;
 
 static VkPipeline post_pipeline(const char *fs) {
-    static struct { const char *fs; VkPipeline p; } cache[8];
-    for (int i = 0; i < 8; i++) if (cache[i].p && cache[i].fs == fs) return cache[i].p;
+    static struct { const char *fs; VkPipeline p; } cache[16];
+    for (int i = 0; i < 16; i++) if (cache[i].p && cache[i].fs == fs) return cache[i].p;
     if (!post_layout) {
         VkDescriptorSetLayoutBinding b[3];
         for (uint32_t i = 0; i < 3; i++)
@@ -3451,7 +3451,8 @@ static VkImageView post_process(VkCommandBuffer cb, TexBackend *b, double ow_d, 
     if (ow > 16384) ow = 16384;
     if (oh > 16384) oh = 16384;
     bool fsr = g_settings.upscaler == UPSCALE_FSR1 && (ow > b->width + 1 || oh > b->height + 1);  // (an upscale only)
-    if (!smaa && !fsr) return v;
+    bool nis = g_settings.upscaler == UPSCALE_NIS && (ow > b->width + 1 || oh > b->height + 1);
+    if (!smaa && !fsr && !nis) return v;
     extern void vk_frame_suspend(void);
     extern void vk_frame_resume(void);
     vk_frame_suspend();
@@ -3478,15 +3479,26 @@ static VkImageView post_process(VkCommandBuffer cb, TexBackend *b, double ow_d, 
         VkImageView ri_[3] = {post_view(e)};
         post_pass(cb, "rcas.frag", ri_, 1, r, pr, false);
         v = post_view(r);
+    } else if (nis) {
+        float iw = (float)b->width, ih = (float)b->height;
+        TexBackend *e = post_image(3, ow, oh), *r = post_image(4, ow, oh);
+        float pe[8] = {iw / ow, ih / oh, 0.5f * iw / ow - 0.5f, 0.5f * ih / oh - 0.5f, iw, ih};
+        VkImageView ei[3] = {v};
+        post_pass(cb, "nis_easu.frag", ei, 1, e, pe, false);
+        float pr[8] = {0.35f, 0, 0, 0, (float)ow, (float)oh};  // (NVIDIA NIS sharpness: 0.35)
+        VkImageView ri_[3] = {post_view(e)};
+        post_pass(cb, "nis_rcas.frag", ri_, 1, r, pr, false);
+        v = post_view(r);
     }
     vk_full_barrier(cb);
     vk_frame_resume();
     {
         static uint32_t piw, pih, pow_, poh;
-        static int psm = -1, pfs = -1;
-        if (b->width != piw || b->height != pih || ow != pow_ || oh != poh || smaa != psm || fsr != pfs)
-            LOG("[post] %ux%u%s%s -> %ux%u\n", b->width, b->height, smaa ? " smaa" : "", fsr ? " fsr1" : "", ow, oh);
-        piw = b->width; pih = b->height; pow_ = ow; poh = oh; psm = smaa; pfs = fsr;
+        static int psm = -1, pup = -1;
+        int up = fsr ? 1 : nis ? 2 : 0;
+        if (b->width != piw || b->height != pih || ow != pow_ || oh != poh || smaa != psm || up != pup)
+            LOG("[post] %ux%u%s%s -> %ux%u\n", b->width, b->height, smaa ? " smaa" : "", fsr ? " fsr1" : nis ? " nis" : "", ow, oh);
+        piw = b->width; pih = b->height; pow_ = ow; poh = oh; psm = smaa; pup = up;
     }
     return v;
 }
