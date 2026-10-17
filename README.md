@@ -11,7 +11,7 @@
 
 ---
 
-## 🎮 Port Features
+##  Port Features
 
 - **Native C/C++ Execution**: This is NOT an emulator (no JIT or dynamic interpretation). Guest AArch64 (ARM64) machine instructions are statically decompiled and lifted to native C code (`-march=x86-64-v3` with AVX2 and FMA).
 - **Vulkan 1.3/1.4 Graphics Backend**: Nintendo Switch NVN (Nvidia Maxwell Tegra) API calls and shaders are translated directly into high-performance Vulkan pipelines for NVIDIA, AMD, and Intel GPUs.
@@ -22,7 +22,7 @@
 
 ---
 
-## 🏗️ Architecture & Pipeline
+##  Architecture & Pipeline
 
 ```
 [ User ROM (.nsp / .xci) + prod.keys ]
@@ -42,7 +42,7 @@
 
 ---
 
-## 🚀 Getting Started
+##  Getting Started
 
 ### System Requirements
 - **Operating System**: Windows 10/11 64-bit
@@ -77,14 +77,6 @@ If you wish to build or modify the runtime from source:
 
 ---
 
-## 🔍 Reverse Engineering Highlights
-
-During the static analysis and debugging of the Skyward Sword HD binary, several critical architectural discoveries were addressed:
-- **ARM64 Jump Tables (Switch-Cases)**: The Nintendo AArch64 toolchain encodes large switch-cases using `ADR x9, <base>` + `LDRB w10, [table, index]` + `ADD x9, x9, w10, LSL #2` + `BR x9`. Previous lifters mistook the `ADR` instruction for an external function pointer reference, artificially fragmenting 1,172 functions and causing dynamic dispatch lookup failures (`FATAL: no function at 7000f11558`). The updated lifter in `tools/gen.py` detects jump table bases, keeping all switch branches inside the same translation unit and converting them to direct native jumps.
-- **Multi-Module Dispatch**: Skyward Sword HD splits executable code across four distinct modules (`main`, `sdk`, `subsdk0`, `subsdk1`). The native runtime implements cross-module function tables and address translation across each module's respective base address space.
-
----
-
-## ⚖️ Legal Notice
+##  Legal Notice
 
 This project is an independent open-source recreation created for educational and interoperability purposes. It is not affiliated with, endorsed by, or sponsored by Nintendo. *The Legend of Zelda* and *The Legend of Zelda: Skyward Sword* are registered trademarks of Nintendo. No copyrighted material or proprietary game assets are hosted or distributed in this repository.
