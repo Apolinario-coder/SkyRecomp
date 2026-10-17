@@ -322,10 +322,16 @@ static void *extract_thread(void *) {
             g_total = 100;
             g_done = 20;
             char cmd[4096];
-            snprintf(cmd, sizeof cmd, "python extract_nsp.py \"%s\" \"%s\"", rom.c_str(), keys.c_str());
+            if (file_exists("tools/extract_nsp.exe")) {
+                snprintf(cmd, sizeof cmd, "\"tools\\extract_nsp.exe\" \"%s\" \"%s\"", rom.c_str(), keys.c_str());
+            } else if (file_exists("extract_nsp.exe")) {
+                snprintf(cmd, sizeof cmd, "\"extract_nsp.exe\" \"%s\" \"%s\"", rom.c_str(), keys.c_str());
+            } else {
+                snprintf(cmd, sizeof cmd, "python extract_nsp.py \"%s\" \"%s\"", rom.c_str(), keys.c_str());
+            }
             int ret = system(cmd);
             if (ret != 0) {
-                set_job("Failed to extract game ROM.", true, "Make sure Python and 'cryptography' are installed and keys are valid.");
+                set_job("Failed to extract game ROM.", true, "Make sure your ROM and keys files are valid.");
                 goto done;
             }
         }
