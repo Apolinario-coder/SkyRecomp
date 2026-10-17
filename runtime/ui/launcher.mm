@@ -216,12 +216,12 @@ static void set_failure(int k) {
                                        "The game code didn't build"};
     static const char *const hint[] = {
         "",
-        "Choose the folder that holds the game files.",
-        "Choose the folder that holds the game files.",
-        "Make sure there's about 12 GB free and try again.",
+        "Choose the folder that holds your dumped game files (with exefs/ and romfs/).",
+        "Raw ROMs (.nsp/.xci) cannot be used directly. Provide the folder with extracted game files.",
+        "Make sure there's enough free disk space and try again.",
         "Sky Recomp needs version 1.0.0 of the game, without updates.",
-        "Some files are missing. Choose the folder again; if it happens again, dump the game again.",
-        "Make sure there's about 2 GB free and try again. If it keeps happening, report it on Discord or GitHub."};
+        "Some files are missing. Make sure your dump has exefs (main) and romfs.",
+        "The game code could not be verified. Report it on Discord or GitHub."};
     if (k >= 1 && k <= 6) set_job(head[k], true, hint[k]);
 }
 
@@ -234,8 +234,8 @@ static bool is_dir(const std::string &p) {
 // in the picked folder or a few levels below it (dump tools nest them).
 static void find_game(const std::string &dir, int depth, std::string &exefs, std::string &romfs, bool &unusable) {
     if (depth > 4 || (!exefs.empty() && !romfs.empty())) return;
-    if (exefs.empty() && file_exists(dir + "/main") && file_exists(dir + "/main.npdm")) exefs = dir;
-    if (romfs.empty() && (is_dir(dir + "/Object") || is_dir(dir + "/THP") || is_dir(dir + "/region_common"))) romfs = dir;
+    if (exefs.empty() && file_exists(dir + "/main")) exefs = dir;
+    if (romfs.empty() && (is_dir(dir + "/Object") || is_dir(dir + "/THP") || is_dir(dir + "/region_common") || file_exists(dir + "/romfs.bin"))) romfs = dir;
     DIR *d = opendir(dir.c_str());
     if (!d) return;
     std::vector<std::string> sub;
@@ -296,8 +296,6 @@ static bool build_game_code(void) {
 
 static void *extract_thread(void *) {
     pthread_mutex_lock(&g_lock);
-    std::string rom = g_settings.rom_path;
-    std::string keys = g_settings.keys_path;
     std::string src = g_src;
     pthread_mutex_unlock(&g_lock);
 
@@ -310,44 +308,6 @@ static void *extract_thread(void *) {
         goto done;
     }
 
-    // 2. If user provided a ROM path (.nsp / .xci)
-    if (!rom.empty()) {
-        if (keys.empty()) {
-            set_job("Keys file (prod.keys / title.keys) is required.", true, "Please select your keys file above.");
-            goto done;
-        }
-        mkdir(g_root.c_str(), 0755);
-        if (!file_exists(g_root + "/romfs.bin") || !file_exists(g_root + "/exefs/main")) {
-            set_job("Extracting game files from ROM (ExeFS & RomFS)...");
-            g_total = 100;
-            g_done = 20;
-            char cmd[4096];
-            if (file_exists("tools/extract_nsp.exe")) {
-                snprintf(cmd, sizeof cmd, "\"tools\\extract_nsp.exe\" \"%s\" \"%s\"", rom.c_str(), keys.c_str());
-            } else if (file_exists("extract_nsp.exe")) {
-                snprintf(cmd, sizeof cmd, "\"extract_nsp.exe\" \"%s\" \"%s\"", rom.c_str(), keys.c_str());
-            } else {
-                snprintf(cmd, sizeof cmd, "python extract_nsp.py \"%s\" \"%s\"", rom.c_str(), keys.c_str());
-            }
-            int ret = system(cmd);
-            if (ret != 0) {
-                set_job("Failed to extract game ROM.", true, "Make sure your ROM and keys files are valid.");
-                goto done;
-            }
-        }
-        if (!gamelib_present(g_root.c_str())) {
-            set_job("Recompiling game library (first-launch generation)...");
-            g_done = 70;
-            int ret = system("python build_game.py");
-            if (ret != 0) {
-                set_job("Failed to build game code.", true, "Check compiler and build logs.");
-                goto done;
-            }
-        }
-        goto check;
-    }
-
-    // 3. Fallback: picked folder holding exefs/ and romfs/
     if (!src.empty() || check_copied_files(g_root).empty()) {
         std::string exefs, romfs;
         bool unusable = false;
@@ -358,31 +318,83 @@ static void *extract_thread(void *) {
         }
         set_job("Looking for the game files...");
         find_game(src, 0, exefs, romfs, unusable);
-        if (exefs.empty() || romfs.empty()) { set_failure(unusable ? FAIL_UNUSABLE : FAIL_NOT_FOUND); goto done; }
-        if (!build_id_ok(exefs + "/main")) { set_failure(FAIL_VERSION); goto done; }
+
+        if (exefs.empty() && file_exists(src + "/main")) exefs = src;
+        if (romfs.empty()) {
+            if (file_exists(g_root + "/romfs.bin") || is_dir(g_root + "/romfs/region_common") || is_dir(g_root + "/romfs/Object")) {
+                romfs = g_root;
+            } else if (file_exists(src + "/../romfs.bin")) {
+                romfs = src + "/../romfs.bin";
+            } else if (is_dir(src + "/../romfs")) {
+                romfs = src + "/../romfs";
+            }
+        }
+
+        if (exefs.empty()) {
+            set_failure(unusable ? FAIL_UNUSABLE : FAIL_NOT_FOUND);
+            goto done;
+        }
+        if (!build_id_ok(exefs + "/main")) {
+            set_failure(FAIL_VERSION);
+            goto done;
+        }
+        if (romfs.empty() && !file_exists(g_root + "/romfs.bin") && !is_dir(g_root + "/romfs/region_common")) {
+            set_failure(FAIL_MISSING);
+            goto done;
+        }
+
         {
             mkdir(g_root.c_str(), 0755);
-            rt_remove_game_files(g_root.c_str());
-            mkdir(g_root.c_str(), 0755);
-            unsigned long long rbytes = romfs_dir_bytes(romfs.c_str());
-            g_total = 2 * rbytes;
-            set_job("Copying the game files...");
-            if (!romfs_copy_tree(exefs.c_str(), (g_root + "/exefs").c_str(), NULL) ||
-                !romfs_copy_tree(romfs.c_str(), (g_root + "/romfs").c_str(), setup_progress)) {
+            set_job("Copying ExeFS game files...");
+            mkdir((g_root + "/exefs").c_str(), 0755);
+            if (!romfs_copy_tree(exefs.c_str(), (g_root + "/exefs").c_str(), NULL)) {
                 set_failure(FAIL_COPY);
                 goto done;
             }
-            g_phase_base = rbytes, g_done = rbytes;
-            set_job("Building the game data image...");
-            char why[256] = "";
-            if (!romfs_build((g_root + "/romfs").c_str(), (g_root + "/romfs.bin").c_str(), setup_progress, why, sizeof why)) {
-                set_failure(FAIL_COPY);
-                goto done;
+
+            if (file_exists(romfs) && !is_dir(romfs)) {
+                set_job("Copying RomFS image...");
+                FILE *in = fopen(romfs.c_str(), "rb");
+                FILE *out = fopen((g_root + "/romfs.bin").c_str(), "wb");
+                if (in && out) {
+                    char buf[1024 * 1024];
+                    size_t n;
+                    while ((n = fread(buf, 1, sizeof buf, in)) > 0) fwrite(buf, 1, n, out);
+                }
+                if (in) fclose(in);
+                if (out) fclose(out);
+            } else if (file_exists(romfs + "/romfs.bin")) {
+                set_job("Copying RomFS image...");
+                FILE *in = fopen((romfs + "/romfs.bin").c_str(), "rb");
+                FILE *out = fopen((g_root + "/romfs.bin").c_str(), "wb");
+                if (in && out) {
+                    char buf[1024 * 1024];
+                    size_t n;
+                    while ((n = fread(buf, 1, sizeof buf, in)) > 0) fwrite(buf, 1, n, out);
+                }
+                if (in) fclose(in);
+                if (out) fclose(out);
+            } else if (romfs != g_root && is_dir(romfs)) {
+                unsigned long long rbytes = romfs_dir_bytes(romfs.c_str());
+                g_total = 2 * rbytes;
+                set_job("Copying RomFS game files...");
+                if (!romfs_copy_tree(romfs.c_str(), (g_root + "/romfs").c_str(), setup_progress)) {
+                    set_failure(FAIL_COPY);
+                    goto done;
+                }
+                g_phase_base = rbytes, g_done = rbytes;
+                set_job("Building the game data image...");
+                char why[256] = "";
+                if (!romfs_build((g_root + "/romfs").c_str(), (g_root + "/romfs.bin").c_str(), setup_progress, why, sizeof why)) {
+                    set_failure(FAIL_COPY);
+                    goto done;
+                }
             }
+
             if (!build_game_code()) goto done;
         }
     } else {
-        set_job("Please select the game ROM (.nsp / .xci) first.", true, "Click on 'ROM file' above.");
+        set_job("Please select the game files folder first.", true, "Click on 'Game files folder' above.");
         goto done;
     }
 
@@ -404,32 +416,13 @@ done:
     return NULL;
 }
 
-// ------------------------------------------------------------------ ROM & Keys file dialogs
-static void SDLCALL picked_rom(void *, const char *const *files, int) {
+// ------------------------------------------------------------------ folder dialog (SDL calls back on any thread)
+static void SDLCALL picked(void *, const char *const *files, int) {
     if (!files || !files[0]) return;
     pthread_mutex_lock(&g_lock);
-    snprintf(g_settings.rom_path, sizeof(g_settings.rom_path), "%s", files[0]);
-    settings_save();
+    g_src = files[0];
     pthread_mutex_unlock(&g_lock);
 }
-
-static void SDLCALL picked_keys(void *, const char *const *files, int) {
-    if (!files || !files[0]) return;
-    pthread_mutex_lock(&g_lock);
-    snprintf(g_settings.keys_path, sizeof(g_settings.keys_path), "%s", files[0]);
-    settings_save();
-    pthread_mutex_unlock(&g_lock);
-}
-
-static const SDL_DialogFileFilter rom_filter[] = {
-    {"Nintendo Switch ROM (*.nsp, *.xci)", "nsp;xci"},
-    {"All files", "*"}
-};
-
-static const SDL_DialogFileFilter keys_filter[] = {
-    {"Switch Keys (*.keys, *.txt)", "keys;txt"},
-    {"All files", "*"}
-};
 
 
 // ------------------------------------------------------------------ the user's own Nintendo fonts (not shipped)
@@ -1352,11 +1345,7 @@ extern "C" void launcher_run(const char *root) {
                 pthread_mutex_unlock(&g_lock);
                 bool ready = status.empty() && !busy;  // (set up: the window offers to delete them)
                 static double files_gb = -1;
-                std::string rom_p = g_settings.rom_path;
-                std::string keys_p = g_settings.keys_path;
-
-                std::string rom_v = rom_p.empty() ? "Choose..." : "Selected";
-                std::string keys_v = keys_p.empty() ? "Choose..." : "Selected";
+                std::string src_v = src.empty() ? "Choose..." : "Selected";
                 auto check_left_of_value = [&](const std::string &v) {
                     if (v != "Selected") return;
                     ImVec2 rb = ImGui::GetItemRectMax(), ra = ImGui::GetItemRectMin();
@@ -1368,16 +1357,13 @@ extern "C" void launcher_run(const char *root) {
                     dl->AddLine(ImVec2(x + u * 0.35f, cy + u * 0.35f), ImVec2(x + u, cy - u * 0.4f), g, fs * 0.11f);
                 };
 
-                std::string rom_d = "Select your legally dumped Nintendo Switch game ROM (.nsp or .xci). "
-                                    "The game files are not bundled with Sky Recomp.";
-                if (!rom_p.empty()) rom_d += "\n\nChosen: " + rom_p;
-
-                std::string keys_d = "Required: Switch keys file (prod.keys or title.keys) from your console.";
-                if (!keys_p.empty()) keys_d += "\n\nChosen: " + keys_p;
+                std::string src_d = "The folder with your own dumped game files (exefs and romfs) of The Legend of Zelda: Skyward Sword HD "
+                                    "for Nintendo Switch, version 1.0.0. No copyrighted Nintendo files are bundled with Sky Recomp.";
+                if (!src.empty()) src_d += "\n\nChosen: " + src;
 
                 // the step that's running / its result, under the rows and in the Set up row's explanation
                 const std::string &job_line = job;
-                std::string ex_d = "Extracts game files, decrypts RomFS and sets up the PC recompilation. "
+                std::string ex_d = "Copies the game files Sky Recomp needs and prepares the game data. "
                                    "This only needs to be done once and your original files are not modified.";
                 if (!job.empty()) ex_d += "\n\n" + job + (job_hint.empty() ? "" : ".\n" + job_hint);
 
@@ -1390,21 +1376,16 @@ extern "C" void launcher_run(const char *root) {
                 };
                 opt_begin("##files", sc);
                 if (!ready) {
-                    opt_section("Game ROM & Keys");
+                    opt_section("Your copy of the game");
                     if (busy) opt_disable_next();
-                    if (opt_action("Game ROM (.nsp / .xci)", rom_v.c_str(), rom_d.c_str(), true))
-                        SDL_ShowOpenFileDialog(picked_rom, NULL, win, rom_filter, 2, NULL, false);
-                    check_left_of_value(rom_v);
+                    if (opt_action("Game files folder", src_v.c_str(), src_d.c_str(), true))
+                        SDL_ShowOpenFolderDialog(picked, NULL, win, NULL, false);
+                    check_left_of_value(src_v);
                     first_row();
 
-                    if (busy) opt_disable_next();
-                    if (opt_action("Keys (prod.keys / title.keys)", keys_v.c_str(), keys_d.c_str(), true))
-                        SDL_ShowOpenFileDialog(picked_keys, NULL, win, keys_filter, 2, NULL, false);
-                    check_left_of_value(keys_v);
-
-                    opt_section("Setup & Play");
-                    if (busy || rom_p.empty() || keys_p.empty()) opt_disable_next();
-                    if (opt_action("Extract & Play", busy ? "Working..." : "Play", ex_d.c_str(), true)) {
+                    opt_section("Set up");
+                    if (busy || (src.empty() && !check_copied_files(g_root).empty())) opt_disable_next();
+                    if (opt_action("Set up game files", busy ? "Working..." : "", ex_d.c_str(), true)) {
                         pthread_mutex_lock(&g_lock);
                         g_busy = true;
                         pthread_mutex_unlock(&g_lock);
