@@ -503,7 +503,7 @@ static void tab_display(void) {
 }
 
 // Cosmetics: tunic / heart colours, live (runtime/nvn/texpatch.c); never part of a seed
-static void tab_cosmetics(void) {
+__attribute__((unused)) static void tab_cosmetics(void) {
     opt_begin("##cosmetics", ImGui::GetFontSize() / 34);
     opt_section("Colors");
     opt_choice("Tunic color", &g_settings.tunic, g_tunic_colours, N_TUNIC_COLOURS, 0,
@@ -685,10 +685,9 @@ static void tabs_body(float scale, bool in_game, void (*prelaunch)(float)) {
     if (prelaunch) tabs[ntabs++] = {"Prelaunch", -1, true};
     static const char *names[] = {"Video", "Audio", "Save Editor", "Randomizer", "Warp", "Cheats", "Gameplay",
                                   "Cosmetics", "Controls", "Quit"};
-    static const int order[] = {8, 0, 1, 6, 7, 3, 5, 4, 2, 9};  // Controls, Video, Audio, Gameplay, Cosmetics, Randomizer,
-                                                                // Cheats, Warp, Save Editor, Quit (ids stay: test hooks)
-    for (int i : order)  // (Quit: in game only - the start screen has its own QUIT, and an eleventh tab cut names short)
-        if (i != 9 || !prelaunch) tabs[ntabs++] = {names[i], i, in_game || (i != 2 && i != 4 && i != 5)};
+    static const int order[] = {8, 0, 1, 9};  // Controls, Video, Audio, Quit
+    for (int i : order)  // (Quit: in game only - the start screen has its own QUIT)
+        if (i != 9 || !prelaunch) tabs[ntabs++] = {names[i], i, true};
     int cur = 0;  // g_tab / g_tab_request hold ids
     for (int i = 0; i < ntabs; i++) if (tabs[i].id == g_tab) cur = i;
     if (!tabs[cur].on) cur = 0;
@@ -754,16 +753,9 @@ static void tabs_body(float scale, bool in_game, void (*prelaunch)(float)) {
                 ImGui::Spacing();
                 ImGui::BeginChild("##page", ImVec2(0, 0), ImGuiChildFlags_None,  // (the rest of the window: no hint line)
                                   ImGuiWindowFlags_NavFlattened);
-                // Down from the tab bar, pages that aren't option rows (Prelaunch, Controls, Warp): their first control
+                // Down from the tab bar, pages that aren't option rows (Prelaunch, Controls): their first control
                 // (option-row pages: opt_focus_first)
-                if (down_from_tab && (t.id == -1 || t.id == 8 || t.id == 4)) {
-                    opt_focus_first(false);
-                    ImGui::SetKeyboardFocusHere();
-                    ImGui::SetNavCursorVisible(true);
-                }
-                // Down from the tab bar, pages that aren't option rows (Prelaunch, Controls, Warp): their first control
-                // (option-row pages: opt_focus_first)
-                if (down_from_tab && (t.id == -1 || t.id == 8 || t.id == 4)) {
+                if (down_from_tab && (t.id == -1 || t.id == 8)) {
                     opt_focus_first(false);
                     ImGui::SetKeyboardFocusHere();
                     ImGui::SetNavCursorVisible(true);
@@ -772,15 +764,6 @@ static void tabs_body(float scale, bool in_game, void (*prelaunch)(float)) {
                 case -1: prelaunch(scale); break;
                 case 0: tab_display(); break;
                 case 1: tab_audio(); break;
-                case 2:
-                    if (game_in_play()) save_editor_draw(scale);
-                    else ImGui::TextDisabled("Load a save file and get into the game to edit it.");
-                    break;
-                case 3: rando_tab_draw(scale); break;
-                case 4: if (warp_tab_draw(scale)) set_open(false); break;
-                case 5: cheats_draw(scale); break;
-                case 6: difficulty_draw(scale); break;
-                case 7: tab_cosmetics(); break;
                 case 8: tab_about(); break;
                 case 9: tab_quit(scale, in_game); break;
                 }
