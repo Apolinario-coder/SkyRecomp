@@ -1,0 +1,6502 @@
+[
+ {
+  "level": "AnglersTunnelExit",
+  "room": "AnglersTunnelExit_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-A10006005CEF3EA9",
+  "params": [
+   "Field",
+   "Field_03L_b",
+   "DefaultUpStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   3.75,
+   0.0,
+   2.25
+  ],
+  "scale": [
+   0.9500002264976501,
+   4.0,
+   1.000000238418579
+  ]
+ },
+ {
+  "level": "AnglersTunnelExit",
+  "room": "AnglersTunnelExit_01B",
+  "index": 0,
+  "name": "AreaLevelOpen-A10012005CEF3EAF",
+  "params": [
+   "Field",
+   "Field_03N",
+   "DefaultUpStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   27.75,
+   0.0,
+   9.75
+  ],
+  "scale": [
+   0.9500002264976501,
+   4.0,
+   1.000000238418579
+  ]
+ },
+ {
+  "level": "AnimalVillageCave",
+  "room": "AnimalVillageCave_02B",
+  "index": 0,
+  "name": "AreaLevelOpen-A1001E005CED1204",
+  "params": [
+   "Field",
+   "Field_13N_c",
+   "DungeonOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   24.0,
+   1.0,
+   24.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "AnimalVillageEnter",
+  "room": "AnimalVillageEnter_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-A10008005CEF3F4B",
+  "params": [
+   "Field",
+   "Field_11K",
+   "DefaultUpStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   3.75,
+   0.0,
+   5.25
+  ],
+  "scale": [
+   0.9500002264976501,
+   4.0,
+   1.000000238418579
+  ]
+ },
+ {
+  "level": "AnimalVillageEnter",
+  "room": "AnimalVillageEnter_01B",
+  "index": 0,
+  "name": "AreaLevelOpen-A10022005CEF3F4C",
+  "params": [
+   "Field",
+   "Field_11L",
+   "DefaultUpStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   26.25,
+   0.0,
+   5.25
+  ],
+  "scale": [
+   0.9500002264976501,
+   4.0,
+   1.000000238418579
+  ]
+ },
+ {
+  "level": "ArmosShrine",
+  "room": "ArmosShrine_03A",
+  "index": 0,
+  "name": "AreaLevelOpen-A10014005CED1343",
+  "params": [
+   "Field",
+   "Field_11M",
+   "DungeonOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   2.0,
+   36.0
+  ],
+  "scale": [
+   3.0,
+   3.0,
+   3.0
+  ]
+ },
+ {
+  "level": "ArmosShrineCave",
+  "room": "ArmosShrineCave_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-A10004005CEF3F7E",
+  "params": [
+   "Field",
+   "Field_11O",
+   "DefaultUpStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   9.75,
+   0.0,
+   8.25
+  ],
+  "scale": [
+   0.9500002264976501,
+   4.0,
+   1.000000238418579
+  ]
+ },
+ {
+  "level": "BananaHouse",
+  "room": "BananaHouse_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-6A000E005D07403D",
+  "params": [
+   "Field",
+   "Field_15D",
+   "RunOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.5199999809265137,
+   12.75
+  ],
+  "scale": [
+   3.0,
+   3.0,
+   3.0
+  ]
+ },
+ {
+  "level": "BearHouse",
+  "room": "BearHouse_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-6A0008005D0CC644",
+  "params": [
+   "Field",
+   "Field_14N",
+   "RunOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.5,
+   12.75
+  ],
+  "scale": [
+   3.0,
+   3.0,
+   3.0
+  ]
+ },
+ {
+  "level": "BedRoom",
+  "room": "BedRoom_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-8D0013005D08CD3A",
+  "params": [
+   "Field",
+   "Field_09D",
+   "RunOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.5,
+   12.375
+  ],
+  "scale": [
+   3.0,
+   3.0,
+   3.0
+  ]
+ },
+ {
+  "level": "BoomerangCave",
+  "room": "BoomerangCave_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-A10014005CED13E5",
+  "params": [
+   "Field",
+   "Field_16E",
+   "DungeonOutShort",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.0,
+   12.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "CatfishsMawEnter",
+  "room": "CatfishsMawEnter_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-4A0003005C176011",
+  "params": [
+   "Field",
+   "Field_14J_a",
+   "WaterSideIn",
+   "",
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   4.5,
+   12.0,
+   0.0
+  ],
+  "scale": [
+   10.0,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "CatfishsMawEnter",
+  "room": "CatfishsMawEnter_01B",
+  "index": 0,
+  "name": "AreaLevelOpen-4A0007005C176265",
+  "params": [
+   "Field",
+   "Field_14J_c",
+   "WaterSideIn",
+   "",
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   24.0,
+   12.0,
+   0.0
+  ],
+  "scale": [
+   10.0,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "ChristineHouse",
+  "room": "ChristineHouse_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-6A00AA005D0CC42F",
+  "params": [
+   "Field",
+   "Field_13N_a",
+   "RunOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.5,
+   11.8125
+  ],
+  "scale": [
+   3.0,
+   3.0,
+   3.0
+  ]
+ },
+ {
+  "level": "CraneGame",
+  "room": "CraneGame_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-75000D005CF8A42E",
+  "params": [
+   "Field",
+   "Field_12D",
+   "RunOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   0.0,
+   9.0
+  ],
+  "scale": [
+   2.0,
+   1.0,
+   1.0
+  ]
+ },
+ {
+  "level": "CuccoHouse",
+  "room": "CuccoHouse_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-6D0003005D08A617",
+  "params": [
+   "Field",
+   "Field_01K_a",
+   "RunOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.125,
+   12.0
+  ],
+  "scale": [
+   3.0,
+   3.0,
+   3.0
+  ]
+ },
+ {
+  "level": "DanpeiHouse",
+  "room": "DanpeiHouse_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-750028005CF77525",
+  "params": [
+   "Field",
+   "Field_04H",
+   "RunOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.8799999952316284,
+   11.625
+  ],
+  "scale": [
+   3.0,
+   3.0,
+   3.0
+  ]
+ },
+ {
+  "level": "DogHouse",
+  "room": "DogHouse_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-6A0014005D0CC425",
+  "params": [
+   "Field",
+   "Field_11B_b",
+   "RunOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   15.0,
+   1.5,
+   10.125
+  ],
+  "scale": [
+   3.0,
+   3.0,
+   3.0
+  ]
+ },
+ {
+  "level": "DrWrightHouse",
+  "room": "DrWrightHouse_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-6A004C005D0CC427",
+  "params": [
+   "Field",
+   "Field_04A_a",
+   "RunOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.1299999952316284,
+   12.75
+  ],
+  "scale": [
+   3.0,
+   3.0,
+   3.0
+  ]
+ },
+ {
+  "level": "DreamShrine",
+  "room": "DreamShrine_02A",
+  "index": 0,
+  "name": "AreaLevelOpen-A10016005CED1427",
+  "params": [
+   "BedRoom",
+   "BedRoom_01A_a",
+   "DungeonOutWhite",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.0,
+   24.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "EagleKeyCave",
+  "room": "EagleKeyCave_02C",
+  "index": 0,
+  "name": "AreaLevelOpen-A10003005CED14A0",
+  "params": [
+   "Field",
+   "Field_01K_c",
+   "DungeonOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   39.0,
+   1.0,
+   24.0
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "EagleTowerExit",
+  "room": "EagleTowerExit_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-A10000005D1C6BCB",
+  "params": [
+   "Field",
+   "Field_03O",
+   "WaterTopInSwim",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   -0.057505249977111816,
+   11.25
+  ],
+  "scale": [
+   1.0,
+   1.0,
+   1.0
+  ]
+ },
+ {
+  "level": "Ending",
+  "room": "Ending_06A",
+  "index": 0,
+  "name": "AreaLevelOpen-720007005D01E4BF",
+  "params": [
+   "MysteriousWoodsCave01",
+   "MysteriousWoodsCave01_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   12.75,
+   13.5,
+   63.380001068115234
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Ending",
+  "room": "Ending_06C",
+  "index": 0,
+  "name": "AreaLevelOpen-720011005D01E4C0",
+  "params": [
+   "MadBattersWell02",
+   "MadBattersWell02_01A",
+   "DefaultDownStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   41.25,
+   12.800000190734863,
+   63.75
+  ],
+  "scale": [
+   0.09999999403953552,
+   1.5,
+   0.09999999403953552
+  ]
+ },
+ {
+  "level": "Ending",
+  "room": "Ending_10C",
+  "index": 0,
+  "name": "AreaLevelOpen-6200EB005CF4C31C",
+  "params": [
+   "FlyingCuccoCave",
+   "FlyingCuccoCave_02A",
+   "DefaultDownStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   38.25,
+   10.550000190734863,
+   114.75
+  ],
+  "scale": [
+   0.10000000149011612,
+   0.10000000149011612,
+   0.10000000149011612
+  ]
+ },
+ {
+  "level": "FaceShrineEnter",
+  "room": "FaceShrineEnter_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-A10032005D089239",
+  "params": [
+   "Field",
+   "Field_10M",
+   "DefaultUpDigStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   3.75,
+   0.0,
+   0.75
+  ],
+  "scale": [
+   1.0,
+   1.0,
+   1.0
+  ]
+ },
+ {
+  "level": "FaceShrineEnter",
+  "room": "FaceShrineEnter_01B",
+  "index": 0,
+  "name": "AreaLevelOpen-A10028005CF0E409",
+  "params": [
+   "Field",
+   "Field_10N",
+   "DefaultUpDigStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   27.75,
+   0.0,
+   8.25
+  ],
+  "scale": [
+   1.0,
+   1.0,
+   1.0
+  ]
+ },
+ {
+  "level": "FairyFountain01",
+  "room": "FairyFountain01_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-A1000A005CED154A",
+  "params": [
+   "Field",
+   "Field_09N",
+   "DungeonOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.0,
+   12.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "FairyFountain02",
+  "room": "FairyFountain02_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-A1000A005CED1565",
+  "params": [
+   "Field",
+   "Field_02P_b",
+   "DungeonOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.0,
+   12.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "FairyFountain03",
+  "room": "FairyFountain03_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-A10011005CED1587",
+  "params": [
+   "Field",
+   "Field_09H",
+   "DungeonOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.0,
+   12.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-8D0001005D036AB9",
+  "params": [
+   "Lv08TurtleRock",
+   "Lv08TurtleRock_03C",
+   "LevelDungeonIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   6.75,
+   27.0,
+   10.880000114440918
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_01C",
+  "index": 0,
+  "name": "AreaLevelOpen-6D0006005D1D73B3",
+  "params": [
+   "Lv08TurtleRock",
+   "Lv08TurtleRock_03F",
+   "LevelDungeonIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   35.25,
+   27.0,
+   10.880000114440918
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_01D",
+  "index": 0,
+  "name": "AreaLevelOpen-480014005B98CE09",
+  "params": [
+   "TurtleRockEnter",
+   "TurtleRockEnter_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   51.75,
+   24.75,
+   10.880000114440918
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_01G",
+  "index": 0,
+  "name": "AreaLevelOpen-750011005CFE1F4C",
+  "params": [
+   "Lv09WindFishsEgg",
+   "Lv09WindFishsEgg_08D",
+   "LevelDungeonIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   98.25,
+   33.64799880981445,
+   6.380000114440918
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_01K",
+  "index": 0,
+  "name": "AreaLevelOpen-620268005CD3CF37",
+  "params": [
+   "CuccoHouse",
+   "CuccoHouse_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   156.75,
+   26.25,
+   7.880000114440918
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_01O",
+  "index": 0,
+  "name": "AreaLevelOpen-610063005BA1C2F7",
+  "params": [
+   "Lv07EagleTower",
+   "Lv07EagleTower_08B_b",
+   "DungeonIn_Lv7",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   219.0,
+   26.812999725341797,
+   11.25
+  ],
+  "scale": [
+   2.0,
+   3.0,
+   3.0
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_02A",
+  "index": 0,
+  "name": "AreaLevelOpen-620066005CD3FC23",
+  "params": [
+   "Lv08TurtleRock",
+   "Lv08TurtleRock_08D_b",
+   "LevelDungeonIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   8.25,
+   24.75,
+   15.0
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_02B",
+  "index": 0,
+  "name": "AreaLevelOpen-6200A1005CD3FC24",
+  "params": [
+   "TelephoneBox05_TurtleRock",
+   "TelephoneBox05_TurtleRock_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   24.75,
+   24.75,
+   18.010000228881836
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_02D",
+  "index": 0,
+  "name": "AreaLevelOpen-6A002D005D0C5AD5",
+  "params": [
+   "TurtleRockEnter",
+   "TurtleRockEnter_02A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   53.25,
+   19.5,
+   15.380000114440918
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_02E",
+  "index": 0,
+  "name": "AreaLevelOpen-6A0008005CF4CC69",
+  "params": [
+   "MadBattersWell03",
+   "MadBattersWell03_01A",
+   "DefaultDownStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   69.75,
+   24.049999237060547,
+   17.25
+  ],
+  "scale": [
+   0.10000000149011612,
+   1.5,
+   0.10000000149011612
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_02F",
+  "index": 0,
+  "name": "AreaLevelOpen-6A000C005D0CD1BF",
+  "params": [
+   "Tamaranch04",
+   "Tamaranch04_04A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   87.75,
+   19.5,
+   19.880001068115234
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_02H",
+  "index": 0,
+  "name": "AreaLevelOpen-6D0014005CEF53CA",
+  "params": [
+   "Tamaranch04",
+   "Tamaranch04_03A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   110.25,
+   21.75,
+   19.880001068115234
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_02H",
+  "index": 1,
+  "name": "AreaLevelOpen-6D0011005CEF53CA",
+  "params": [
+   "Tamaranch04",
+   "Tamaranch04_01B",
+   "DefaultDownStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   110.25,
+   25.600000381469727,
+   15.75
+  ],
+  "scale": [
+   0.10000000149011612,
+   1.5,
+   0.10000000149011612
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_02I",
+  "index": 0,
+  "name": "AreaLevelOpen-620198005CD3FC24",
+  "params": [
+   "Tamaranch04",
+   "Tamaranch04_02E",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   132.75,
+   20.25,
+   15.380000114440918
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_02I",
+  "index": 1,
+  "name": "AreaLevelOpen-620199005CD3FC24",
+  "params": [
+   "Tamaranch04",
+   "Tamaranch04_02D",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   129.75,
+   20.25,
+   15.380000114440918
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_02J",
+  "index": 0,
+  "name": "AreaLevelOpen-6D0013005D0C6B37",
+  "params": [
+   "Tamaranch02",
+   "Tamaranch02_02A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   147.75,
+   19.5,
+   19.880001068115234
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_02K",
+  "index": 0,
+  "name": "AreaLevelOpen-6201D6005CD3FC24",
+  "params": [
+   "Tamaranch02",
+   "Tamaranch02_02B",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   152.25,
+   22.5,
+   13.880000114440918
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_02K",
+  "index": 1,
+  "name": "AreaLevelOpen-6201D8005CD3FC24",
+  "params": [
+   "EagleKeyCave",
+   "EagleKeyCave_02C",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   161.25,
+   24.0,
+   15.380000114440918
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_02N",
+  "index": 0,
+  "name": "AreaLevelOpen-620221005CD3FC24",
+  "params": [
+   "Tamaranch05",
+   "Tamaranch05_02A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   197.25,
+   19.5,
+   19.880001068115234
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_02N",
+  "index": 1,
+  "name": "AreaLevelOpen-620222005CD3FC24",
+  "params": [
+   "Tamaranch05",
+   "Tamaranch05_02B",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   206.25,
+   19.5,
+   18.380001068115234
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_02N",
+  "index": 2,
+  "name": "AreaLevelOpen-620245005CD3FC24",
+  "params": [
+   "Tamaranch05",
+   "Tamaranch05_04A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   197.25,
+   21.75,
+   12.380000114440918
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_02O",
+  "index": 0,
+  "name": "AreaLevelOpen-6D000C005CF8CE12",
+  "params": [
+   "Tamaranch01",
+   "Tamaranch01_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   215.25,
+   23.25,
+   18.380001068115234
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_02O",
+  "index": 1,
+  "name": "AreaLevelOpen-6D000D005CF8CE12",
+  "params": [
+   "Tamaranch01",
+   "Tamaranch01_02A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   221.25,
+   23.25,
+   18.380001068115234
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_02P",
+  "index": 0,
+  "name": "AreaLevelOpen-510005005CF79B70",
+  "params": [
+   "FairyFountain02",
+   "FairyFountain02_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   230.25,
+   19.5,
+   21.380001068115234
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_02P",
+  "index": 1,
+  "name": "AreaLevelOpen-510003005CF79B70",
+  "params": [
+   "Tamaranch03",
+   "Tamaranch03_02A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   236.25,
+   19.5,
+   15.380000114440918
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_02P",
+  "index": 2,
+  "name": "AreaLevelOpen-51000F005CF79B70",
+  "params": [
+   "Tamaranch01",
+   "Tamaranch01_04B",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   233.25,
+   19.5,
+   18.380001068115234
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_02P",
+  "index": 3,
+  "name": "AreaLevelOpen-51001A005CF79B70",
+  "params": [
+   "Tamaranch01",
+   "Tamaranch01_01C",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   228.75,
+   23.25,
+   18.380001068115234
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_02P",
+  "index": 4,
+  "name": "AreaLevelOpen-510033005CF79B70",
+  "params": [
+   "Tamaranch03",
+   "Tamaranch03_03A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   230.25,
+   25.5,
+   12.380000114440918
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_03A",
+  "index": 0,
+  "name": "AreaLevelOpen-6202AF005CD3FC25",
+  "params": [
+   "GopongaCave",
+   "GopongaCave_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   12.75,
+   14.25,
+   28.880001068115234
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_03B",
+  "index": 0,
+  "name": "AreaLevelOpen-6A0034005CED1405",
+  "params": [
+   "GopongaCave",
+   "GopongaCave_01B",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   17.25,
+   14.25,
+   28.880001068115234
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_03E",
+  "index": 0,
+  "name": "AreaLevelOpen-6A0033005D0C5FB9",
+  "params": [
+   "Lv02BottleGrotto",
+   "Lv02BottleGrotto_08C",
+   "LevelDungeonIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   65.25,
+   14.0625,
+   25.875
+  ],
+  "scale": [
+   1.5,
+   1.875,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_03K",
+  "index": 0,
+  "name": "AreaLevelOpen-622DF3005CDEA275",
+  "params": [
+   "MamboCave",
+   "MamboCave_01A",
+   "WaterTopInSwim",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   159.75,
+   12.010000228881836,
+   26.625
+  ],
+  "scale": [
+   1.5,
+   3.0,
+   3.0
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_03L",
+  "index": 0,
+  "name": "AreaLevelOpen-6D0044005CF485C7",
+  "params": [
+   "AnglersTunnelExit",
+   "AnglersTunnelExit_01A",
+   "DefaultDownStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   174.75,
+   12.050000190734863,
+   26.25
+  ],
+  "scale": [
+   0.10000000149011612,
+   1.5,
+   0.10000000149011612
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_03L",
+  "index": 1,
+  "name": "AreaLevelOpen-6D0051005CF485C7",
+  "params": [
+   "Lv04AnglersTunnel",
+   "Lv04AnglersTunnel_08D",
+   "LevelDungeonIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   171.75,
+   12.75,
+   24.380001068115234
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_03N",
+  "index": 0,
+  "name": "AreaLevelOpen-622DD7005CDEA275",
+  "params": [
+   "AnglersTunnelExit",
+   "AnglersTunnelExit_01B",
+   "DefaultDownStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   203.25,
+   13.550000190734863,
+   32.25
+  ],
+  "scale": [
+   0.10000000149011612,
+   1.5,
+   0.10000000149011612
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_03O",
+  "index": 0,
+  "name": "AreaLevelOpen-8D0008005D255481",
+  "params": [
+   "EagleTowerExit",
+   "EagleTowerExit_01A_b",
+   "WaterTopInSwim",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   218.25,
+   12.010000228881836,
+   25.1299991607666
+  ],
+  "scale": [
+   1.5,
+   3.0,
+   3.0
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_03P",
+  "index": 0,
+  "name": "AreaLevelOpen-51003F005CF79B70",
+  "params": [
+   "RapidsRideExit",
+   "RapidsRideExit_01A",
+   "DefaultDownStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   227.25,
+   12.800000190734863,
+   33.75
+  ],
+  "scale": [
+   0.10000000149011612,
+   1.5,
+   0.10000000149011612
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_04A",
+  "index": 0,
+  "name": "AreaLevelOpen-6A0375005D107D72",
+  "params": [
+   "DrWrightHouse",
+   "DrWrightHouse_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   11.25,
+   14.25,
+   39.380001068115234
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_04B",
+  "index": 0,
+  "name": "AreaLevelOpen-6A035E005D107D72",
+  "params": [
+   "TelephoneBox06_Goponga",
+   "TelephoneBox06_Goponga_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   24.0,
+   14.25,
+   42.005001068115234
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_04F",
+  "index": 0,
+  "name": "AreaLevelOpen-6A0032005CF52AF1",
+  "params": [
+   "MoriblinCave",
+   "MoriblinCave_02A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   84.75,
+   13.5,
+   42.380001068115234
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_04H",
+  "index": 0,
+  "name": "AreaLevelOpen-620013005D0B46C9",
+  "params": [
+   "DanpeiHouse",
+   "DanpeiHouse_01A_a",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   111.75,
+   14.25,
+   41.25
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_04P",
+  "index": 0,
+  "name": "AreaLevelOpen-510013005CF79F7D",
+  "params": [
+   "RapidsRideTicket",
+   "RapidsRideTicket_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   228.75,
+   13.499999046325684,
+   39.380001068115234
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_05C",
+  "index": 0,
+  "name": "AreaLevelOpen-62733A005CD41AA2",
+  "params": [
+   "MysteriousWoodsCave02",
+   "MysteriousWoodsCave02_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   35.25,
+   13.5,
+   52.880001068115234
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_05F",
+  "index": 0,
+  "name": "AreaLevelOpen-6A0064005CF4F6F1",
+  "params": [
+   "TracyHouse",
+   "TracyHouse_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   87.75,
+   14.25,
+   52.880001068115234
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_05J",
+  "index": 0,
+  "name": "AreaLevelOpen-6A0090005D18B091",
+  "params": [
+   "KanaletCastleEnter",
+   "KanaletCastleEnter_01A",
+   "DefaultDownStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   144.75,
+   7.550000190734863,
+   54.75
+  ],
+  "scale": [
+   0.10000000149011612,
+   1.5,
+   0.10000000149011612
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_05K",
+  "index": 0,
+  "name": "AreaLevelOpen-6A0079005D18B091",
+  "params": [
+   "KanaletCastleEnter",
+   "KanaletCastleEnter_01B",
+   "DefaultDownStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   162.75,
+   7.550000190734863,
+   51.75
+  ],
+  "scale": [
+   0.10000000149011612,
+   1.5,
+   0.10000000149011612
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_05L",
+  "index": 0,
+  "name": "AreaLevelOpen-622E53005CDEA275",
+  "params": [
+   "TelephoneBox03_Kanalet",
+   "TelephoneBox03_Kanalet_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   171.75,
+   8.25,
+   49.505001068115234
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_06A",
+  "index": 0,
+  "name": "AreaLevelOpen-627374005CD41AA2",
+  "params": [
+   "MysteriousWoodsCave01",
+   "MysteriousWoodsCave01_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   12.75,
+   13.5,
+   63.380001068115234
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_06C",
+  "index": 0,
+  "name": "AreaLevelOpen-6A0022005CF4CFCF",
+  "params": [
+   "MadBattersWell02",
+   "MadBattersWell02_01A",
+   "DefaultDownStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   41.25,
+   12.800000190734863,
+   63.75
+  ],
+  "scale": [
+   0.10000000149011612,
+   1.5,
+   0.10000000149011612
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_06J",
+  "index": 0,
+  "name": "AreaLevelOpen-6A002E005B7FDDB6",
+  "params": [
+   "KanaletCastle",
+   "KanaletCastle_02C",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   137.25,
+   12.0,
+   64.87999725341797
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_06J",
+  "index": 1,
+  "name": "AreaLevelOpen-6A0032005B7FDDB6",
+  "params": [
+   "KanaletCastle",
+   "KanaletCastle_02D",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   143.25,
+   12.0,
+   66.37999725341797
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_07C",
+  "index": 0,
+  "name": "AreaLevelOpen-627278005CD41AA1",
+  "params": [
+   "MysteriousWoodsCave01",
+   "MysteriousWoodsCave01_02B",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   41.25,
+   13.5,
+   76.87999725341797
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_07F",
+  "index": 0,
+  "name": "AreaLevelOpen-6A03E5005D107D72",
+  "params": [
+   "MagicPowderHouse",
+   "MagicPowderHouse_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   81.75,
+   14.25,
+   75.37999725341797
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_07J",
+  "index": 0,
+  "name": "AreaLevelOpen-720035005CEF6E66",
+  "params": [
+   "KanaletCastle",
+   "KanaletCastle_02B",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   143.25,
+   8.25,
+   76.87999725341797
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_07M",
+  "index": 0,
+  "name": "AreaLevelOpen-4A0170005C4A9C5D",
+  "params": [
+   "Lv06FaceShrine",
+   "Lv06FaceShrine_02A",
+   "DefaultDownStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   186.75,
+   10.550000190734863,
+   75.75
+  ],
+  "scale": [
+   0.10000000149011612,
+   1.5,
+   0.10000000149011612
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_08F",
+  "index": 0,
+  "name": "AreaLevelOpen-6A0668005CEF9B15",
+  "params": [
+   "UnderGrave",
+   "UnderGrave_01A",
+   "DefaultDownStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   80.25,
+   12.050000190734863,
+   89.25
+  ],
+  "scale": [
+   0.10000000149011612,
+   1.5,
+   0.10000000149011612
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_08G",
+  "index": 0,
+  "name": "AreaLevelOpen-6A00E8005CEFD98C",
+  "params": [
+   "UnderGrave",
+   "UnderGrave_01B",
+   "DefaultDownStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   99.75,
+   13.550000190734863,
+   89.25
+  ],
+  "scale": [
+   0.10000000149011612,
+   1.5,
+   0.10000000149011612
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_08H",
+  "index": 0,
+  "name": "AreaLevelOpen-6A0B70005D1C6068",
+  "params": [
+   "Lv10ClothesDungeon",
+   "Lv10ClothesDungeon_08C",
+   "levelDownStairsJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   116.25,
+   13.550000190734863,
+   86.25
+  ],
+  "scale": [
+   0.10000000149011612,
+   1.5,
+   0.10000000149011612
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_08H",
+  "index": 1,
+  "name": "AreaLevelOpen-6A0B72005D1C6068",
+  "params": [
+   "FairyFountain03",
+   "FairyFountain03_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   108.75,
+   10.5,
+   94.87999725341797
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_08I",
+  "index": 0,
+  "name": "AreaLevelOpen-720064005CEF6E68",
+  "params": [
+   "KanaletCastleSouthCave",
+   "KanaletCastleSouthCave_01A",
+   "DefaultDownStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   123.75,
+   7.550000190734863,
+   93.75
+  ],
+  "scale": [
+   0.10000000149011612,
+   0.10000000149011612,
+   0.10000000149011612
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_09C",
+  "index": 0,
+  "name": "AreaLevelOpen-8D001C005D26B297",
+  "params": [
+   "QuadupletHouse",
+   "QuadupletHouse_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   38.25,
+   13.5,
+   102.37999725341797
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_09C",
+  "index": 1,
+  "name": "AreaLevelOpen-8D0018005D26B297",
+  "params": [
+   "QuadupletHouse",
+   "QuadupletHouse_01B",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   41.25,
+   13.5,
+   102.37999725341797
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_09D",
+  "index": 0,
+  "name": "AreaLevelOpen-6A0233005CEFD0BA",
+  "params": [
+   "BedRoom",
+   "BedRoom_01A_b",
+   "LevelDungeonIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   48.75,
+   13.5,
+   100.87999725341797
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_09E",
+  "index": 0,
+  "name": "AreaLevelOpen-480007005B98D320",
+  "params": [
+   "UkukuCave01",
+   "UkukuCave01_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   74.25,
+   10.5,
+   103.87999725341797
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_09G",
+  "index": 0,
+  "name": "AreaLevelOpen-620080005D15ACA6",
+  "params": [
+   "UkukuCave02",
+   "UkukuCave02_02A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   92.25,
+   10.5,
+   100.87999725341797
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_09I",
+  "index": 0,
+  "name": "AreaLevelOpen-6101BD005BA1C305",
+  "params": [
+   "TelephoneBox07_Ukuku2",
+   "TelephoneBox07_Ukuku2_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   128.25,
+   8.25,
+   102.00499725341797
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_09K",
+  "index": 0,
+  "name": "AreaLevelOpen-6A0001005BD0518F",
+  "params": [
+   "SeashellHouse",
+   "SeashellHouse_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   158.25,
+   10.5,
+   100.87999725341797
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_09M",
+  "index": 0,
+  "name": "AreaLevelOpen-6F000E005CF4AC16",
+  "params": [
+   "Lv06FaceShrine",
+   "Lv06FaceShrine_08D",
+   "LevelDungeonIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   185.25,
+   11.25,
+   100.87999725341797
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_09M",
+  "index": 1,
+  "name": "AreaLevelOpen-6F0013005CF4AC16",
+  "params": [
+   "FaceShrineEnter",
+   "FaceShrineEnter_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   188.25,
+   9.000000953674316,
+   106.87999725341797
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_09N",
+  "index": 0,
+  "name": "AreaLevelOpen-6101F1005BA1C305",
+  "params": [
+   "FairyFountain01",
+   "FairyFountain01_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   200.25,
+   8.25,
+   96.37999725341797
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_09P",
+  "index": 0,
+  "name": "AreaLevelOpen-6A003B005D0CD1C7",
+  "params": [
+   "RapidsRideExit",
+   "RapidsRideExit_02A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   225.75,
+   8.25,
+   96.37999725341797
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_10C",
+  "index": 0,
+  "name": "AreaLevelOpen-6D0015005D070B0C",
+  "params": [
+   "FlyingCuccoCave",
+   "FlyingCuccoCave_02A",
+   "DefaultDownStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   38.25,
+   10.550000190734863,
+   114.75
+  ],
+  "scale": [
+   0.10000000149011612,
+   1.5,
+   0.10000000149011612
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_10D",
+  "index": 0,
+  "name": "AreaLevelOpen-620540005CE2387A",
+  "params": [
+   "Shop",
+   "Shop_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   51.75,
+   11.25,
+   115.12999725341797
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_10N",
+  "index": 0,
+  "name": "AreaLevelOpen-610251005BA1C308",
+  "params": [
+   "FaceShrineEnter",
+   "FaceShrineEnter_01B",
+   "DefaultDownStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   198.75,
+   7.550000190734863,
+   110.25
+  ],
+  "scale": [
+   0.10000000149011612,
+   1.5,
+   0.10000000149011612
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_11B",
+  "index": 0,
+  "name": "AreaLevelOpen-620017005D0B4133",
+  "params": [
+   "DogHouse",
+   "DogHouse_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   "-"
+  ],
+  "pos": [
+   23.25,
+   11.25,
+   125.62999725341797
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_11B",
+  "index": 1,
+  "name": "AreaLevelOpen-620009005D0B4133",
+  "params": [
+   "MadamHouse",
+   "MadamHouse_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   20.25,
+   11.25,
+   126.37999725341797
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_11C",
+  "index": 0,
+  "name": "AreaLevelOpen-620012005D0B449B",
+  "params": [
+   "MarinTarinHouse",
+   "MarinTarinHouse_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   38.25,
+   11.25,
+   126.37999725341797
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_11E",
+  "index": 0,
+  "name": "AreaLevelOpen-620041005D15ACA5",
+  "params": [
+   "TelephoneBox01_Ukuku1",
+   "TelephoneBox01_Ukuku1_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   65.25,
+   10.5,
+   124.50499725341797
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_11K",
+  "index": 0,
+  "name": "AreaLevelOpen-6A0006005CF4D0A5",
+  "params": [
+   "AnimalVillageEnter",
+   "AnimalVillageEnter_01A",
+   "DefaultDownStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   162.75,
+   7.550000190734863,
+   126.75
+  ],
+  "scale": [
+   0.10000000149011612,
+   1.5,
+   0.10000000149011612
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_11L",
+  "index": 0,
+  "name": "AreaLevelOpen-6102C7005BA1C30B",
+  "params": [
+   "AnimalVillageEnter",
+   "AnimalVillageEnter_01B",
+   "DefaultDownStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   176.25,
+   7.550000190734863,
+   126.75
+  ],
+  "scale": [
+   0.10000000149011612,
+   1.5,
+   0.10000000149011612
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_11M",
+  "index": 0,
+  "name": "AreaLevelOpen-8D005E005D039F75",
+  "params": [
+   "ArmosShrine",
+   "ArmosShrine_03A",
+   "LevelDungeonIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   188.25,
+   9.75,
+   123.37999725341797
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_11O",
+  "index": 0,
+  "name": "AreaLevelOpen-610305005BA1C30B",
+  "params": [
+   "ArmosShrineCave",
+   "ArmosShrineCave_01A",
+   "DefaultDownStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   216.75,
+   6.800000190734863,
+   125.25
+  ],
+  "scale": [
+   0.10000000149011612,
+   1.5,
+   0.10000000149011612
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_12A",
+  "index": 0,
+  "name": "AreaLevelOpen-624AFE005CD29205",
+  "params": [
+   "Library",
+   "Library_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   5.25,
+   11.25,
+   135.3800048828125
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_12B",
+  "index": 0,
+  "name": "AreaLevelOpen-6A002A005CF0B66F",
+  "params": [
+   "UlriraHouse",
+   "UlriraHouse_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   21.75,
+   11.249999046325684,
+   137.6300048828125
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_12C",
+  "index": 0,
+  "name": "AreaLevelOpen-6D0005005D12D108",
+  "params": [
+   "TelephoneBox02_Mebe",
+   "TelephoneBox02_Mebe_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   38.25,
+   11.25,
+   138.0050048828125
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_12D",
+  "index": 0,
+  "name": "AreaLevelOpen-6A0101005B7E49D8",
+  "params": [
+   "CraneGame",
+   "CraneGame_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   53.25,
+   11.25,
+   137.6300048828125
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_12F",
+  "index": 0,
+  "name": "AreaLevelOpen-750015005CEF91B3",
+  "params": [
+   "Lv03KeyCavern",
+   "Lv03KeyCavern_08B",
+   "LevelDungeonIn",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   84.75,
+   10.5,
+   133.5
+  ],
+  "scale": [
+   3.0,
+   2.0,
+   1.0
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_12I",
+  "index": 0,
+  "name": "AreaLevelOpen-61032E005BA1C30D",
+  "params": [
+   "MarthaUkuku",
+   "MarthaUkuku_02C",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   131.25,
+   8.25,
+   139.8800048828125
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_12I",
+  "index": 1,
+  "name": "AreaLevelOpen-61032D005BA1C30D",
+  "params": [
+   "MarthaUkuku",
+   "MarthaUkuku_01B",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   128.25,
+   10.5,
+   136.8800048828125
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_13G",
+  "index": 0,
+  "name": "AreaLevelOpen-6A010E005D197FF8",
+  "params": [
+   "RichardCave",
+   "RichardCave_01B",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   95.25,
+   9.0,
+   150.3800048828125
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_13I",
+  "index": 0,
+  "name": "AreaLevelOpen-610479005BA1C311",
+  "params": [
+   "MarthaUkuku",
+   "MarthaUkuku_03B",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   123.75,
+   8.25,
+   148.8800048828125
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_13M",
+  "index": 0,
+  "name": "AreaLevelOpen-6D002E005CF88A5A",
+  "params": [
+   "RabbitBigHouse",
+   "RabbitBigHouse_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   183.75,
+   8.25,
+   148.69000244140625
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_13M",
+  "index": 1,
+  "name": "AreaLevelOpen-6D0006005CF88A5A",
+  "params": [
+   "SchuleDonavitchHouse",
+   "SchuleDonavitchHouse_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   191.25,
+   8.25,
+   148.8800048828125
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_13N",
+  "index": 0,
+  "name": "AreaLevelOpen-6D001D005CF889E4",
+  "params": [
+   "ChristineHouse",
+   "ChristineHouse_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   198.75,
+   7.499999523162842,
+   148.875
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_13N",
+  "index": 1,
+  "name": "AreaLevelOpen-6D0013005CF889E4",
+  "params": [
+   "HiddenZoraHouse",
+   "HiddenZoraHouse_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   203.25,
+   7.5,
+   148.875
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_13N",
+  "index": 2,
+  "name": "AreaLevelOpen-6D0002005CF889E4",
+  "params": [
+   "AnimalVillageCave",
+   "AnimalVillageCave_02B",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   207.75,
+   8.25,
+   144.3800048828125
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_13P",
+  "index": 0,
+  "name": "AreaLevelOpen-6A0016005D1859C6",
+  "params": [
+   "LanmolaCave",
+   "LanmolaCave_02B",
+   "DefaultDownStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   236.25,
+   9.050000190734863,
+   146.25
+  ],
+  "scale": [
+   0.10000003129243851,
+   1.5,
+   0.10000003129243851
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_14D",
+  "index": 0,
+  "name": "AreaLevelOpen-6D0009005CFDF13B",
+  "params": [
+   "Lv01TailCave",
+   "Lv01TailCave_08D",
+   "LevelDungeonIn",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   54.75,
+   9.0,
+   157.875
+  ],
+  "scale": [
+   3.0,
+   1.5,
+   1.0
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_14E",
+  "index": 0,
+  "name": "AreaLevelOpen-61052F005BA1C313",
+  "params": [
+   "MamuCave",
+   "MamuCave_01A",
+   "DefaultDownStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   72.75,
+   7.925000190734863,
+   161.25
+  ],
+  "scale": [
+   0.10000000149011612,
+   1.5,
+   0.10000000149011612
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_14G",
+  "index": 0,
+  "name": "AreaLevelOpen-6A00A8005D197FF7",
+  "params": [
+   "RichardHouse",
+   "RichardHouse_01A_b",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   96.75,
+   9.0,
+   162.3800048828125
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_14J",
+  "index": 0,
+  "name": "AreaLevelOpen-760091005CECF90E",
+  "params": [
+   "Lv05CatfishsMaw",
+   "Lv05CatfishsMaw_08H",
+   "LevelDungeonIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   143.25,
+   7.5,
+   160.1300048828125
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_14J",
+  "index": 1,
+  "name": "AreaLevelOpen-760093005CECF90E",
+  "params": [
+   "CatfishsMawEnter",
+   "CatfishsMawEnter_01B",
+   "WaterTopIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   141.75,
+   4.5,
+   163.8800048828125
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_14J",
+  "index": 2,
+  "name": "AreaLevelOpen-76009A005CECF90E",
+  "params": [
+   "CatfishsMawEnter",
+   "CatfishsMawEnter_01A",
+   "WaterTopIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   138.75,
+   4.5,
+   163.8800048828125
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_14L",
+  "index": 0,
+  "name": "AreaLevelOpen-510012005CFA4337",
+  "params": [
+   "TelephoneBox04_AnimalVillage",
+   "TelephoneBox04_AnimalVillage_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   176.25,
+   8.25,
+   162.0050048828125
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_14N",
+  "index": 0,
+  "name": "AreaLevelOpen-6D0011005CF887B9",
+  "params": [
+   "BearHouse",
+   "BearHouse_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   203.25,
+   8.25,
+   159.3800048828125
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_15D",
+  "index": 0,
+  "name": "AreaLevelOpen-7200EB005CFF3741",
+  "params": [
+   "BananaHouse",
+   "BananaHouse_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   "-"
+  ],
+  "pos": [
+   53.25,
+   6.75,
+   171.3800048828125
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_15G",
+  "index": 0,
+  "name": "AreaLevelOpen-610663005BA1C317",
+  "params": [
+   "MadBattersWell01",
+   "MadBattersWell01_01A",
+   "DefaultDownStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   101.25,
+   7.550000190734863,
+   170.25
+  ],
+  "scale": [
+   0.10000000149011612,
+   1.5,
+   0.10000000149011612
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_15H",
+  "index": 0,
+  "name": "AreaLevelOpen-61067C005BA1C318",
+  "params": [
+   "MadBattersWellEnter",
+   "MadBattersWellEnter_01A",
+   "DefaultDownStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   113.25,
+   7.550000190734863,
+   170.25
+  ],
+  "scale": [
+   0.10000000149011612,
+   1.5,
+   0.10000000149011612
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_15I",
+  "index": 0,
+  "name": "AreaLevelOpen-610691005BA1C318",
+  "params": [
+   "TelephoneBox08_Martha",
+   "TelephoneBox08_Martha_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   125.25,
+   8.25,
+   174.3800048828125
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_15J",
+  "index": 0,
+  "name": "AreaLevelOpen-6A00CF005D0CD1CB",
+  "params": [
+   "MermaidStatue",
+   "MermaidStatue_02A",
+   "DefaultDownStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   144.75,
+   7.550000190734863,
+   171.75
+  ],
+  "scale": [
+   0.10000000149011612,
+   1.5,
+   0.10000000149011612
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_15K",
+  "index": 0,
+  "name": "AreaLevelOpen-8D000D005D15EC1E",
+  "params": [
+   "FishingBoat",
+   "FishingBoat_01A",
+   "WaterTopInSwim_Bridge",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   158.4375,
+   6.5,
+   171.75
+  ],
+  "scale": [
+   1.0,
+   2.0,
+   1.0
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_16D",
+  "index": 0,
+  "name": "AreaLevelOpen-720150005CFF3745",
+  "params": [
+   "BoomerangCave",
+   "BoomerangCave_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   59.25,
+   4.5,
+   180.3800048828125
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_16G",
+  "index": 0,
+  "name": "AreaLevelOpen-75000D005B9760A5",
+  "params": [
+   "GhostHouse",
+   "GhostHouse_01A",
+   "WalkIn",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   99.75,
+   8.25,
+   184.8800048828125
+  ],
+  "scale": [
+   1.5,
+   1.5,
+   1.5
+  ]
+ },
+ {
+  "level": "Field",
+  "room": "Field_16J",
+  "index": 0,
+  "name": "AreaLevelOpen-6A0005005D1B59C3",
+  "params": [
+   "MadBattersWellEnter",
+   "MadBattersWellEnter_02B",
+   "DefaultDownStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   146.25,
+   7.550000190734863,
+   186.75
+  ],
+  "scale": [
+   0.10000000149011612,
+   1.5,
+   0.10000000149011612
+  ]
+ },
+ {
+  "level": "FishingBoat",
+  "room": "FishingBoat_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-4A000F005C19DF60",
+  "params": [
+   "Field",
+   "Field_15K",
+   "WaterSideInRight",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   19.5,
+   6.396505355834961,
+   0.0
+  ],
+  "scale": [
+   3.0,
+   8.0,
+   1.5
+  ]
+ },
+ {
+  "level": "FlyingCuccoCave",
+  "room": "FlyingCuccoCave_02A",
+  "index": 0,
+  "name": "AreaLevelOpen-A10003005CEF41A2",
+  "params": [
+   "Field",
+   "Field_10C",
+   "DefaultUpStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   8.25,
+   0.0,
+   21.75
+  ],
+  "scale": [
+   0.9500002264976501,
+   4.0,
+   1.000000238418579
+  ]
+ },
+ {
+  "level": "GhostHouse",
+  "room": "GhostHouse_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-6A0038005D0CC426",
+  "params": [
+   "Field",
+   "Field_16G",
+   "RunOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.5,
+   12.5625
+  ],
+  "scale": [
+   3.0,
+   3.0,
+   3.0
+  ]
+ },
+ {
+  "level": "GopongaCave",
+  "room": "GopongaCave_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-A1001A005CED15A8",
+  "params": [
+   "Field",
+   "Field_03A",
+   "DungeonOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.0,
+   12.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "GopongaCave",
+  "room": "GopongaCave_01B",
+  "index": 0,
+  "name": "AreaLevelOpen-A10057005CED15A9",
+  "params": [
+   "Field",
+   "Field_03B",
+   "DungeonOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   22.5,
+   1.0,
+   12.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "HiddenZoraHouse",
+  "room": "HiddenZoraHouse_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-6D000E005CFDDF7A",
+  "params": [
+   "Field",
+   "Field_13N_b",
+   "RunOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.5,
+   12.375
+  ],
+  "scale": [
+   3.0,
+   3.0,
+   3.0
+  ]
+ },
+ {
+  "level": "KanaletCastle",
+  "room": "KanaletCastle_02B",
+  "index": 0,
+  "name": "AreaLevelOpen-A1000B005CED15D9",
+  "params": [
+   "Field",
+   "Field_07J",
+   "DungeonOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   22.5,
+   1.0,
+   24.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "KanaletCastle",
+  "room": "KanaletCastle_02C",
+  "index": 0,
+  "name": "AreaLevelOpen-A10028005CED15E2",
+  "params": [
+   "Field",
+   "Field_06J_a",
+   "DungeonOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   67.5,
+   1.0,
+   24.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "KanaletCastle",
+  "room": "KanaletCastle_02D",
+  "index": 0,
+  "name": "AreaLevelOpen-A10017005CED15E1",
+  "params": [
+   "Field",
+   "Field_06J_b",
+   "DungeonOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   82.5,
+   1.0,
+   24.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "KanaletCastleEnter",
+  "room": "KanaletCastleEnter_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-A1000C005D020050",
+  "params": [
+   "Field",
+   "Field_05J",
+   "LadderUp",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   2.25,
+   7.5,
+   0.0
+  ],
+  "scale": [
+   1.000000238418579,
+   1.0,
+   1.000000238418579
+  ]
+ },
+ {
+  "level": "KanaletCastleEnter",
+  "room": "KanaletCastleEnter_01B",
+  "index": 0,
+  "name": "AreaLevelOpen-A10013005D020056",
+  "params": [
+   "Field",
+   "Field_05K",
+   "LadderUp",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   24.75,
+   7.5,
+   0.0
+  ],
+  "scale": [
+   1.000000238418579,
+   1.0,
+   1.000000238418579
+  ]
+ },
+ {
+  "level": "KanaletCastleSouthCave",
+  "room": "KanaletCastleSouthCave_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-A10004005CEF4275",
+  "params": [
+   "Field",
+   "Field_08I",
+   "DefaultUpStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   8.25,
+   0.0,
+   6.75
+  ],
+  "scale": [
+   0.9500002264976501,
+   4.0,
+   1.000000238418579
+  ]
+ },
+ {
+  "level": "LanmolaCave",
+  "room": "LanmolaCave_02B",
+  "index": 0,
+  "name": "AreaLevelOpen-A10003005CEF49C8",
+  "params": [
+   "Field",
+   "Field_13P",
+   "DefaultUpStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   26.25,
+   0.0,
+   20.25
+  ],
+  "scale": [
+   0.9500002264976501,
+   4.0,
+   1.000000238418579
+  ]
+ },
+ {
+  "level": "Library",
+  "room": "Library_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-6A0022005CEE2BEC",
+  "params": [
+   "Field",
+   "Field_12A",
+   "RunOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.1299999952316284,
+   12.75
+  ],
+  "scale": [
+   3.0,
+   3.0,
+   3.0
+  ]
+ },
+ {
+  "level": "Lv01TailCave",
+  "room": "Lv01TailCave_08D",
+  "index": 0,
+  "name": "AreaLevelOpen-1F032F005CFF5DA9",
+  "params": [
+   "Field",
+   "Field_14D",
+   "DungeonOut",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   52.5,
+   1.0,
+   96.1875
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "Lv02BottleGrotto",
+  "room": "Lv02BottleGrotto_08C",
+  "index": 0,
+  "name": "AreaLevelOpen-4D0017005CEF9BA9",
+  "params": [
+   "Field",
+   "Field_03E",
+   "DungeonOut",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   37.5,
+   1.0,
+   96.75
+  ],
+  "scale": [
+   3.0,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "Lv03KeyCavern",
+  "room": "Lv03KeyCavern_08B",
+  "index": 0,
+  "name": "AreaLevelOpen-1F0234005CF9FAFF",
+  "params": [
+   "Field",
+   "Field_12F",
+   "DungeonOut",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   22.5,
+   1.0,
+   96.1875
+  ],
+  "scale": [
+   3.0,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "Lv04AnglersTunnel",
+  "room": "Lv04AnglersTunnel_08D",
+  "index": 0,
+  "name": "AreaLevelOpen-1F0278005CEFBFD7",
+  "params": [
+   "Field",
+   "Field_03L_a",
+   "DungeonOut",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   52.5,
+   1.0,
+   96.1875
+  ],
+  "scale": [
+   3.0,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "Lv05CatfishsMaw",
+  "room": "Lv05CatfishsMaw_08H",
+  "index": 0,
+  "name": "AreaLevelOpen-1F0297005D033F87",
+  "params": [
+   "Field",
+   "Field_14J_b",
+   "DungeonOut",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   112.5,
+   1.0,
+   96.1875
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "Lv06FaceShrine",
+  "room": "Lv06FaceShrine_02A",
+  "index": 0,
+  "name": "AreaLevelOpen-4D003B005CEE2046",
+  "params": [
+   "Field",
+   "Field_07M",
+   "DefaultUpDigStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   11.25,
+   1.5,
+   12.729999542236328
+  ],
+  "scale": [
+   1.0,
+   1.0,
+   1.0
+  ]
+ },
+ {
+  "level": "Lv06FaceShrine",
+  "room": "Lv06FaceShrine_08D",
+  "index": 0,
+  "name": "AreaLevelOpen-1F04CC005CF4B093",
+  "params": [
+   "Field",
+   "Field_09M",
+   "DungeonOut",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   52.5,
+   1.0,
+   96.1875
+  ],
+  "scale": [
+   2.0,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "Lv07EagleTower",
+  "room": "Lv07EagleTower_03C",
+  "index": 0,
+  "name": "AreaLevelOpen-610B50005BA1C35F",
+  "params": [
+   "Lv07EagleTower",
+   "Lv07EagleTower_07C",
+   "",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   29.25,
+   -1.4975053071975708,
+   23.25
+  ],
+  "scale": [
+   1.0,
+   1.0,
+   1.0
+  ]
+ },
+ {
+  "level": "Lv07EagleTower",
+  "room": "Lv07EagleTower_08B",
+  "index": 0,
+  "name": "AreaLevelOpen-1F048C005D039F69",
+  "params": [
+   "Field",
+   "Field_01O",
+   "DungeonOut",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   22.5,
+   1.0,
+   120.1875
+  ],
+  "scale": [
+   3.0,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "Lv08TurtleRock",
+  "room": "Lv08TurtleRock_03C",
+  "index": 0,
+  "name": "AreaLevelOpen-4D0096005CF8F378",
+  "params": [
+   "Field",
+   "Field_01A",
+   "DefaultUpDigStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   38.25,
+   0.0,
+   25.5
+  ],
+  "scale": [
+   1.0,
+   1.0,
+   1.0
+  ]
+ },
+ {
+  "level": "Lv08TurtleRock",
+  "room": "Lv08TurtleRock_03F",
+  "index": 0,
+  "name": "AreaLevelOpen-4D008E005CF8F30E",
+  "params": [
+   "Field",
+   "Field_01C",
+   "DefaultUpDigStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   83.25,
+   1.0,
+   24.75
+  ],
+  "scale": [
+   1.0,
+   2.0,
+   1.0
+  ]
+ },
+ {
+  "level": "Lv08TurtleRock",
+  "room": "Lv08TurtleRock_03H",
+  "index": 0,
+  "name": "AreaLevelOpen-1F066E005CED2261",
+  "params": [
+   "Lv08TurtleRock",
+   "Lv08TurtleRock_08D_a",
+   "",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   104.25,
+   -2.9975051879882812,
+   23.25
+  ],
+  "scale": [
+   1.0,
+   1.0,
+   1.0
+  ]
+ },
+ {
+  "level": "Lv08TurtleRock",
+  "room": "Lv08TurtleRock_08A",
+  "index": 0,
+  "name": "AreaLevelOpen-1F0956005CED2262",
+  "params": [
+   "Lv08TurtleRock",
+   "Lv08TurtleRock_08D_b",
+   "",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   11.25,
+   -2.9975051879882812,
+   93.75
+  ],
+  "scale": [
+   1.0,
+   1.0,
+   1.0
+  ]
+ },
+ {
+  "level": "Lv08TurtleRock",
+  "room": "Lv08TurtleRock_08D",
+  "index": 0,
+  "name": "AreaLevelOpen-1F0963005CED2262",
+  "params": [
+   "Field",
+   "Field_02A",
+   "DungeonOut",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   52.5,
+   1.0,
+   96.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "Lv09WindFishsEgg",
+  "room": "Lv09WindFishsEgg_02A",
+  "index": 0,
+  "name": "AreaLevelOpen-4A002A005CEE7111",
+  "params": [
+   "Field",
+   "Field_01G",
+   "RunOut",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.0,
+   24.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "Lv09WindFishsEgg",
+  "room": "Lv09WindFishsEgg_08C",
+  "index": 0,
+  "name": "AreaLevelOpen-4A001C005CEE7104",
+  "params": [
+   "Field",
+   "Field_01G",
+   "RunOut",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   37.5,
+   0.9900000095367432,
+   96.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "Lv10ClothesDungeon",
+  "room": "Lv10ClothesDungeon_04C",
+  "index": 0,
+  "name": "AreaLevelOpen-6D001C005CF48AC2",
+  "params": [
+   "Field",
+   "Field_08H",
+   "",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   29.25,
+   -1.5,
+   35.25
+  ],
+  "scale": [
+   1.0,
+   1.0,
+   1.0
+  ]
+ },
+ {
+  "level": "Lv10ClothesDungeon",
+  "room": "Lv10ClothesDungeon_08C",
+  "index": 0,
+  "name": "AreaLevelOpen-8D0021005D02472F",
+  "params": [
+   "Field",
+   "Field_08H",
+   "DefaultUpStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   38.25,
+   1.0,
+   92.25
+  ],
+  "scale": [
+   0.9500002264976501,
+   2.0,
+   1.000000238418579
+  ]
+ },
+ {
+  "level": "MadBattersWell01",
+  "room": "MadBattersWell01_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-A10002005CEDF37F",
+  "params": [
+   "Field",
+   "Field_15G",
+   "DefaultUpStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   12.75,
+   0.9975051879882812,
+   9.75
+  ],
+  "scale": [
+   0.9500002264976501,
+   4.0,
+   1.000000238418579
+  ]
+ },
+ {
+  "level": "MadBattersWell02",
+  "room": "MadBattersWell02_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-A10010005CEDFDCC",
+  "params": [
+   "Field",
+   "Field_06C",
+   "DefaultUpStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   12.75,
+   1.0,
+   6.75
+  ],
+  "scale": [
+   0.9500002264976501,
+   4.0,
+   1.000000238418579
+  ]
+ },
+ {
+  "level": "MadBattersWell03",
+  "room": "MadBattersWell03_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-A1003D005CEE120A",
+  "params": [
+   "Field",
+   "Field_01E",
+   "DefaultUpStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   12.75,
+   1.0,
+   6.75
+  ],
+  "scale": [
+   0.9500002264976501,
+   4.0,
+   1.000000238418579
+  ]
+ },
+ {
+  "level": "MadBattersWellEnter",
+  "room": "MadBattersWellEnter_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-A10001005CEF4528",
+  "params": [
+   "Field",
+   "Field_15H",
+   "DefaultUpStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   3.75,
+   0.0,
+   3.75
+  ],
+  "scale": [
+   0.9500002264976501,
+   4.0,
+   1.000000238418579
+  ]
+ },
+ {
+  "level": "MadBattersWellEnter",
+  "room": "MadBattersWellEnter_02B",
+  "index": 0,
+  "name": "AreaLevelOpen-A10006005CEF4558",
+  "params": [
+   "Field",
+   "Field_16J",
+   "DefaultUpStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   27.75,
+   0.0,
+   21.75
+  ],
+  "scale": [
+   0.9500002264976501,
+   4.0,
+   1.000000238418579
+  ]
+ },
+ {
+  "level": "MadamHouse",
+  "room": "MadamHouse_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-6A0086005D0CC42D",
+  "params": [
+   "Field",
+   "Field_11B_a",
+   "RunOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   6.0,
+   1.5,
+   11.0625
+  ],
+  "scale": [
+   3.0,
+   3.0,
+   3.0
+  ]
+ },
+ {
+  "level": "MagicPowderHouse",
+  "room": "MagicPowderHouse_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-6A005A005D0CC429",
+  "params": [
+   "Field",
+   "Field_07F",
+   "RunOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.1299999952316284,
+   13.5
+  ],
+  "scale": [
+   3.0,
+   3.0,
+   3.0
+  ]
+ },
+ {
+  "level": "MamboCave",
+  "room": "MamboCave_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-A10009005D198802",
+  "params": [
+   "Field",
+   "Field_03K",
+   "WaterSideInLeft",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   -2.25,
+   4.869999885559082,
+   0.0
+  ],
+  "scale": [
+   1.5,
+   4.0,
+   1.5
+  ]
+ },
+ {
+  "level": "MamuCave",
+  "room": "MamuCave_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-A1000A005CEF4618",
+  "params": [
+   "Field",
+   "Field_14E",
+   "DefaultUpStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   12.75,
+   0.0,
+   9.75
+  ],
+  "scale": [
+   0.9500002264976501,
+   4.0,
+   1.000000238418579
+  ]
+ },
+ {
+  "level": "MarinTarinHouse",
+  "room": "MarinTarinHouse_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-6D002A005CEDEAC0",
+  "params": [
+   "Field",
+   "Field_11C",
+   "RunOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.1299999952316284,
+   12.0
+  ],
+  "scale": [
+   3.0,
+   3.0,
+   3.0
+  ]
+ },
+ {
+  "level": "MarthaUkuku",
+  "room": "MarthaUkuku_01B",
+  "index": 0,
+  "name": "AreaLevelOpen-A10015005CED1624",
+  "params": [
+   "Field",
+   "Field_12I_a",
+   "DungeonOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   25.5,
+   1.0,
+   12.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "MarthaUkuku",
+  "room": "MarthaUkuku_02C",
+  "index": 0,
+  "name": "AreaLevelOpen-A10002005CED1669",
+  "params": [
+   "Field",
+   "Field_12I_b",
+   "DungeonOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   34.5,
+   1.0,
+   48.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "MarthaUkuku",
+  "room": "MarthaUkuku_03B",
+  "index": 0,
+  "name": "AreaLevelOpen-A10005005CED167F",
+  "params": [
+   "Field",
+   "Field_13I",
+   "DungeonOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   19.5,
+   1.0,
+   60.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "MermaidStatue",
+  "room": "MermaidStatue_02A",
+  "index": 0,
+  "name": "AreaLevelOpen-A10005005CEF473F",
+  "params": [
+   "Field",
+   "Field_15J",
+   "DefaultUpStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   9.75,
+   0.0,
+   20.25
+  ],
+  "scale": [
+   0.9500002264976501,
+   4.0,
+   1.000000238418579
+  ]
+ },
+ {
+  "level": "MoriblinCave",
+  "room": "MoriblinCave_02A",
+  "index": 0,
+  "name": "AreaLevelOpen-A1000C005CED1782",
+  "params": [
+   "Field",
+   "Field_04F",
+   "DungeonOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.0,
+   24.75
+  ],
+  "scale": [
+   3.0,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "MysteriousWoodsCave01",
+  "room": "MysteriousWoodsCave01_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-A10014005CED17C4",
+  "params": [
+   "Field",
+   "Field_06A",
+   "DungeonOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.0,
+   12.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "MysteriousWoodsCave01",
+  "room": "MysteriousWoodsCave01_02B",
+  "index": 0,
+  "name": "AreaLevelOpen-A1000A005CED17D6",
+  "params": [
+   "Field",
+   "Field_07C",
+   "DungeonOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   23.25,
+   1.0,
+   24.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "MysteriousWoodsCave02",
+  "room": "MysteriousWoodsCave02_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-A1002B005CF75715",
+  "params": [
+   "Field",
+   "Field_05C",
+   "DungeonOut",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.0,
+   12.1875
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "PanelLv01TailCave",
+  "room": "PanelLv01TailCave_08D",
+  "index": 0,
+  "name": "AreaLevelOpen-930008005CDB8A43",
+  "params": [
+   "",
+   "",
+   "PanelRetire",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.0,
+   11.625
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   1.5
+  ]
+ },
+ {
+  "level": "PanelLv02BottleGrotto",
+  "room": "PanelLv02BottleGrotto_08C",
+  "index": 0,
+  "name": "AreaLevelOpen-930003005CEFADCB",
+  "params": [
+   "",
+   "",
+   "PanelRetire",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.0,
+   11.625
+  ],
+  "scale": [
+   3.0,
+   2.0,
+   1.5
+  ]
+ },
+ {
+  "level": "PanelLv03KeyCavern",
+  "room": "PanelLv03KeyCavern_08B",
+  "index": 0,
+  "name": "AreaLevelOpen-930007005CDB8E4D",
+  "params": [
+   "",
+   "",
+   "PanelRetire",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.0,
+   11.625
+  ],
+  "scale": [
+   3.0,
+   2.0,
+   1.5
+  ]
+ },
+ {
+  "level": "PanelLv04AnglersTunnel",
+  "room": "PanelLv04AnglersTunnel_08D",
+  "index": 0,
+  "name": "AreaLevelOpen-4D1EF8005CDD0850",
+  "params": [
+   "",
+   "",
+   "PanelRetire",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.0,
+   11.625
+  ],
+  "scale": [
+   2.0,
+   2.0,
+   1.5
+  ]
+ },
+ {
+  "level": "PanelLv05CatfishsMaw",
+  "room": "PanelLv05CatfishsMaw_08H",
+  "index": 0,
+  "name": "AreaLevelOpen-930000005CECE10A",
+  "params": [
+   "",
+   "",
+   "PanelRetire",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.0,
+   11.625
+  ],
+  "scale": [
+   3.0,
+   2.0,
+   1.5
+  ]
+ },
+ {
+  "level": "PanelLv06FaceShrine",
+  "room": "PanelLv06FaceShrine_08D",
+  "index": 0,
+  "name": "AreaLevelOpen-9300F1005D23FF44",
+  "params": [
+   "",
+   "",
+   "PanelRetire",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.0,
+   11.625
+  ],
+  "scale": [
+   3.0,
+   2.0,
+   1.5
+  ]
+ },
+ {
+  "level": "PanelLv07EagleTower",
+  "room": "PanelLv07EagleTower_08B",
+  "index": 0,
+  "name": "AreaLevelOpen-930016005CDB9D94",
+  "params": [
+   "",
+   "",
+   "PanelRetire",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.0,
+   11.625
+  ],
+  "scale": [
+   3.0,
+   2.0,
+   1.5
+  ]
+ },
+ {
+  "level": "PanelLv08TurtleRock",
+  "room": "PanelLv08TurtleRock_08D",
+  "index": 0,
+  "name": "AreaLevelOpen-4D0142005D0A10D0",
+  "params": [
+   "",
+   "",
+   "PanelRetire",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.0,
+   11.625
+  ],
+  "scale": [
+   3.0,
+   2.0,
+   1.5
+  ]
+ },
+ {
+  "level": "PanelLv10ClothesDungeon",
+  "room": "PanelLv10ClothesDungeon_04C",
+  "index": 0,
+  "name": "AreaLevelOpen-8D0040005CF73721",
+  "params": [
+   "Field",
+   "Field_08H",
+   "",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   -0.75,
+   -1.5,
+   -0.75
+  ],
+  "scale": [
+   1.0,
+   1.0,
+   1.0
+  ]
+ },
+ {
+  "level": "PanelLv10ClothesDungeon",
+  "room": "PanelLv10ClothesDungeon_08C",
+  "index": 0,
+  "name": "AreaLevelOpen-8D0285005CF7372E",
+  "params": [
+   "",
+   "",
+   "PanelRetireLv10",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   8.549999237060547,
+   1.5,
+   8.25
+  ],
+  "scale": [
+   1.000000238418579,
+   1.0,
+   0.7000001072883606
+  ]
+ },
+ {
+  "level": "QuadupletHouse",
+  "room": "QuadupletHouse_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-75001B005CF9DDDA",
+  "params": [
+   "Field",
+   "Field_09C_a",
+   "RunOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   6.75,
+   1.1299999952316284,
+   12.375
+  ],
+  "scale": [
+   3.0,
+   3.0,
+   3.0
+  ]
+ },
+ {
+  "level": "QuadupletHouse",
+  "room": "QuadupletHouse_01A",
+  "index": 1,
+  "name": "AreaLevelOpen-750019005CF9DDDA",
+  "params": [
+   "Field",
+   "Field_09C_b",
+   "RunOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   14.25,
+   1.1299999952316284,
+   12.375
+  ],
+  "scale": [
+   3.0,
+   3.0,
+   3.0
+  ]
+ },
+ {
+  "level": "RabbitBigHouse",
+  "room": "RabbitBigHouse_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-6D0007005CF88F5D",
+  "params": [
+   "Field",
+   "Field_13M_a",
+   "RunOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   6.0,
+   1.5,
+   10.3125
+  ],
+  "scale": [
+   3.0,
+   3.0,
+   3.0
+  ]
+ },
+ {
+  "level": "RapidsRideExit",
+  "room": "RapidsRideExit_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-A10003005CF75B8A",
+  "params": [
+   "Field",
+   "Field_03P",
+   "DefaultUpDigStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   6.75,
+   0.0,
+   0.5625
+  ],
+  "scale": [
+   1.0,
+   1.0,
+   1.0
+  ]
+ },
+ {
+  "level": "RapidsRideExit",
+  "room": "RapidsRideExit_02A",
+  "index": 0,
+  "name": "AreaLevelOpen-A1000D005CF75B8A",
+  "params": [
+   "Field",
+   "Field_09P",
+   "DungeonOutShort",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   11.25,
+   1.5,
+   24.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "RapidsRideTicket",
+  "room": "RapidsRideTicket_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-6A00A3005D0CC42E",
+  "params": [
+   "Field",
+   "Field_04P",
+   "RunOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.5,
+   11.8125
+  ],
+  "scale": [
+   3.0,
+   3.0,
+   3.0
+  ]
+ },
+ {
+  "level": "RichardCave",
+  "room": "RichardCave_01B",
+  "index": 0,
+  "name": "AreaLevelOpen-A10005005CED18E7",
+  "params": [
+   "Field",
+   "Field_13G",
+   "DungeonOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   64.5,
+   1.0,
+   12.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "RichardCave",
+  "room": "RichardCave_02A",
+  "index": 0,
+  "name": "AreaLevelOpen-A10005005CEF4856",
+  "params": [
+   "RichardHouse",
+   "RichardHouse_01A_a",
+   "DefaultUpStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   12.75,
+   0.0,
+   21.75
+  ],
+  "scale": [
+   0.9500002264976501,
+   4.0,
+   1.000000238418579
+  ]
+ },
+ {
+  "level": "RichardHouse",
+  "room": "RichardHouse_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-6D0016005D08A044",
+  "params": [
+   "Field",
+   "Field_14G",
+   "RunOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.5,
+   11.4375
+  ],
+  "scale": [
+   3.0,
+   3.0,
+   3.0
+  ]
+ },
+ {
+  "level": "RichardHouse",
+  "room": "RichardHouse_01A",
+  "index": 1,
+  "name": "AreaLevelOpen-6D0014005D08A044",
+  "params": [
+   "RichardCave",
+   "RichardCave_02A",
+   "DefaultDownStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   9.800000190734863,
+   1.125,
+   4.25
+  ],
+  "scale": [
+   0.10000000149011612,
+   1.5,
+   0.10000000149011612
+  ]
+ },
+ {
+  "level": "SchuleDonavitchHouse",
+  "room": "SchuleDonavitchHouse_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-6A0080005D0CC42B",
+  "params": [
+   "Field",
+   "Field_13M_b",
+   "RunOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.5,
+   11.625
+  ],
+  "scale": [
+   3.0,
+   3.0,
+   3.0
+  ]
+ },
+ {
+  "level": "SeashellHouse",
+  "room": "SeashellHouse_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-6D000C005D06F6B9",
+  "params": [
+   "Field",
+   "Field_09K",
+   "",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   0.6499999761581421,
+   1.3799999952316284,
+   0.0
+  ],
+  "scale": [
+   1.5000004768371582,
+   3.0,
+   0.20000006258487701
+  ]
+ },
+ {
+  "level": "Shop",
+  "room": "Shop_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-6A0067005D0CC42A",
+  "params": [
+   "Field",
+   "Field_10D",
+   "RunOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.5,
+   11.625
+  ],
+  "scale": [
+   3.0,
+   3.0,
+   3.0
+  ]
+ },
+ {
+  "level": "Tamaranch01",
+  "room": "Tamaranch01_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-A10006005CED199F",
+  "params": [
+   "Field",
+   "Field_02O_a",
+   "DungeonOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   3.0,
+   1.0,
+   12.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "Tamaranch01",
+  "room": "Tamaranch01_01C",
+  "index": 0,
+  "name": "AreaLevelOpen-A1002E005CED19A0",
+  "params": [
+   "Field",
+   "Field_02P_a",
+   "DungeonOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   40.5,
+   1.0,
+   12.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "Tamaranch01",
+  "room": "Tamaranch01_02A",
+  "index": 0,
+  "name": "AreaLevelOpen-A10033005CED19A0",
+  "params": [
+   "Field",
+   "Field_02O_b",
+   "RunOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   12.0,
+   1.0,
+   48.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "Tamaranch01",
+  "room": "Tamaranch01_04B",
+  "index": 0,
+  "name": "AreaLevelOpen-620018005D146CE4",
+  "params": [
+   "Field",
+   "Field_02P_c",
+   "DungeonOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   24.0,
+   1.0,
+   96.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "Tamaranch02",
+  "room": "Tamaranch02_02A",
+  "index": 0,
+  "name": "AreaLevelOpen-A10017005CED1A0A",
+  "params": [
+   "Field",
+   "Field_02J",
+   "DungeonOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   6.0,
+   1.0,
+   24.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "Tamaranch02",
+  "room": "Tamaranch02_02B",
+  "index": 0,
+  "name": "AreaLevelOpen-A10024005CED1A0B",
+  "params": [
+   "Field",
+   "Field_01K_b",
+   "DungeonOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   52.5,
+   1.0,
+   24.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "Tamaranch03",
+  "room": "Tamaranch03_02A",
+  "index": 0,
+  "name": "AreaLevelOpen-A10004005CED1A44",
+  "params": [
+   "Field",
+   "Field_02P_d",
+   "DungeonOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   9.0,
+   1.0,
+   24.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "Tamaranch03",
+  "room": "Tamaranch03_03A",
+  "index": 0,
+  "name": "AreaLevelOpen-A1000A005CED1A44",
+  "params": [
+   "Field",
+   "Field_01P",
+   "DungeonOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   10.5,
+   1.0,
+   60.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "Tamaranch04",
+  "room": "Tamaranch04_01B",
+  "index": 0,
+  "name": "AreaLevelOpen-A10007005CED1A76",
+  "params": [
+   "Field",
+   "Field_01H",
+   "DefaultUpStairsLvJump",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   26.25,
+   2.25,
+   3.75
+  ],
+  "scale": [
+   0.9500002264976501,
+   4.0,
+   1.000000238418579
+  ]
+ },
+ {
+  "level": "Tamaranch04",
+  "room": "Tamaranch04_02D",
+  "index": 0,
+  "name": "AreaLevelOpen-A10045005CED1A78",
+  "params": [
+   "Field",
+   "Field_02I_a",
+   "DungeonOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   52.5,
+   1.0,
+   24.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "Tamaranch04",
+  "room": "Tamaranch04_02E",
+  "index": 0,
+  "name": "AreaLevelOpen-A1008F005CED1A79",
+  "params": [
+   "Field",
+   "Field_02I_b",
+   "DungeonOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   64.5,
+   1.0,
+   24.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "Tamaranch04",
+  "room": "Tamaranch04_03A",
+  "index": 0,
+  "name": "AreaLevelOpen-A100AE005CED1A7A",
+  "params": [
+   "Field",
+   "Field_02H",
+   "RunOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.0,
+   48.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "Tamaranch04",
+  "room": "Tamaranch04_04A",
+  "index": 0,
+  "name": "AreaLevelOpen-A1011E005CED1A7B",
+  "params": [
+   "Field",
+   "Field_02F",
+   "DungeonOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.0,
+   72.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "Tamaranch05",
+  "room": "Tamaranch05_02A",
+  "index": 0,
+  "name": "AreaLevelOpen-A1000F005CED1AE5",
+  "params": [
+   "Field",
+   "Field_02N_a",
+   "DungeonOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   3.0,
+   1.0,
+   24.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "Tamaranch05",
+  "room": "Tamaranch05_02B",
+  "index": 0,
+  "name": "AreaLevelOpen-A1001B005CED1AE6",
+  "params": [
+   "Field",
+   "Field_02N_b",
+   "DungeonOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   25.5,
+   1.0,
+   24.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "Tamaranch05",
+  "room": "Tamaranch05_04A",
+  "index": 0,
+  "name": "AreaLevelOpen-A10034005CED1AE7",
+  "params": [
+   "Field",
+   "Field_01N",
+   "DungeonOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.0,
+   72.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "TelephoneBox01_Ukuku1",
+  "room": "TelephoneBox01_Ukuku1_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-6A0004005D08DE9D",
+  "params": [
+   "Field",
+   "Field_11E",
+   "RunOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.5,
+   12.5625
+  ],
+  "scale": [
+   3.0,
+   3.0,
+   3.0
+  ]
+ },
+ {
+  "level": "TelephoneBox02_Mebe",
+  "room": "TelephoneBox02_Mebe_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-6A0004005D0CC423",
+  "params": [
+   "Field",
+   "Field_12C",
+   "RunOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.5,
+   12.5625
+  ],
+  "scale": [
+   3.0,
+   3.0,
+   3.0
+  ]
+ },
+ {
+  "level": "TelephoneBox03_Kanalet",
+  "room": "TelephoneBox03_Kanalet_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-6A0008005D08DEA3",
+  "params": [
+   "Field",
+   "Field_05L",
+   "RunOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.5,
+   12.5625
+  ],
+  "scale": [
+   3.0,
+   3.0,
+   3.0
+  ]
+ },
+ {
+  "level": "TelephoneBox04_AnimalVillage",
+  "room": "TelephoneBox04_AnimalVillage_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-6A0013005D08DEA4",
+  "params": [
+   "Field",
+   "Field_14L",
+   "RunOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.5,
+   12.5625
+  ],
+  "scale": [
+   3.0,
+   3.0,
+   3.0
+  ]
+ },
+ {
+  "level": "TelephoneBox05_TurtleRock",
+  "room": "TelephoneBox05_TurtleRock_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-6A001D005D08DEA4",
+  "params": [
+   "Field",
+   "Field_02B",
+   "RunOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.5,
+   12.5625
+  ],
+  "scale": [
+   3.0,
+   3.0,
+   3.0
+  ]
+ },
+ {
+  "level": "TelephoneBox06_Goponga",
+  "room": "TelephoneBox06_Goponga_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-6A0021005D08DEA5",
+  "params": [
+   "Field",
+   "Field_04B",
+   "RunOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.5,
+   12.5625
+  ],
+  "scale": [
+   3.0,
+   3.0,
+   3.0
+  ]
+ },
+ {
+  "level": "TelephoneBox07_Ukuku2",
+  "room": "TelephoneBox07_Ukuku2_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-6A002C005D08DEA5",
+  "params": [
+   "Field",
+   "Field_09I",
+   "RunOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.5,
+   12.5625
+  ],
+  "scale": [
+   3.0,
+   3.0,
+   3.0
+  ]
+ },
+ {
+  "level": "TelephoneBox08_Martha",
+  "room": "TelephoneBox08_Martha_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-6A0032005D08DEA6",
+  "params": [
+   "Field",
+   "Field_15I",
+   "RunOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.5,
+   12.5625
+  ],
+  "scale": [
+   3.0,
+   3.0,
+   3.0
+  ]
+ },
+ {
+  "level": "TownWell",
+  "room": "TownWell_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-4A0003005CECC67C",
+  "params": [
+   "Field",
+   "Field_11A",
+   "DefaultUpStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   8.25,
+   1.0,
+   5.25
+  ],
+  "scale": [
+   0.9500002264976501,
+   2.0,
+   1.000000238418579
+  ]
+ },
+ {
+  "level": "TracyHouse",
+  "room": "TracyHouse_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-6A00C0005D0CC431",
+  "params": [
+   "Field",
+   "Field_05F",
+   "RunOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.125,
+   12.0
+  ],
+  "scale": [
+   3.0,
+   3.0,
+   3.0
+  ]
+ },
+ {
+  "level": "TurtleRockEnter",
+  "room": "TurtleRockEnter_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-A10001005CEF4A5B",
+  "params": [
+   "Field",
+   "Field_01D",
+   "DefaultUpStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   2.25,
+   0.0,
+   5.25
+  ],
+  "scale": [
+   0.9500002264976501,
+   4.0,
+   1.000000238418579
+  ]
+ },
+ {
+  "level": "TurtleRockEnter",
+  "room": "TurtleRockEnter_02A",
+  "index": 0,
+  "name": "AreaLevelOpen-A1000A005CED1B27",
+  "params": [
+   "Field",
+   "Field_02D",
+   "DungeonOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   10.5,
+   1.0,
+   24.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "UkukuCave01",
+  "room": "UkukuCave01_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-A1000A005CED1B3D",
+  "params": [
+   "Field",
+   "Field_09E",
+   "DungeonOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.0,
+   12.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "UkukuCave02",
+  "room": "UkukuCave02_02A",
+  "index": 0,
+  "name": "AreaLevelOpen-A1000D005CED1B53",
+  "params": [
+   "Field",
+   "Field_09G",
+   "DungeonOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   6.0,
+   1.0,
+   24.75
+  ],
+  "scale": [
+   1.5,
+   2.0,
+   3.0
+  ]
+ },
+ {
+  "level": "UlriraHouse",
+  "room": "UlriraHouse_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-6A00CA005D0CC437",
+  "params": [
+   "Field",
+   "Field_12B",
+   "RunOut",
+   1,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   7.5,
+   1.5,
+   12.75
+  ],
+  "scale": [
+   3.0,
+   3.0,
+   3.0
+  ]
+ },
+ {
+  "level": "UnderGrave",
+  "room": "UnderGrave_01A",
+  "index": 0,
+  "name": "AreaLevelOpen-A10015005CEF4A78",
+  "params": [
+   "Field",
+   "Field_08F",
+   "DefaultUpStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   5.25,
+   0.0,
+   5.25
+  ],
+  "scale": [
+   0.9500002264976501,
+   4.0,
+   1.000000238418579
+  ]
+ },
+ {
+  "level": "UnderGrave",
+  "room": "UnderGrave_01B",
+  "index": 0,
+  "name": "AreaLevelOpen-A10073005CEF4A79",
+  "params": [
+   "Field",
+   "Field_08G",
+   "DefaultUpStairsLvJump",
+   0,
+   "",
+   "",
+   "",
+   ""
+  ],
+  "pos": [
+   20.25,
+   0.0,
+   2.25
+  ],
+  "scale": [
+   0.949999988079071,
+   4.0,
+   1.0
+  ]
+ }
+]

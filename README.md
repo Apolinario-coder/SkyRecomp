@@ -1,0 +1,90 @@
+# Sky Recomp - Native PC Recompilation
+
+**Sky Recomp** is a native PC port (Windows x86-64 with Vulkan) based on static AArch64 -> C recompilation of *The Legend of Zelda: Skyward Sword HD*.
+
+> [!IMPORTANT]
+> **No copyrighted game files, code, audio, textures, or fonts from Nintendo are included in this repository or in its distributed binaries.**
+> This project consists exclusively of the open-source static recompiler tooling and the Vulkan/SDL3 compatibility runtime.
+> Users must legally own and dump their own Nintendo Switch game copy (v1.0.0) and provide their cryptographic keys (`prod.keys`).
+
+![The Legend of Zelda: Skyward Sword HD running natively on PC via Vulkan](docs/gameplay.png)
+
+---
+
+## 🎮 Port Features
+
+- **Native C/C++ Execution**: This is NOT an emulator (no JIT or dynamic interpretation). Guest AArch64 (ARM64) machine instructions are statically decompiled and lifted to native C code (`-march=x86-64-v3` with AVX2 and FMA).
+- **Vulkan 1.3/1.4 Graphics Backend**: Nintendo Switch NVN (Nvidia Maxwell Tegra) API calls and shaders are translated directly into high-performance Vulkan pipelines for NVIDIA, AMD, and Intel GPUs.
+- **1:1 Virtual Memory Layout**: The runtime reserves a 12.5 GB window at `0x7000000000` matching the 39-bit guest address space, enabling pointer operations with zero address-translation overhead.
+- **SDL3 Input & Controller Support**: Seamless support for modern gamepads (Xbox, DualSense/DualShock, Nintendo Pro Controller) and keyboard/mouse. Includes standard button-controls mapping (right stick sword combat).
+- **Solid 60 FPS Performance**: Harnesses modern multi-core CPUs and dedicated desktop GPUs for rock-solid 60.0 FPS gameplay at native resolutions (1080p, 1440p, 4K, and Ultrawide).
+- **Embedded Setup GUI**: No batch scripts or command-line steps required. The standalone launcher GUI allows picking your ROM and keys on first launch and boots directly to PLAY on subsequent launches.
+
+---
+
+## 🏗️ Architecture & Pipeline
+
+```
+[ User ROM (.nsp / .xci) + prod.keys ]
+                  │
+                  ▼ (extract_nsp.py)
+[ extracted/exefs (main, sdk, subsdk0, subsdk1) + extracted/romfs.bin ]
+                  │
+                  ▼ (tools/gen.py - AArch64 -> C Lifter)
+[ ssh_generated/ (1,400+ C translation units with 155,000+ functions) ]
+                  │
+                  ▼ (build_game.py - Clang C11)
+[ extracted/skygame.dll (Native game library ~274 MB) ]
+                  │
+                  ▼ (skyrecomp.exe)
+[ Game running natively on PC via Vulkan! ]
+```
+
+---
+
+## 🚀 Getting Started
+
+### System Requirements
+- **Operating System**: Windows 10/11 64-bit
+- **Processor**: x86-64 CPU with AVX2 support (Intel Haswell / 4th Gen Core or newer, AMD Ryzen or newer)
+- **Graphics Card**: Vulkan 1.3+ compatible GPU (NVIDIA GeForce 900 series+, AMD Radeon RX 400+, Intel Arc / Iris Xe)
+- **RAM**: 8 GB minimum (16 GB recommended)
+- **Storage**: ~15 GB free space for extracted game assets
+
+### How to Play (Release Package)
+1. Download the release `.zip` package and extract it to a folder.
+2. Double-click `skyrecomp.exe`.
+3. On the Setup screen:
+   - Click **Nintendo Switch ROM** and select your dumped `.nsp` or `.xci` file.
+   - Click **Switch Keys** and select your dumped `prod.keys` file.
+4. Click **Extract & Play**.
+   - The launcher will extract the game data (`romfs.bin`) in ~15 seconds and launch the game automatically.
+5. On subsequent runs, `skyrecomp.exe` opens directly with the **PLAY** button.
+
+### Developer Setup (Compiling from Source)
+If you wish to build or modify the runtime from source:
+1. Ensure **MSYS2 UCRT64** with `clang`, `lld`, and `make` is installed.
+2. Ensure **Python 3.10+** with `cryptography` is installed (`pip install cryptography`).
+3. Compile the launcher runtime:
+   ```bash
+   make skyrecomp.exe
+   ```
+4. Extract game files and compile the game library:
+   ```bash
+   python extract_nsp.py "<path_to_nsp>" "<path_to_keys>"
+   python build_game.py
+   ```
+
+---
+
+## 🔍 Reverse Engineering Highlights
+
+During the static analysis and debugging of the Skyward Sword HD binary, several critical architectural discoveries were addressed:
+- **ARM64 Jump Tables (Switch-Cases)**: The Nintendo AArch64 toolchain encodes large switch-cases using `ADR x9, <base>` + `LDRB w10, [table, index]` + `ADD x9, x9, w10, LSL #2` + `BR x9`. Previous lifters mistook the `ADR` instruction for an external function pointer reference, artificially fragmenting 1,172 functions and causing dynamic dispatch lookup failures (`FATAL: no function at 7000f11558`). The updated lifter in `tools/gen.py` detects jump table bases, keeping all switch branches inside the same translation unit and converting them to direct native jumps.
+- **Multi-Module Dispatch**: Skyward Sword HD splits executable code across four distinct modules (`main`, `sdk`, `subsdk0`, `subsdk1`). The native runtime implements cross-module function tables and address translation across each module's respective base address space.
+
+---
+
+## ⚖️ Legal Notice
+
+This project is an independent open-source recreation created for educational and interoperability purposes. It is not affiliated with, endorsed by, or sponsored by Nintendo. *The Legend of Zelda* and *The Legend of Zelda: Skyward Sword* are registered trademarks of Nintendo. No copyrighted material or proprietary game assets are hosted or distributed in this repository.

@@ -1,0 +1,50 @@
+# Gitignore for Sky Recomp (Native PC Port)
+
+# Proprietary game files and keys (NEVER commit to GitHub)
+Rom Game/*.nsp
+Rom Game/*.xci
+Rom Game/*.keys
+Rom Game/*.bin
+!Rom Game/INSTRUCTIONS.txt
+!Rom Game/.gitkeep
+
+extracted/romfs.bin
+extracted/romfs/
+extracted/exefs/
+extracted/skygame.dll
+extracted/*.o
+extracted/*.id
+!extracted/INSTRUCTIONS.txt
+!extracted/.gitkeep
+
+# Locally generated recompiled source code
+ssh_generated/
+
+# Build artifacts, caches, and local saves
+build/
+cache/
+save/
+scratch/
+
+# Local user configuration
+skyrecomp.ini
+larecomp.ini
+
+# Logs and test captures
+*.log
+*.wav
+*.bin
+*.csv
+
+# Python and system caches
+__pycache__/
+*.pyc
+venv/
+tools/venv/
+.DS_Store
+Thumbs.db
+.vs/
+.vscode/
+
+# Downloaded compilers
+zig/

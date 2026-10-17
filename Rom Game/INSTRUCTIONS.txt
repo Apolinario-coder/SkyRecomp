@@ -1,0 +1,5 @@
+Place your legally obtained Nintendo Switch ROM and keys here:
+- ROM: The Legend of Zelda Skyward Sword HD (.nsp or .xci)
+- Keys: prod.keys and title.keys (from your dumped console)
+
+When you start skyrecomp.exe, you can select these files directly from the Setup screen.

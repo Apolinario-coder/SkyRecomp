@@ -1,0 +1,2410 @@
+{
+ "sale": {
+  "room": null,
+  "level": null,
+  "region": "sale-house",
+  "subtype": "npc",
+  "cond": "dog-food"
+ },
+ "south-bay-dig": {
+  "room": null,
+  "level": null,
+  "region": "animal-village",
+  "subtype": "dig",
+  "cond": "shovel"
+ },
+ "mermaid-cave": {
+  "room": null,
+  "level": null,
+  "region": "animal-village",
+  "subtype": "standing",
+  "cond": "hookshot & mermaid-scale"
+ },
+ "animal-village-northwest": {
+  "room": "Field_13L",
+  "level": "Field",
+  "region": "animal-village",
+  "subtype": "standing",
+  "cond": "break-bush"
+ },
+ "animal-village-cave": {
+  "room": "AnimalVillageCave_01A",
+  "level": "AnimalVillageCave",
+  "region": "animal-village",
+  "subtype": "standing",
+  "cond": "break-bush & bombs & ((hookshot & feather) | rooster)"
+ },
+ "christine-trade": {
+  "room": null,
+  "level": null,
+  "region": "animal-village",
+  "subtype": "npc",
+  "cond": "hibiscus"
+ },
+ "christine-grateful": {
+  "room": null,
+  "level": null,
+  "region": "animal-village",
+  "subtype": "npc",
+  "cond": "hibiscus & letter & mr-write-house"
+ },
+ "invisible-zora": {
+  "room": null,
+  "level": null,
+  "region": "animal-village",
+  "subtype": "npc",
+  "cond": "magnifying-lens"
+ },
+ "chef-bear": {
+  "room": null,
+  "level": null,
+  "region": "animal-village",
+  "subtype": "npc",
+  "cond": "honeycomb"
+ },
+ "grandma-yahoo": {
+  "room": null,
+  "level": null,
+  "region": "animal-village",
+  "subtype": "npc",
+  "cond": "broom"
+ },
+ "beach-chest": {
+  "room": "Field_15F",
+  "level": "Field",
+  "region": "beach",
+  "subtype": "chest",
+  "cond": "bracelet"
+ },
+ "beach-dig": {
+  "room": null,
+  "level": null,
+  "region": "beach",
+  "subtype": "dig",
+  "cond": "shovel"
+ },
+ "washed-up": {
+  "room": null,
+  "level": null,
+  "region": "beach",
+  "subtype": "standing",
+  "cond": null
+ },
+ "goriya-trader": {
+  "room": null,
+  "level": null,
+  "region": "beach",
+  "subtype": "npc",
+  "cond": "bombs & magnifying-lens & (shovel | bow | rod) & (boomerang | sword | bracelet | (shovel & rod))"
+ },
+ "dampe-page-1": {
+  "room": null,
+  "level": null,
+  "region": "wasteland",
+  "subtype": "npc",
+  "cond": "dampe-1-1 & dampe-1-2 & dampe-1-3 & dampe-1-4"
+ },
+ "dampe-heart-challenge": {
+  "room": null,
+  "level": null,
+  "region": "wasteland",
+  "subtype": "npc",
+  "cond": "dampe-1-4"
+ },
+ "dampe-page-2": {
+  "room": null,
+  "level": null,
+  "region": "wasteland",
+  "subtype": "npc",
+  "cond": "dampe-2-1 & dampe-2-2 & dampe-2-3 & dampe-2-4"
+ },
+ "dampe-bottle-challenge": {
+  "room": null,
+  "level": null,
+  "region": "wasteland",
+  "subtype": "npc",
+  "cond": "dampe-3-2"
+ },
+ "dampe-final": {
+  "room": null,
+  "level": null,
+  "region": "wasteland",
+  "subtype": "npc",
+  "cond": "dampe-1-1 & dampe-1-2 & dampe-1-3 & dampe-1-4 & dampe-2-1 & dampe-2-2 & dampe-2-3 & dampe-2-4 & dampe-3-1 & dampe-3-2 & dampe-3-3 & dampe-3-4"
+ },
+ "taltal-entrance-blocks": {
+  "room": "Tamaranch04_03B",
+  "level": "Tamaranch04",
+  "region": "wasteland",
+  "subtype": "standing",
+  "cond": "bracelet & break-crystal"
+ },
+ "taltal-entrance-chest": {
+  "room": "Tamaranch04_02D",
+  "level": "Tamaranch04",
+  "region": "wasteland",
+  "subtype": "chest",
+  "cond": "bracelet & (hookshot | rooster) & break-crystal"
+ },
+ "taltal-east-left-chest": {
+  "room": "Field_02I",
+  "level": "Field",
+  "region": "wasteland",
+  "subtype": "chest",
+  "cond": "bracelet & break-crystal"
+ },
+ "wasteland-dig": {
+  "room": null,
+  "level": null,
+  "region": "wasteland",
+  "subtype": "dig",
+  "cond": "shovel"
+ },
+ "north-wasteland": {
+  "room": "Field_05H",
+  "level": "Field",
+  "region": "wasteland",
+  "subtype": "standing",
+  "cond": "feather | hookshot | rooster"
+ },
+ "north-of-moblin-cave": {
+  "room": null,
+  "level": null,
+  "region": "wasteland",
+  "subtype": "hidden",
+  "cond": "bracelet"
+ },
+ "lanmola": {
+  "room": null,
+  "level": null,
+  "region": "desert",
+  "subtype": "boss",
+  "cond": "kill-lanmola"
+ },
+ "desert-cave": {
+  "room": "LanmolaCave_01A",
+  "level": "LanmolaCave",
+  "region": "desert",
+  "subtype": "standing",
+  "cond": "bombs"
+ },
+ "walrus": {
+  "room": null,
+  "level": null,
+  "region": "desert",
+  "subtype": "npc",
+  "cond": "ocarina & song-ballad"
+ },
+ "desert-dig": {
+  "room": null,
+  "level": null,
+  "region": "desert",
+  "subtype": "dig",
+  "cond": "shovel"
+ },
+ "desert-south": {
+  "room": null,
+  "level": null,
+  "region": "desert",
+  "subtype": "hidden",
+  "cond": "bracelet"
+ },
+ "ghost-reward": {
+  "room": null,
+  "level": null,
+  "region": "ghost-grave",
+  "subtype": "npc",
+  "cond": "surf-harp"
+ },
+ "ghost-grave-dig": {
+  "room": null,
+  "level": null,
+  "region": "ghost-grave",
+  "subtype": "dig",
+  "cond": "shovel & break-bush"
+ },
+ "graveyard-cave": {
+  "room": "UnderGrave_01B",
+  "level": "UnderGrave",
+  "region": "ghost-grave",
+  "subtype": "standing",
+  "cond": "(bombs & hookshot & feather) | rooster"
+ },
+ "ghost-house-pot": {
+  "room": null,
+  "level": null,
+  "region": "ghost-house",
+  "subtype": "hidden",
+  "cond": "break-pot"
+ },
+ "taltal-heights-hole": {
+  "room": null,
+  "level": null,
+  "region": "heights",
+  "subtype": "bomb-hole",
+  "cond": "bombs"
+ },
+ "kanalet-crow": {
+  "room": "Field_06I",
+  "level": "Field",
+  "region": "kanalet-outside",
+  "subtype": "enemy",
+  "cond": "kill-crow & (bombs | bracelet)"
+ },
+ "kanalet-mad-bomber": {
+  "room": "Field_06K",
+  "level": "Field",
+  "region": "kanalet-outside",
+  "subtype": "enemy",
+  "cond": "kill-mad-bomber"
+ },
+ "kanalet-kill-room": {
+  "room": "KanaletCastle_02A",
+  "level": "KanaletCastle",
+  "region": "kanalet-inside",
+  "subtype": "drop",
+  "cond": "kill-darknut-spear & kill-zol-red"
+ },
+ "kanalet-bombed-guard": {
+  "room": "KanaletCastle_01C",
+  "level": "KanaletCastle",
+  "region": "kanalet-inside",
+  "subtype": "enemy",
+  "cond": "bombs & kill-darknut-shield"
+ },
+ "kanalet-final-guard": {
+  "room": "KanaletCastle_01D",
+  "level": "KanaletCastle",
+  "region": "kanalet-inside",
+  "subtype": "enemy",
+  "cond": "bracelet & kill-darknut-flail"
+ },
+ "dream-shrine-right": {
+  "room": "DreamShrine_01B",
+  "level": "DreamShrine",
+  "region": "dream-shrine",
+  "subtype": "chest",
+  "cond": "kill-arm-mimic"
+ },
+ "dream-shrine-left": {
+  "room": null,
+  "level": null,
+  "region": "dream-shrine",
+  "subtype": "standing",
+  "cond": "break-obstacle & kill-arm-mimic"
+ },
+ "mabe-bushes": {
+  "room": null,
+  "level": null,
+  "region": "mabe",
+  "subtype": "hidden",
+  "cond": "break-bush"
+ },
+ "doghouse-dig": {
+  "room": null,
+  "level": null,
+  "region": "mabe",
+  "subtype": "dig",
+  "cond": "shovel"
+ },
+ "mabe-well": {
+  "room": "TownWell_01A",
+  "level": "TownWell",
+  "region": "mabe",
+  "subtype": "standing",
+  "cond": "break-bush"
+ },
+ "fishing-orange": {
+  "room": null,
+  "level": null,
+  "region": "mabe",
+  "subtype": "npc",
+  "cond": "can-farm-rupees"
+ },
+ "fishing-50": {
+  "room": null,
+  "level": null,
+  "region": "mabe",
+  "subtype": "npc",
+  "cond": "can-farm-rupees"
+ },
+ "fishing-100": {
+  "room": null,
+  "level": null,
+  "region": "mabe",
+  "subtype": "npc",
+  "cond": "can-farm-rupees & (wind-marimba | coral-triangle | fast-fishing)"
+ },
+ "fishing-150": {
+  "room": null,
+  "level": null,
+  "region": "mabe",
+  "subtype": "npc",
+  "cond": "can-farm-rupees & (coral-triangle | fast-fishing)"
+ },
+ "fishing-cheep-cheep": {
+  "room": null,
+  "level": null,
+  "region": "mabe",
+  "subtype": "npc",
+  "cond": "can-farm-rupees & (surf-harp | fast-fishing)"
+ },
+ "fishing-ol-baron": {
+  "room": null,
+  "level": null,
+  "region": "mabe",
+  "subtype": "npc",
+  "cond": "can-farm-rupees & (coral-triangle | fast-fishing)"
+ },
+ "fishing-loose": {
+  "room": null,
+  "level": null,
+  "region": "mabe",
+  "subtype": "standing",
+  "cond": "can-farm-rupees"
+ },
+ "tarin": {
+  "room": null,
+  "level": null,
+  "region": "mabe",
+  "subtype": "npc",
+  "cond": null
+ },
+ "marin": {
+  "room": null,
+  "level": null,
+  "region": "mabe",
+  "subtype": "npc",
+  "cond": "ocarina"
+ },
+ "shop-slot3-1st": {
+  "room": null,
+  "level": null,
+  "region": "mabe",
+  "subtype": "shop",
+  "cond": "can-shop"
+ },
+ "shop-slot3-2nd": {
+  "room": null,
+  "level": null,
+  "region": "mabe",
+  "subtype": "shop",
+  "cond": "can-shop"
+ },
+ "shop-slot5-1st": {
+  "room": null,
+  "level": null,
+  "region": "mabe",
+  "subtype": "shop",
+  "cond": "can-shop & (D0-clear | free-shop)"
+ },
+ "shop-slot5-2nd": {
+  "room": null,
+  "level": null,
+  "region": "mabe",
+  "subtype": "shop",
+  "cond": "can-shop & (D0-clear | free-shop)"
+ },
+ "shop-slot5-3rd": {
+  "room": null,
+  "level": null,
+  "region": "mabe",
+  "subtype": "shop",
+  "cond": "can-shop & (coral-triangle | free-shop)"
+ },
+ "shop-slot5-4th": {
+  "room": null,
+  "level": null,
+  "region": "mabe",
+  "subtype": "shop",
+  "cond": "can-shop & (thunder-drum | free-shop)"
+ },
+ "shop-slot5-5th": {
+  "room": null,
+  "level": null,
+  "region": "mabe",
+  "subtype": "shop",
+  "cond": "can-shop & (thunder-drum | free-shop)"
+ },
+ "shop-slot5-6th": {
+  "room": null,
+  "level": null,
+  "region": "mabe",
+  "subtype": "shop",
+  "cond": "can-shop & (thunder-drum | free-shop)"
+ },
+ "shop-slot5-7th": {
+  "room": null,
+  "level": null,
+  "region": "mabe",
+  "subtype": "shop",
+  "cond": "can-shop & (thunder-drum | free-shop)"
+ },
+ "shop-slot6": {
+  "room": null,
+  "level": null,
+  "region": "mabe",
+  "subtype": "shop",
+  "cond": "can-shop"
+ },
+ "mamasha": {
+  "room": null,
+  "level": null,
+  "region": "mabe",
+  "subtype": "npc",
+  "cond": "yoshi-doll"
+ },
+ "ciao-ciao": {
+  "room": null,
+  "level": null,
+  "region": "mabe",
+  "subtype": "npc",
+  "cond": "ribbon"
+ },
+ "tail-cave-bonk-tree": {
+  "room": null,
+  "level": null,
+  "region": "mabe",
+  "subtype": "hidden",
+  "cond": "boots"
+ },
+ "beach-bonk-tree": {
+  "room": null,
+  "level": null,
+  "region": "mabe",
+  "subtype": "hidden",
+  "cond": "boots"
+ },
+ "armos-cave": {
+  "room": "ArmosShrineCave_01A",
+  "level": "ArmosShrineCave",
+  "region": "armos-maze",
+  "subtype": "chest",
+  "cond": null
+ },
+ "rock-maze": {
+  "room": null,
+  "level": null,
+  "region": "armos-maze",
+  "subtype": "hidden",
+  "cond": "bracelet"
+ },
+ "armos-knight": {
+  "room": null,
+  "level": null,
+  "region": "armos-maze",
+  "subtype": "boss",
+  "cond": "kill-armos-knight"
+ },
+ "goponga-cave-left": {
+  "room": "GopongaCave_01A",
+  "level": "GopongaCave",
+  "region": "mr-write-house",
+  "subtype": "chest",
+  "cond": "feather"
+ },
+ "goponga-cave-right": {
+  "room": "GopongaCave_01B",
+  "level": "GopongaCave",
+  "region": "mr-write-house",
+  "subtype": "chest",
+  "cond": "break-skull"
+ },
+ "goponga-west-dig": {
+  "room": null,
+  "level": null,
+  "region": "mr-write-house",
+  "subtype": "dig",
+  "cond": "break-bush & shovel"
+ },
+ "mr-write": {
+  "room": null,
+  "level": null,
+  "region": "mr-write-house",
+  "subtype": "npc",
+  "cond": "letter"
+ },
+ "pond-island": {
+  "room": null,
+  "level": null,
+  "region": "plains",
+  "subtype": "hidden",
+  "cond": "break-bush & cross-water"
+ },
+ "southwest-bay-bush": {
+  "room": null,
+  "level": null,
+  "region": "plains",
+  "subtype": "hidden",
+  "cond": "break-bush"
+ },
+ "beside-seashell-mansion": {
+  "room": null,
+  "level": null,
+  "region": "plains",
+  "subtype": "hidden",
+  "cond": "break-bush"
+ },
+ "small-coast-island": {
+  "room": null,
+  "level": null,
+  "region": "plains",
+  "subtype": "hidden",
+  "cond": "break-bush & cross-water"
+ },
+ "above-cave-dig": {
+  "room": null,
+  "level": null,
+  "region": "plains",
+  "subtype": "dig",
+  "cond": "bombs & (feather | rooster) & shovel"
+ },
+ "above-d3": {
+  "room": null,
+  "level": null,
+  "region": "plains",
+  "subtype": "dig",
+  "cond": "(cross-water | feather) & shovel"
+ },
+ "under-skull-rock": {
+  "room": null,
+  "level": null,
+  "region": "plains",
+  "subtype": "dig",
+  "cond": "bombs & shovel"
+ },
+ "ukuku-cave-west-chest": {
+  "room": "UkukuCave01_01A",
+  "level": "UkukuCave01",
+  "region": "plains",
+  "subtype": "chest",
+  "cond": null
+ },
+ "ukuku-cave-west-loose": {
+  "room": "UkukuCave01_01A",
+  "level": "UkukuCave01",
+  "region": "plains",
+  "subtype": "standing",
+  "cond": "break-skull"
+ },
+ "ukuku-cave-east-chest": {
+  "room": "UkukuCave02_02A",
+  "level": "UkukuCave02",
+  "region": "plains",
+  "subtype": "chest",
+  "cond": "break-obstacle & bombs"
+ },
+ "ukuku-cave-east-loose": {
+  "room": "UkukuCave02_01B",
+  "level": "UkukuCave02",
+  "region": "plains",
+  "subtype": "standing",
+  "cond": "break-obstacle & bombs"
+ },
+ "mad-batter-bay": {
+  "room": null,
+  "level": null,
+  "region": "plains",
+  "subtype": "npc",
+  "cond": "(((rooster | feather) & (boomerang | rod)) | (feather & sword)) & cross-water & powders"
+ },
+ "bay-passage-sunken": {
+  "room": "MadBattersWellEnter_01B",
+  "level": "MadBattersWellEnter",
+  "region": "plains",
+  "subtype": "underwater",
+  "cond": "(((rooster | feather) & (boomerang | rod)) | (feather & sword)) & flippers"
+ },
+ "river-crossing-cave": {
+  "room": "AnimalVillageEnter_01B",
+  "level": "AnimalVillageEnter",
+  "region": "plains",
+  "subtype": "underwater",
+  "cond": "break-bush & flippers"
+ },
+ "kiki": {
+  "room": null,
+  "level": null,
+  "region": "plains",
+  "subtype": "npc",
+  "cond": "bananas"
+ },
+ "tarin-ukuku": {
+  "room": null,
+  "level": null,
+  "region": "plains",
+  "subtype": "standing",
+  "cond": "stick"
+ },
+ "kanalet-south-cave": {
+  "room": "KanaletCastleSouthCave_01A",
+  "level": "KanaletCastleSouthCave",
+  "region": "plains",
+  "subtype": "chest",
+  "cond": "rooster | (hookshot & (flippers | (ocarina & song-mambo)))"
+ },
+ "plains-rock-maze": {
+  "room": null,
+  "level": null,
+  "region": "plains",
+  "subtype": "hidden",
+  "cond": "bracelet"
+ },
+ "ukuku-bonk-tree": {
+  "room": null,
+  "level": null,
+  "region": "plains",
+  "subtype": "hidden",
+  "cond": "boots"
+ },
+ "5-seashell-reward": {
+  "room": null,
+  "level": null,
+  "region": "plains",
+  "subtype": "npc",
+  "cond": "seashell:5"
+ },
+ "15-seashell-reward": {
+  "room": null,
+  "level": null,
+  "region": "plains",
+  "subtype": "npc",
+  "cond": "seashell:15"
+ },
+ "30-seashell-reward": {
+  "room": null,
+  "level": null,
+  "region": "plains",
+  "subtype": "npc",
+  "cond": "seashell:30"
+ },
+ "40-seashell-reward": {
+  "room": null,
+  "level": null,
+  "region": "plains",
+  "subtype": "npc",
+  "cond": "seashell:40"
+ },
+ "50-seashell-reward": {
+  "room": null,
+  "level": null,
+  "region": "plains",
+  "subtype": "npc",
+  "cond": "seashell:50"
+ },
+ "rapids-west-island": {
+  "room": "Field_06M",
+  "level": "Field",
+  "region": "rapids",
+  "subtype": "standing",
+  "cond": "hookshot"
+ },
+ "rapids-middle-island": {
+  "room": "Field_06N",
+  "level": "Field",
+  "region": "rapids",
+  "subtype": "chest",
+  "cond": null
+ },
+ "rapids-east-island": {
+  "room": null,
+  "level": null,
+  "region": "rapids",
+  "subtype": "dig",
+  "cond": "hookshot & shovel"
+ },
+ "rapids-south-island": {
+  "room": "Field_07M",
+  "level": "Field",
+  "region": "rapids",
+  "subtype": "chest",
+  "cond": "D6-2A"
+ },
+ "rapids-race-45": {
+  "room": null,
+  "level": null,
+  "region": "rapids",
+  "subtype": "npc",
+  "cond": null
+ },
+ "rapids-race-35": {
+  "room": null,
+  "level": null,
+  "region": "rapids",
+  "subtype": "npc",
+  "cond": "hookshot"
+ },
+ "rapids-race-30": {
+  "room": null,
+  "level": null,
+  "region": "rapids",
+  "subtype": "npc",
+  "cond": "hookshot"
+ },
+ "rapids-ascent-cave": {
+  "room": "RapidsRideExit_01A",
+  "level": "RapidsRideExit",
+  "region": "rapids",
+  "subtype": "standing",
+  "cond": "hookshot & cross-water"
+ },
+ "mermaid-martha": {
+  "room": null,
+  "level": null,
+  "region": "river",
+  "subtype": "npc",
+  "cond": "flippers & necklace"
+ },
+ "bay-fisherman": {
+  "room": null,
+  "level": null,
+  "region": "river",
+  "subtype": "npc",
+  "cond": "flippers & fishing-hook"
+ },
+ "kanalet-moat-north": {
+  "room": "Field_04I",
+  "level": "Field",
+  "region": "river",
+  "subtype": "underwater",
+  "cond": "flippers"
+ },
+ "kanalet-moat-south": {
+  "room": "Field_08J",
+  "level": "Field",
+  "region": "river",
+  "subtype": "underwater",
+  "cond": "flippers"
+ },
+ "south-bay-sunken": {
+  "room": "Field_15J",
+  "level": "Field",
+  "region": "river",
+  "subtype": "underwater",
+  "cond": "flippers"
+ },
+ "mamu": {
+  "room": null,
+  "level": null,
+  "region": "sign-maze",
+  "subtype": "npc",
+  "cond": "(hookshot | rooster) & (bracelet | open-mamu) & ocarina & can-farm-rupees"
+ },
+ "swamp-chest": {
+  "room": "Field_04E",
+  "level": "Field",
+  "region": "swamp",
+  "subtype": "chest",
+  "cond": "kill-big-flower"
+ },
+ "taltal-left-ascent-cave": {
+  "room": "Tamaranch02_01B",
+  "level": "Tamaranch02",
+  "region": "taltal-east-0",
+  "subtype": "chest",
+  "cond": null
+ },
+ "papahl": {
+  "room": null,
+  "level": null,
+  "region": "taltal-east-0",
+  "subtype": "npc",
+  "cond": "pineapple"
+ },
+ "taltal-bomb-hole": {
+  "room": null,
+  "level": null,
+  "region": "taltal-east-1",
+  "subtype": "bomb-hole",
+  "cond": "bombs"
+ },
+ "taltal-rooster-cave": {
+  "room": null,
+  "level": null,
+  "region": "taltal-east-1",
+  "subtype": "standing",
+  "cond": "rooster"
+ },
+ "taltal-crossing-cave": {
+  "room": "Tamaranch04_02C",
+  "level": "Tamaranch04",
+  "region": "taltal-east-1",
+  "subtype": "standing",
+  "cond": "(hookshot | rooster) & break-bush & bombs"
+ },
+ "taltal-east-bridge": {
+  "room": null,
+  "level": null,
+  "region": "taltal-east-1",
+  "subtype": "hidden",
+  "cond": "(feather | rooster) & bracelet"
+ },
+ "taltal-sunken": {
+  "room": "Field_02M",
+  "level": "Field",
+  "region": "taltal-east-1",
+  "subtype": "underwater",
+  "cond": "flippers"
+ },
+ "taltal-ledge-chest": {
+  "room": "Field_02N",
+  "level": "Field",
+  "region": "taltal-east-2",
+  "subtype": "chest",
+  "cond": "bombs"
+ },
+ "taltal-5-chest-puzzle": {
+  "room": "Tamaranch05_04A",
+  "level": "Tamaranch05",
+  "region": "taltal-east-2",
+  "subtype": "chest",
+  "cond": "bombs"
+ },
+ "manbo": {
+  "room": null,
+  "level": null,
+  "region": "taltal-river",
+  "subtype": "npc",
+  "cond": "flippers & ocarina"
+ },
+ "taltal-east-drop": {
+  "room": "EagleTowerExit_01A",
+  "level": "EagleTowerExit",
+  "region": "taltal-river",
+  "subtype": "underwater",
+  "cond": "flippers"
+ },
+ "taltal-west-chest": {
+  "room": "Field_02E",
+  "level": "Field",
+  "region": "taltal-west-0",
+  "subtype": "chest",
+  "cond": null
+ },
+ "mad-batter-taltal": {
+  "room": null,
+  "level": null,
+  "region": "taltal-west-0",
+  "subtype": "npc",
+  "cond": "bracelet & powders"
+ },
+ "taltal-west-rock": {
+  "room": null,
+  "level": null,
+  "region": "taltal-west-0",
+  "subtype": "hidden",
+  "cond": "bracelet"
+ },
+ "taltal-west-escape": {
+  "room": "Field_03B",
+  "level": "Field",
+  "region": "taltal-west-1",
+  "subtype": "standing",
+  "cond": null
+ },
+ "taltal-west-dig": {
+  "room": null,
+  "level": null,
+  "region": "taltal-west-2",
+  "subtype": "dig",
+  "cond": "shovel"
+ },
+ "above-turtle-rock": {
+  "room": "Field_01A",
+  "level": "Field",
+  "region": "taltal-west-2",
+  "subtype": "standing",
+  "cond": "D8-4C"
+ },
+ "trendy-prize-1": {
+  "room": null,
+  "level": null,
+  "region": "trendy",
+  "subtype": "standing",
+  "cond": "can-farm-rupees"
+ },
+ "trendy-prize-2": {
+  "room": null,
+  "level": null,
+  "region": "trendy",
+  "subtype": "standing",
+  "cond": "can-farm-rupees"
+ },
+ "trendy-prize-3": {
+  "room": null,
+  "level": null,
+  "region": "trendy",
+  "subtype": "standing",
+  "cond": "can-farm-rupees"
+ },
+ "trendy-prize-4": {
+  "room": null,
+  "level": null,
+  "region": "trendy",
+  "subtype": "standing",
+  "cond": "can-farm-rupees & conch-horn"
+ },
+ "trendy-prize-5": {
+  "room": null,
+  "level": null,
+  "region": "trendy",
+  "subtype": "standing",
+  "cond": "can-farm-rupees & sea-lilys-bell"
+ },
+ "trendy-prize-6": {
+  "room": null,
+  "level": null,
+  "region": "trendy",
+  "subtype": "standing",
+  "cond": "can-farm-rupees & surf-harp"
+ },
+ "trendy-prize-final": {
+  "room": null,
+  "level": null,
+  "region": "trendy",
+  "subtype": "npc",
+  "cond": "can-farm-rupees & (fast-trendy | (full-moon-cello & conch-horn & sea-lilys-bell & surf-harp & wind-marimba & coral-triangle & evening-calm-organ & thunder-drum))"
+ },
+ "villa-cave": {
+  "room": "RichardCave_01A",
+  "level": "RichardCave",
+  "region": "pothole",
+  "subtype": "chest",
+  "cond": "feather | rooster | hookshot"
+ },
+ "pothole-north": {
+  "room": "Field_12H",
+  "level": "Field",
+  "region": "pothole",
+  "subtype": "standing",
+  "cond": "((rooster | feather) & (boomerang | rod)) | (feather & sword)"
+ },
+ "pothole-final": {
+  "room": "Field_13G",
+  "level": "Field",
+  "region": "pothole",
+  "subtype": "drop",
+  "cond": "break-bush & shovel"
+ },
+ "woods-crossing-cave-chest": {
+  "room": "MysteriousWoodsCave01_02B",
+  "level": "MysteriousWoodsCave01",
+  "region": "woods",
+  "subtype": "chest",
+  "cond": "break-crystal"
+ },
+ "woods-crossing-cave-loose": {
+  "room": "MysteriousWoodsCave01_01A",
+  "level": "MysteriousWoodsCave01",
+  "region": "woods",
+  "subtype": "standing",
+  "cond": "break-skull"
+ },
+ "woods-north-cave-chest": {
+  "room": "MysteriousWoodsCave02_01A",
+  "level": "MysteriousWoodsCave02",
+  "region": "woods",
+  "subtype": "chest",
+  "cond": "bracelet & (feather | rooster | hookshot)"
+ },
+ "woods-north-cave-loose": {
+  "room": "MysteriousWoodsCave02_01A",
+  "level": "MysteriousWoodsCave02",
+  "region": "woods",
+  "subtype": "standing",
+  "cond": "bracelet & (hookshot | rooster)"
+ },
+ "mad-batter-woods": {
+  "room": null,
+  "level": null,
+  "region": "woods",
+  "subtype": "npc",
+  "cond": "bracelet & powders"
+ },
+ "woods-south-chest": {
+  "room": "Field_08B",
+  "level": "Field",
+  "region": "woods",
+  "subtype": "chest",
+  "cond": "bracelet"
+ },
+ "woods-north-chest": {
+  "room": "Field_05B",
+  "level": "Field",
+  "region": "woods",
+  "subtype": "chest",
+  "cond": "(powders | rooster | feather) & break-bush"
+ },
+ "woods-west-dig": {
+  "room": null,
+  "level": null,
+  "region": "woods",
+  "subtype": "dig",
+  "cond": "shovel"
+ },
+ "woods-east-dig": {
+  "room": null,
+  "level": null,
+  "region": "woods",
+  "subtype": "dig",
+  "cond": "shovel"
+ },
+ "woods-loose": {
+  "room": null,
+  "level": null,
+  "region": "woods",
+  "subtype": "standing",
+  "cond": null
+ },
+ "diamond-island": {
+  "room": "Field_05E",
+  "level": "Field",
+  "region": "woods",
+  "subtype": "standing",
+  "cond": "feather | rooster | hookshot"
+ },
+ "syrup": {
+  "room": null,
+  "level": null,
+  "region": "woods",
+  "subtype": "npc",
+  "cond": "mushroom"
+ },
+ "D1-instrument": {
+  "room": "Lv01TailCave_03G",
+  "level": "Lv01TailCave",
+  "region": "tail-cave",
+  "subtype": "standing",
+  "cond": "D1-6F & nightmare-key-D1 & (feather | (rooster & bad-pets)) & kill-rolling-bones & kill-moldorm"
+ },
+ "D1-moldorm": {
+  "room": null,
+  "level": null,
+  "region": "tail-cave",
+  "subtype": "boss",
+  "cond": "D1-6F & nightmare-key-D1 & (feather | (rooster & bad-pets)) & kill-rolling-bones & kill-moldorm"
+ },
+ "D1-west-hallway": {
+  "room": "Lv01TailCave_05A",
+  "level": "Lv01TailCave",
+  "region": "tail-cave",
+  "subtype": "chest",
+  "cond": "D1-8D & key-D1:3 & kill-spiny[pit]"
+ },
+ "D1-middle-ledge": {
+  "room": "Lv01TailCave_05D",
+  "level": "Lv01TailCave",
+  "region": "tail-cave",
+  "subtype": "chest",
+  "cond": "D1-8D & (feather | (rooster & bad-pets)) & key-D1:3"
+ },
+ "D1-3-of-a-kind": {
+  "room": "Lv01TailCave_05F",
+  "level": "Lv01TailCave",
+  "region": "tail-cave",
+  "subtype": "chest",
+  "cond": "D1-6F & kill-3-of-a-kind"
+ },
+ "D1-bomb-room": {
+  "room": "Lv01TailCave_06B",
+  "level": "Lv01TailCave",
+  "region": "tail-cave",
+  "subtype": "chest",
+  "cond": "D1-8D & bombs"
+ },
+ "D1-middle-kill-chest": {
+  "room": "Lv01TailCave_06C",
+  "level": "Lv01TailCave",
+  "region": "tail-cave",
+  "subtype": "chest",
+  "cond": "D1-8D & (shield | kill-minimoldorm)"
+ },
+ "D1-spark-chest": {
+  "room": "Lv01TailCave_06D",
+  "level": "Lv01TailCave",
+  "region": "tail-cave",
+  "subtype": "chest",
+  "cond": "D1-8D"
+ },
+ "D1-button-chest": {
+  "room": "Lv01TailCave_07D",
+  "level": "Lv01TailCave",
+  "region": "tail-cave",
+  "subtype": "chest",
+  "cond": "D1-8D"
+ },
+ "D1-stalfos-chest": {
+  "room": "Lv01TailCave_07E",
+  "level": "Lv01TailCave",
+  "region": "tail-cave",
+  "subtype": "chest",
+  "cond": "D1-8D & kill-keese & kill-stalfos[pit]"
+ },
+ "D1-4-zols-chest": {
+  "room": "Lv01TailCave_08B",
+  "level": "Lv01TailCave",
+  "region": "tail-cave",
+  "subtype": "chest",
+  "cond": "D1-8D"
+ },
+ "D1-beetles": {
+  "room": "Lv01TailCave_08C",
+  "level": "Lv01TailCave",
+  "region": "tail-cave",
+  "subtype": "drop",
+  "cond": "D1-8D & kill-hardhat-beetle[pit]"
+ },
+ "D1-owl-statue-long-hallway": {
+  "room": null,
+  "level": null,
+  "region": "tail-cave",
+  "subtype": "dungeon-statue",
+  "cond": "D1-8D & key-D1:3 & stone-beak-D1"
+ },
+ "D1-owl-statue-spinies": {
+  "room": null,
+  "level": null,
+  "region": "tail-cave",
+  "subtype": "dungeon-statue",
+  "cond": "D1-8D & key-D1:3 & stone-beak-D1"
+ },
+ "D1-owl-statue-3-of-a-kind": {
+  "room": null,
+  "level": null,
+  "region": "tail-cave",
+  "subtype": "dungeon-statue",
+  "cond": "D1-6F & stone-beak-D1"
+ },
+ "D2-instrument": {
+  "room": "Lv02BottleGrotto_04F",
+  "level": "Lv02BottleGrotto",
+  "region": "bottle-grotto",
+  "subtype": "standing",
+  "cond": "D2-4G & kill-genie"
+ },
+ "D2-genie": {
+  "room": null,
+  "level": null,
+  "region": "bottle-grotto",
+  "subtype": "boss",
+  "cond": "D2-4G & kill-genie"
+ },
+ "D2-boos": {
+  "room": "Lv02BottleGrotto_02B",
+  "level": "Lv02BottleGrotto",
+  "region": "bottle-grotto",
+  "subtype": "chest",
+  "cond": "D2-4C & key-D2:5 & (powders | rod | shoot-arrows | sword:2)"
+ },
+ "D2-long-room-west": {
+  "room": "Lv02BottleGrotto_02C",
+  "level": "Lv02BottleGrotto",
+  "region": "bottle-grotto",
+  "subtype": "chest",
+  "cond": "D2-4C"
+ },
+ "D2-long-room-east": {
+  "room": "Lv02BottleGrotto_02D",
+  "level": "Lv02BottleGrotto",
+  "region": "bottle-grotto",
+  "subtype": "chest",
+  "cond": "D2-4C & break-pot & hit-crystal-switch"
+ },
+ "D2-vacuum-mouth-room": {
+  "room": "Lv02BottleGrotto_03C",
+  "level": "Lv02BottleGrotto",
+  "region": "bottle-grotto",
+  "subtype": "chest",
+  "cond": "D2-4C"
+ },
+ "D2-kill-puzzle": {
+  "room": "Lv02BottleGrotto_03F",
+  "level": "Lv02BottleGrotto",
+  "region": "bottle-grotto",
+  "subtype": "chest",
+  "cond": "D2-2F & kill-stalfos-spear[heavy] & kill-pols-voice[heavy] & kill-keese[heavy]"
+ },
+ "D2-west-chest": {
+  "room": "Lv02BottleGrotto_06B",
+  "level": "Lv02BottleGrotto",
+  "region": "bottle-grotto",
+  "subtype": "chest",
+  "cond": "D2-8C & key-D2:5 & (feather | (rooster & bad-pets) | hookshot) & kill-keese"
+ },
+ "D2-double-stalfos": {
+  "room": "Lv02BottleGrotto_07D",
+  "level": "Lv02BottleGrotto",
+  "region": "bottle-grotto",
+  "subtype": "drop",
+  "cond": "D2-7D & kill-stalfos"
+ },
+ "D2-double-shy-guys": {
+  "room": "Lv02BottleGrotto_07F",
+  "level": "Lv02BottleGrotto",
+  "region": "bottle-grotto",
+  "subtype": "drop",
+  "cond": "D2-7D & (feather | (rooster & bad-pets)) & hit-crystal-switch & kill-shy-guy"
+ },
+ "D2-entrance-chest": {
+  "room": "Lv02BottleGrotto_08C",
+  "level": "Lv02BottleGrotto",
+  "region": "bottle-grotto",
+  "subtype": "chest",
+  "cond": "D2-8C & break-pot"
+ },
+ "D2-single-shy-guy": {
+  "room": "Lv02BottleGrotto_08D",
+  "level": "Lv02BottleGrotto",
+  "region": "bottle-grotto",
+  "subtype": "chest",
+  "cond": "D2-7D & key-D2:5 & kill-shy-guy"
+ },
+ "D2-peg-circle": {
+  "room": "Lv02BottleGrotto_08E",
+  "level": "Lv02BottleGrotto",
+  "region": "bottle-grotto",
+  "subtype": "chest",
+  "cond": "D2-7D & hit-crystal-switch"
+ },
+ "D2-button-chest": {
+  "room": "Lv02BottleGrotto_08F",
+  "level": "Lv02BottleGrotto",
+  "region": "bottle-grotto",
+  "subtype": "chest",
+  "cond": "D2-7D & (feather | (rooster & bad-pets)) & hit-crystal-switch"
+ },
+ "D2-owl-statue-first-switch": {
+  "room": null,
+  "level": null,
+  "region": "bottle-grotto",
+  "subtype": "dungeon-statue",
+  "cond": "D2-7D & stone-beak-D2"
+ },
+ "D2-owl-statue-push-puzzle": {
+  "room": null,
+  "level": null,
+  "region": "bottle-grotto",
+  "subtype": "dungeon-statue",
+  "cond": "D2-7D & (feather | (rooster & bad-pets)) & hit-crystal-switch & key-D2:3 & stone-beak-D2"
+ },
+ "D2-owl-statue-past-hinox": {
+  "room": null,
+  "level": null,
+  "region": "bottle-grotto",
+  "subtype": "dungeon-statue",
+  "cond": "D2-4C & stone-beak-D2"
+ },
+ "D3-instrument": {
+  "room": "Lv03KeyCavern_06G",
+  "level": "Lv03KeyCavern",
+  "region": "key-cavern",
+  "subtype": "standing",
+  "cond": "D3-8G & nightmare-key-D3 & kill-slime-eye"
+ },
+ "D3-slime-eye": {
+  "room": null,
+  "level": null,
+  "region": "key-cavern",
+  "subtype": "boss",
+  "cond": "D3-8G & nightmare-key-D3 & kill-slime-eye"
+ },
+ "D3-pre-boss": {
+  "room": "Lv03KeyCavern_08G",
+  "level": "Lv03KeyCavern",
+  "region": "key-cavern",
+  "subtype": "drop",
+  "cond": "D3-8G & kill-keese"
+ },
+ "D3-triple-bombites": {
+  "room": "Lv03KeyCavern_01B",
+  "level": "Lv03KeyCavern",
+  "region": "key-cavern",
+  "subtype": "drop",
+  "cond": "D3-4C & bombs & kill-zol-green & kill-bombite-green & kill-bombite-red"
+ },
+ "D3-north-chest": {
+  "room": "Lv03KeyCavern_01C",
+  "level": "Lv03KeyCavern",
+  "region": "key-cavern",
+  "subtype": "chest",
+  "cond": "D3-4C & bombs & kill-bombite-green & kill-zol-green"
+ },
+ "D3-central-ledge": {
+  "room": "Lv03KeyCavern_02A",
+  "level": "Lv03KeyCavern",
+  "region": "key-cavern",
+  "subtype": "chest",
+  "cond": "D3-4C & kill-zol-red & kill-stalfos"
+ },
+ "D3-central-chest": {
+  "room": "Lv03KeyCavern_02C",
+  "level": "Lv03KeyCavern",
+  "region": "key-cavern",
+  "subtype": "chest",
+  "cond": "D3-4C & kill-dodongo"
+ },
+ "D3-east-ledge": {
+  "room": "Lv03KeyCavern_02D",
+  "level": "Lv03KeyCavern",
+  "region": "key-cavern",
+  "subtype": "chest",
+  "cond": "D3-4C & bombs & (dash-jump | (rooster & bad-pets))"
+ },
+ "D3-pairodds": {
+  "room": "Lv03KeyCavern_03A",
+  "level": "Lv03KeyCavern",
+  "region": "key-cavern",
+  "subtype": "drop",
+  "cond": "D3-4C & kill-zol-red & kill-zol-green & kill-pairodd"
+ },
+ "D3-five-zols": {
+  "room": "Lv03KeyCavern_04C",
+  "level": "Lv03KeyCavern",
+  "region": "key-cavern",
+  "subtype": "drop",
+  "cond": "D3-4C & kill-zol-green"
+ },
+ "D3-basement-north": {
+  "room": "Lv03KeyCavern_03G",
+  "level": "Lv03KeyCavern",
+  "region": "key-cavern",
+  "subtype": "drop",
+  "cond": "D3-3G & kill-stalfos-spear & kill-stalfos"
+ },
+ "D3-basement-west": {
+  "room": "Lv03KeyCavern_04F",
+  "level": "Lv03KeyCavern",
+  "region": "key-cavern",
+  "subtype": "drop",
+  "cond": "D3-4B & key-D3:1 & kill-zol-green & kill-pairodd & (feather | (rooster & bad-pets))"
+ },
+ "D3-basement-south": {
+  "room": "Lv03KeyCavern_05G",
+  "level": "Lv03KeyCavern",
+  "region": "key-cavern",
+  "subtype": "drop",
+  "cond": "D3-4B & key-D3:1 & kill-zol-green & kill-pairodd & kill-stalfos-spear"
+ },
+ "D3-hallway-4": {
+  "room": "Lv03KeyCavern_04B",
+  "level": "Lv03KeyCavern",
+  "region": "key-cavern",
+  "subtype": "chest",
+  "cond": "D3-4B & D3-3G & hit-crystal-switch"
+ },
+ "D3-hallway-3": {
+  "room": "Lv03KeyCavern_05B",
+  "level": "Lv03KeyCavern",
+  "region": "key-cavern",
+  "subtype": "chest",
+  "cond": "D3-7B & boots & kill-zol-red & kill-stalfos"
+ },
+ "D3-hallway-2": {
+  "room": "Lv03KeyCavern_06B",
+  "level": "Lv03KeyCavern",
+  "region": "key-cavern",
+  "subtype": "chest",
+  "cond": "D3-7B & kill-zol-green"
+ },
+ "D3-hallway-side-room": {
+  "room": "Lv03KeyCavern_06C",
+  "level": "Lv03KeyCavern",
+  "region": "key-cavern",
+  "subtype": "chest",
+  "cond": "D3-7B & D3-3G & kill-zol-green & hit-crystal-switch"
+ },
+ "D3-hallway-1": {
+  "room": "Lv03KeyCavern_07B",
+  "level": "Lv03KeyCavern",
+  "region": "key-cavern",
+  "subtype": "chest",
+  "cond": "D3-7B & (sword | powders | bombs | shoot-arrows | hookshot | rod | boomerang)"
+ },
+ "D3-vacuum-mouth": {
+  "room": "Lv03KeyCavern_08C",
+  "level": "Lv03KeyCavern",
+  "region": "key-cavern",
+  "subtype": "chest",
+  "cond": "D3-8B & (boots | hookshot | (rooster & bad-pets))"
+ },
+ "D3-owl-statue-basement-north": {
+  "room": null,
+  "level": null,
+  "region": "key-cavern",
+  "subtype": "dungeon-statue",
+  "cond": "D3-3G & stone-beak-D3"
+ },
+ "D3-owl-statue-arrow": {
+  "room": null,
+  "level": null,
+  "region": "key-cavern",
+  "subtype": "dungeon-statue",
+  "cond": "D3-4C & stone-beak-D3"
+ },
+ "D3-owl-statue-northwest": {
+  "room": null,
+  "level": null,
+  "region": "key-cavern",
+  "subtype": "dungeon-statue",
+  "cond": "D3-4C & kill-zol-red & kill-stalfos & stone-beak-D3"
+ },
+ "D4-instrument": {
+  "room": "Lv04AnglersTunnel_03B",
+  "level": "Lv04AnglersTunnel",
+  "region": "angler-tunnel",
+  "subtype": "standing",
+  "cond": "D4-5B & nightmare-key-D4 & kill-angler & flippers"
+ },
+ "D4-angler": {
+  "room": null,
+  "level": null,
+  "region": "angler-tunnel",
+  "subtype": "boss",
+  "cond": "D4-5B & nightmare-key-D4 & kill-angler & flippers"
+ },
+ "D4-north-chest": {
+  "room": "Lv04AnglersTunnel_02D",
+  "level": "Lv04AnglersTunnel",
+  "region": "angler-tunnel",
+  "subtype": "chest",
+  "cond": "D4-4E & (flippers | (key-D4:5 & kill-cueball))"
+ },
+ "D4-east-side-north": {
+  "room": "Lv04AnglersTunnel_03G",
+  "level": "Lv04AnglersTunnel",
+  "region": "angler-tunnel",
+  "subtype": "chest",
+  "cond": "D4-5G & bombs"
+ },
+ "D4-east-side-south": {
+  "room": "Lv04AnglersTunnel_05G",
+  "level": "Lv04AnglersTunnel",
+  "region": "angler-tunnel",
+  "subtype": "chest",
+  "cond": "D4-5G & bombs"
+ },
+ "D4-west-ledge": {
+  "room": "Lv04AnglersTunnel_07C",
+  "level": "Lv04AnglersTunnel",
+  "region": "angler-tunnel",
+  "subtype": "chest",
+  "cond": "D4-6C"
+ },
+ "D4-east-of-puzzle": {
+  "room": "Lv04AnglersTunnel_04D",
+  "level": "Lv04AnglersTunnel",
+  "region": "angler-tunnel",
+  "subtype": "chest",
+  "cond": "D4-4C"
+ },
+ "D4-south-of-puzzle": {
+  "room": "Lv04AnglersTunnel_05C",
+  "level": "Lv04AnglersTunnel",
+  "region": "angler-tunnel",
+  "subtype": "chest",
+  "cond": "D4-4C"
+ },
+ "D4-sunken-item": {
+  "room": "Lv04AnglersTunnel_04E",
+  "level": "Lv04AnglersTunnel",
+  "region": "angler-tunnel",
+  "subtype": "drop",
+  "cond": "D4-4E & kill-zol-red & flippers"
+ },
+ "D4-central-room": {
+  "room": "Lv04AnglersTunnel_05D",
+  "level": "Lv04AnglersTunnel",
+  "region": "angler-tunnel",
+  "subtype": "chest",
+  "cond": "D4-4E & (flippers | hookshot | (rooster & bad-pets))"
+ },
+ "D4-small-island": {
+  "room": "Lv04AnglersTunnel_06F",
+  "level": "Lv04AnglersTunnel",
+  "region": "angler-tunnel",
+  "subtype": "chest",
+  "cond": "D4-8D & key-D4:2 & kill-spiny & kill-zol-red & (flippers | (rooster & bad-pets))"
+ },
+ "D4-ledge-north": {
+  "room": "Lv04AnglersTunnel_04F",
+  "level": "Lv04AnglersTunnel",
+  "region": "angler-tunnel",
+  "subtype": "chest",
+  "cond": "D4-8D"
+ },
+ "D4-statues-chest": {
+  "room": "Lv04AnglersTunnel_07F",
+  "level": "Lv04AnglersTunnel",
+  "region": "angler-tunnel",
+  "subtype": "chest",
+  "cond": "D4-8D"
+ },
+ "D4-lobby": {
+  "room": "Lv04AnglersTunnel_07E",
+  "level": "Lv04AnglersTunnel",
+  "region": "angler-tunnel",
+  "subtype": "chest",
+  "cond": "D4-8D & kill-zol-red[pit]"
+ },
+ "D4-crystals": {
+  "room": "Lv04AnglersTunnel_08E",
+  "level": "Lv04AnglersTunnel",
+  "region": "angler-tunnel",
+  "subtype": "chest",
+  "cond": "D4-8D & kill-spiny & kill-zol-red & break-crystal & kill-water-tektite"
+ },
+ "D4-owl-statue": {
+  "room": null,
+  "level": null,
+  "region": "angler-tunnel",
+  "subtype": "dungeon-statue",
+  "cond": "D4-4E & stone-beak-D4"
+ },
+ "D5-instrument": {
+  "room": "Lv05CatfishsMaw_01D",
+  "level": "Lv05CatfishsMaw",
+  "region": "catfish-maw",
+  "subtype": "standing",
+  "cond": "D5-3E & key-D5:3 & nightmare-key-D5 & hookshot & kill-slime-eel"
+ },
+ "D5-slime-eel": {
+  "room": null,
+  "level": null,
+  "region": "catfish-maw",
+  "subtype": "boss",
+  "cond": "D5-3E & key-D5:3 & nightmare-key-D5 & hookshot & kill-slime-eel"
+ },
+ "D5-master-stalfos": {
+  "room": null,
+  "level": null,
+  "region": "catfish-maw",
+  "subtype": "boss",
+  "cond": "D5-8H & D5-5G & feather & kill-master-stalfos & break-crystal & kill-keese & kill-helmasaur"
+ },
+ "D5-crystal-blocks": {
+  "room": "Lv05CatfishsMaw_01C",
+  "level": "Lv05CatfishsMaw",
+  "region": "catfish-maw",
+  "subtype": "drop",
+  "cond": "D5-8H & break-crystal & feather & kill-keese & kill-helmasaur"
+ },
+ "D5-past-master-stalfos-3": {
+  "room": "Lv05CatfishsMaw_01E",
+  "level": "Lv05CatfishsMaw",
+  "region": "catfish-maw",
+  "subtype": "chest",
+  "cond": "D5-5G & break-pot & kill-zol-green & (feather | (rooster & bad-pets) | hookshot)"
+ },
+ "D5-water-tunnel": {
+  "room": "Lv05CatfishsMaw_02E",
+  "level": "Lv05CatfishsMaw",
+  "region": "catfish-maw",
+  "subtype": "chest",
+  "cond": "D5-5G & flippers & (hookshot | (rooster & bad-pets))"
+ },
+ "D5-right-side-north": {
+  "room": "Lv05CatfishsMaw_02G",
+  "level": "Lv05CatfishsMaw",
+  "region": "catfish-maw",
+  "subtype": "chest",
+  "cond": "D5-5G & (hookshot | (rooster & bad-pets))"
+ },
+ "D5-right-side-middle": {
+  "room": "Lv05CatfishsMaw_03G",
+  "level": "Lv05CatfishsMaw",
+  "region": "catfish-maw",
+  "subtype": "chest",
+  "cond": "D5-5G & (hookshot | dash-jump | (rooster & bad-pets))"
+ },
+ "D5-right-side-east": {
+  "room": "Lv05CatfishsMaw_03H",
+  "level": "Lv05CatfishsMaw",
+  "region": "catfish-maw",
+  "subtype": "chest",
+  "cond": "D5-5G & (hookshot | (rooster & bad-pets))"
+ },
+ "D5-past-master-stalfos-1": {
+  "room": "Lv05CatfishsMaw_05G",
+  "level": "Lv05CatfishsMaw",
+  "region": "catfish-maw",
+  "subtype": "chest",
+  "cond": "D5-5G"
+ },
+ "D5-west-chest": {
+  "room": "Lv05CatfishsMaw_06C",
+  "level": "Lv05CatfishsMaw",
+  "region": "catfish-maw",
+  "subtype": "chest",
+  "cond": "D5-7F & kill-helmasaur & (hookshot | (rooster & bad-pets))"
+ },
+ "D5-helmasaurs": {
+  "room": "Lv05CatfishsMaw_07D",
+  "level": "Lv05CatfishsMaw",
+  "region": "catfish-maw",
+  "subtype": "chest",
+  "cond": "D5-7F & kill-helmasaur"
+ },
+ "D5-west-stairs-chest": {
+  "room": "Lv05CatfishsMaw_08E",
+  "level": "Lv05CatfishsMaw",
+  "region": "catfish-maw",
+  "subtype": "chest",
+  "cond": "D5-8H & kill-keese & kill-helmasaur"
+ },
+ "D5-near-entrance": {
+  "room": "Lv05CatfishsMaw_08G",
+  "level": "Lv05CatfishsMaw",
+  "region": "catfish-maw",
+  "subtype": "chest",
+  "cond": "D5-8H & (hookshot | (rooster & bad-pets))"
+ },
+ "D5-owl-statue-triple-stalfos": {
+  "room": null,
+  "level": null,
+  "region": "catfish-maw",
+  "subtype": "dungeon-statue",
+  "cond": "D5-7F & stone-beak-D5"
+ },
+ "D5-owl-statue-before-slime-eel": {
+  "room": null,
+  "level": null,
+  "region": "catfish-maw",
+  "subtype": "dungeon-statue",
+  "cond": "D5-5G & feather & stone-beak-D5"
+ },
+ "D6-instrument": {
+  "room": "Lv06FaceShrine_03E",
+  "level": "Lv06FaceShrine",
+  "region": "face-shrine",
+  "subtype": "standing",
+  "cond": "D6-4D & kill-wizzrobe[pit] & nightmare-key-D6 & kill-facade"
+ },
+ "D6-facade": {
+  "room": null,
+  "level": null,
+  "region": "face-shrine",
+  "subtype": "boss",
+  "cond": "D6-4D & kill-wizzrobe[pit] & nightmare-key-D6 & kill-facade"
+ },
+ "D6-far-northwest": {
+  "room": "Lv06FaceShrine_02A",
+  "level": "Lv06FaceShrine",
+  "region": "face-shrine",
+  "subtype": "chest",
+  "cond": "D6-3A & hit-crystal-switch & bracelet:2"
+ },
+ "D6-far-northeast": {
+  "room": "Lv06FaceShrine_02H",
+  "level": "Lv06FaceShrine",
+  "region": "face-shrine",
+  "subtype": "chest",
+  "cond": "D6-4H & kill-pols-voice & break-pot"
+ },
+ "D6-statue-line-north": {
+  "room": "Lv06FaceShrine_03B",
+  "level": "Lv06FaceShrine",
+  "region": "face-shrine",
+  "subtype": "chest",
+  "cond": "D6-3A"
+ },
+ "D6-statue-line-south": {
+  "room": "Lv06FaceShrine_04B",
+  "level": "Lv06FaceShrine",
+  "region": "face-shrine",
+  "subtype": "chest",
+  "cond": "D6-8D & (bracelet:2 | shoot-arrows | rod | bombs | boomerang | hookshot)"
+ },
+ "D6-wizzrobe-pegs": {
+  "room": "Lv06FaceShrine_03D",
+  "level": "Lv06FaceShrine",
+  "region": "face-shrine",
+  "subtype": "drop",
+  "cond": "D6-3A & kill-wizzrobe"
+ },
+ "D6-pot-chest": {
+  "room": "Lv06FaceShrine_03G",
+  "level": "Lv06FaceShrine",
+  "region": "face-shrine",
+  "subtype": "chest",
+  "cond": "D6-4H & bombs & hookshot & bracelet & key-D6:3"
+ },
+ "D6-canal": {
+  "room": "Lv06FaceShrine_04G",
+  "level": "Lv06FaceShrine",
+  "region": "face-shrine",
+  "subtype": "chest",
+  "cond": "(D6-4H & bombs) | (D6-8D & bracelet:2 & kill-wizzrobe)"
+ },
+ "D6-3-wizzrobes": {
+  "room": "Lv06FaceShrine_05A",
+  "level": "Lv06FaceShrine",
+  "region": "face-shrine",
+  "subtype": "chest",
+  "cond": "D6-8D & kill-wizzrobe"
+ },
+ "D6-tile-room": {
+  "room": "Lv06FaceShrine_05D",
+  "level": "Lv06FaceShrine",
+  "region": "face-shrine",
+  "subtype": "drop",
+  "cond": "D6-5D"
+ },
+ "D6-gated-hallway-north": {
+  "room": "Lv06FaceShrine_06C",
+  "level": "Lv06FaceShrine",
+  "region": "face-shrine",
+  "subtype": "chest",
+  "cond": "D6-8D & bracelet:2"
+ },
+ "D6-gated-hallway-south": {
+  "room": "Lv06FaceShrine_07C",
+  "level": "Lv06FaceShrine",
+  "region": "face-shrine",
+  "subtype": "chest",
+  "cond": "D6-8D & (bracelet:2 | kill-wizzrobe)"
+ },
+ "D6-southwest-chest": {
+  "room": "Lv06FaceShrine_07B",
+  "level": "Lv06FaceShrine",
+  "region": "face-shrine",
+  "subtype": "chest",
+  "cond": "D6-8D & bombs & feather"
+ },
+ "D6-wizzrobes-ledge": {
+  "room": "Lv06FaceShrine_07G",
+  "level": "Lv06FaceShrine",
+  "region": "face-shrine",
+  "subtype": "chest",
+  "cond": "D6-8D & bracelet:2 & kill-wizzrobe & feather"
+ },
+ "D6-owl-statue-ledge": {
+  "room": null,
+  "level": null,
+  "region": "face-shrine",
+  "subtype": "dungeon-statue",
+  "cond": "D6-8D & stone-beak-D6"
+ },
+ "D6-owl-statue-southeast": {
+  "room": null,
+  "level": null,
+  "region": "face-shrine",
+  "subtype": "dungeon-statue",
+  "cond": "D6-8D & bracelet:2 & kill-wizzrobe & stone-beak-D6"
+ },
+ "D6-owl-statue-canal": {
+  "room": null,
+  "level": null,
+  "region": "face-shrine",
+  "subtype": "dungeon-statue",
+  "cond": "D6-4H & bombs & hookshot & bracelet & key-D6:3 & stone-beak-D6"
+ },
+ "D7-instrument": {
+  "room": "Lv07EagleTower_02G",
+  "level": "Lv07EagleTower",
+  "region": "eagle-tower",
+  "subtype": "standing",
+  "cond": "D7-2F & hookshot & kill-evil-eagle"
+ },
+ "D7-eagle": {
+  "room": null,
+  "level": null,
+  "region": "eagle-tower",
+  "subtype": "boss",
+  "cond": "D7-2F & hookshot & kill-evil-eagle"
+ },
+ "D7-like-likes": {
+  "room": "Lv07EagleTower_08D",
+  "level": "Lv07EagleTower",
+  "region": "eagle-tower",
+  "subtype": "drop",
+  "cond": "D7-8B & kill-like-like"
+ },
+ "D7-1f-west": {
+  "room": "Lv07EagleTower_07A",
+  "level": "Lv07EagleTower",
+  "region": "eagle-tower",
+  "subtype": "chest",
+  "cond": "D7-2D"
+ },
+ "D7-west-ledge": {
+  "room": "Lv07EagleTower_05A",
+  "level": "Lv07EagleTower",
+  "region": "eagle-tower",
+  "subtype": "chest",
+  "cond": "D7-2D & hit-crystal-switch"
+ },
+ "D7-east-ledge": {
+  "room": "Lv07EagleTower_05D",
+  "level": "Lv07EagleTower",
+  "region": "eagle-tower",
+  "subtype": "chest",
+  "cond": "D7-2D & hit-crystal-switch"
+ },
+ "D7-3ofakind-north": {
+  "room": "Lv07EagleTower_01B",
+  "level": "Lv07EagleTower",
+  "region": "eagle-tower",
+  "subtype": "chest",
+  "cond": "D7-2D & kill-3-of-a-kind & (feather | hit-crystal-switch)"
+ },
+ "D7-2f-horseheads": {
+  "room": "Lv07EagleTower_01C",
+  "level": "Lv07EagleTower",
+  "region": "eagle-tower",
+  "subtype": "chest",
+  "cond": "D7-2D"
+ },
+ "D7-hinox": {
+  "room": "Lv07EagleTower_04A",
+  "level": "Lv07EagleTower",
+  "region": "eagle-tower",
+  "subtype": "drop",
+  "cond": "D7-2D & hit-crystal-switch & kill-hinox"
+ },
+ "D7-3ofakind-south": {
+  "room": "Lv07EagleTower_04B",
+  "level": "Lv07EagleTower",
+  "region": "eagle-tower",
+  "subtype": "chest",
+  "cond": "D7-2D & hit-crystal-switch & bombs & kill-3-of-a-kind & (hookshot | (rooster & bad-pets))"
+ },
+ "D7-blue-pegs-chest": {
+  "room": "Lv07EagleTower_03D",
+  "level": "Lv07EagleTower",
+  "region": "eagle-tower",
+  "subtype": "chest",
+  "cond": "D7-2D & hit-crystal-switch"
+ },
+ "D7-3f-horseheads": {
+  "room": "Lv07EagleTower_01G",
+  "level": "Lv07EagleTower",
+  "region": "eagle-tower",
+  "subtype": "chest",
+  "cond": "D7-2F"
+ },
+ "D7-grim-creeper": {
+  "room": "Lv07EagleTower_02H",
+  "level": "Lv07EagleTower",
+  "region": "eagle-tower",
+  "subtype": "chest",
+  "cond": "D7-2D & hit-crystal-switch & kill-battle-bat"
+ },
+ "D7-owl-statue-ball": {
+  "room": null,
+  "level": null,
+  "region": "eagle-tower",
+  "subtype": "dungeon-statue",
+  "cond": "D7-2D & stone-beak-D7"
+ },
+ "D7-owl-statue-kirbys": {
+  "room": null,
+  "level": null,
+  "region": "eagle-tower",
+  "subtype": "dungeon-statue",
+  "cond": "D7-2D & stone-beak-D7"
+ },
+ "D7-owl-statue-hookshot-chest": {
+  "room": null,
+  "level": null,
+  "region": "eagle-tower",
+  "subtype": "dungeon-statue",
+  "cond": "D7-2D & hit-crystal-switch & bombs & stone-beak-D7"
+ },
+ "D8-instrument": {
+  "room": "Lv08TurtleRock_01D",
+  "level": "Lv08TurtleRock",
+  "region": "turtle-rock",
+  "subtype": "standing",
+  "cond": "D8-8D & feather & rod & nightmare-key-D8 & kill-hothead"
+ },
+ "D8-hothead": {
+  "room": null,
+  "level": null,
+  "region": "turtle-rock",
+  "subtype": "boss",
+  "cond": "D8-8D & feather & rod & nightmare-key-D8 & kill-hothead"
+ },
+ "D8-far-northwest": {
+  "room": "Lv08TurtleRock_02A",
+  "level": "Lv08TurtleRock",
+  "region": "turtle-rock",
+  "subtype": "chest",
+  "cond": "D8-8D & key-D8:7 & feather & rod & kill-cueball"
+ },
+ "D8-far-northeast": {
+  "room": "Lv08TurtleRock_02H",
+  "level": "Lv08TurtleRock",
+  "region": "turtle-rock",
+  "subtype": "chest",
+  "cond": "D8-8D & key-D8:7 & feather & bombs & hookshot & kill-blaino"
+ },
+ "D8-left-exit-chest": {
+  "room": "Lv08TurtleRock_03C",
+  "level": "Lv08TurtleRock",
+  "region": "turtle-rock",
+  "subtype": "chest",
+  "cond": "(D8-4C & kill-vire & kill-rope & hookshot) | (D8-8D & rod & feather & hookshot)"
+ },
+ "D8-dodongos": {
+  "room": "Lv08TurtleRock_03F",
+  "level": "Lv08TurtleRock",
+  "region": "turtle-rock",
+  "subtype": "chest",
+  "cond": "D8-4C & bombs"
+ },
+ "D8-northern-ledge": {
+  "room": "Lv08TurtleRock_02E",
+  "level": "Lv08TurtleRock",
+  "region": "turtle-rock",
+  "subtype": "chest",
+  "cond": "(D8-4C & feather & hookshot) | (D8-8D & feather & hookshot & kill-zol-green & key-D8:2)"
+ },
+ "D8-gibdos": {
+  "room": "Lv08TurtleRock_03G",
+  "level": "Lv08TurtleRock",
+  "region": "turtle-rock",
+  "subtype": "drop",
+  "cond": "(D8-4C & kill-gibdo) | (D8-8D & feather & kill-zol-green & kill-gibdo & key-D8:2)"
+ },
+ "D8-beamos-chest": {
+  "room": "Lv08TurtleRock_04B",
+  "level": "Lv08TurtleRock",
+  "region": "turtle-rock",
+  "subtype": "chest",
+  "cond": "D8-4C"
+ },
+ "D8-statue": {
+  "room": "Lv08TurtleRock_04C",
+  "level": "Lv08TurtleRock",
+  "region": "turtle-rock",
+  "subtype": "drop",
+  "cond": "D8-4C & shoot-arrows"
+ },
+ "D8-torches": {
+  "room": "Lv08TurtleRock_05B",
+  "level": "Lv08TurtleRock",
+  "region": "turtle-rock",
+  "subtype": "chest",
+  "cond": "D8-6B & rod"
+ },
+ "D8-west-vire": {
+  "room": "Lv08TurtleRock_06A",
+  "level": "Lv08TurtleRock",
+  "region": "turtle-rock",
+  "subtype": "drop",
+  "cond": "D8-6B & kill-rolling-bones & kill-vire"
+ },
+ "D8-west-roomba": {
+  "room": "Lv08TurtleRock_06B",
+  "level": "Lv08TurtleRock",
+  "region": "turtle-rock",
+  "subtype": "chest",
+  "cond": "D8-6B"
+ },
+ "D8-surrounded-by-blocks": {
+  "room": "Lv08TurtleRock_06D",
+  "level": "Lv08TurtleRock",
+  "region": "turtle-rock",
+  "subtype": "chest",
+  "cond": "D8-8D & feather"
+ },
+ "D8-sparks-chest": {
+  "room": "Lv08TurtleRock_07B",
+  "level": "Lv08TurtleRock",
+  "region": "turtle-rock",
+  "subtype": "chest",
+  "cond": "D8-6B & (feather | hookshot | (rooster & bad-pets))"
+ },
+ "D8-east-of-pots": {
+  "room": "Lv08TurtleRock_07F",
+  "level": "Lv08TurtleRock",
+  "region": "turtle-rock",
+  "subtype": "chest",
+  "cond": "D8-8D & (feather | (break-pot & kill-vire))"
+ },
+ "D8-east-roomba": {
+  "room": "Lv08TurtleRock_07G",
+  "level": "Lv08TurtleRock",
+  "region": "turtle-rock",
+  "subtype": "drop",
+  "cond": "D8-8D & feather & (break-pot | (rooster & bad-pets))"
+ },
+ "D8-far-southwest": {
+  "room": "Lv08TurtleRock_08A",
+  "level": "Lv08TurtleRock",
+  "region": "turtle-rock",
+  "subtype": "chest",
+  "cond": "D8-6B & kill-rolling-bones"
+ },
+ "D8-far-southeast": {
+  "room": "Lv08TurtleRock_08H",
+  "level": "Lv08TurtleRock",
+  "region": "turtle-rock",
+  "subtype": "chest",
+  "cond": "D8-8D & feather & (break-pot | (rooster & bad-pets))"
+ },
+ "D8-owl-statue-above-smasher": {
+  "room": null,
+  "level": null,
+  "region": "turtle-rock",
+  "subtype": "dungeon-statue",
+  "cond": "D8-8D & feather & (break-pot | (rooster & bad-pets)) & stone-beak-D8"
+ },
+ "D8-owl-statue-below-gibdos": {
+  "room": null,
+  "level": null,
+  "region": "turtle-rock",
+  "subtype": "dungeon-statue",
+  "cond": "D8-8D & feather & key-D8:2 & stone-beak-D8"
+ },
+ "D8-owl-statue-eye-statue": {
+  "room": null,
+  "level": null,
+  "region": "turtle-rock",
+  "subtype": "dungeon-statue",
+  "cond": "D8-4C & stone-beak-D8"
+ },
+ "D0-northern-chest": {
+  "room": "Lv10ClothesDungeon_04F",
+  "level": "Lv10ClothesDungeon",
+  "region": "color-dungeon",
+  "subtype": "chest",
+  "cond": "D0-8C & kill-goblin[heavy] & key-D0:3 & kill-blob-boss"
+ },
+ "D0-zol-pots": {
+  "room": "Lv10ClothesDungeon_05D",
+  "level": "Lv10ClothesDungeon",
+  "region": "color-dungeon",
+  "subtype": "chest",
+  "cond": "D0-6D & kill-zol-red[heavy] & kill-zol-green[heavy] & break-pot"
+ },
+ "D0-north-orbs": {
+  "room": "Lv10ClothesDungeon_05E",
+  "level": "Lv10ClothesDungeon",
+  "region": "color-dungeon",
+  "subtype": "drop",
+  "cond": "D0-6D & kill-orb & break-pot"
+ },
+ "D0-south-orbs": {
+  "room": "Lv10ClothesDungeon_07F",
+  "level": "Lv10ClothesDungeon",
+  "region": "color-dungeon",
+  "subtype": "chest",
+  "cond": "D0-8C & kill-goblin[heavy] & kill-orb"
+ },
+ "D0-east-color-puzzle": {
+  "room": "Lv10ClothesDungeon_05F",
+  "level": "Lv10ClothesDungeon",
+  "region": "color-dungeon",
+  "subtype": "drop",
+  "cond": "D0-8C & kill-goblin[heavy] & hit-color-dungeon-switch"
+ },
+ "D0-west-color-puzzle": {
+  "room": "Lv10ClothesDungeon_07D",
+  "level": "Lv10ClothesDungeon",
+  "region": "color-dungeon",
+  "subtype": "chest",
+  "cond": "D0-8C & kill-goblin[heavy] & hit-color-dungeon-switch"
+ },
+ "D0-putters": {
+  "room": "Lv10ClothesDungeon_08E",
+  "level": "Lv10ClothesDungeon",
+  "region": "color-dungeon",
+  "subtype": "chest",
+  "cond": "D0-8C & kill-goblin[heavy]"
+ },
+ "D0-fairy-1": {
+  "room": null,
+  "level": null,
+  "region": "color-dungeon",
+  "subtype": "npc",
+  "cond": "D0-6D & nightmare-key-D0 & key-D0:3 & hit-color-dungeon-switch & break-pot"
+ },
+ "D0-fairy-2": {
+  "room": null,
+  "level": null,
+  "region": "color-dungeon",
+  "subtype": "npc",
+  "cond": "D0-6D & nightmare-key-D0 & key-D0:3 & hit-color-dungeon-switch & break-pot"
+ },
+ "D0-owl-statue-nine-switches": {
+  "room": null,
+  "level": null,
+  "region": "color-dungeon",
+  "subtype": "dungeon-statue",
+  "cond": "D0-6D & key-D0:2 & stone-beak-D0 & break-pot"
+ },
+ "D0-owl-statue-first-switches": {
+  "room": null,
+  "level": null,
+  "region": "color-dungeon",
+  "subtype": "dungeon-statue",
+  "cond": "D0-8C & kill-goblin[heavy] & stone-beak-D0"
+ },
+ "D0-owl-statue-before-mini-boss": {
+  "room": null,
+  "level": null,
+  "region": "color-dungeon",
+  "subtype": "dungeon-statue",
+  "cond": "D0-8C & kill-goblin[heavy] & stone-beak-D0"
+ },
+ "D0-rupee-1": {
+  "room": null,
+  "level": null,
+  "region": "color-dungeon",
+  "subtype": "standing",
+  "cond": "D0-8C & kill-goblin[heavy] & bombs"
+ },
+ "D0-rupee-2": {
+  "room": null,
+  "level": null,
+  "region": "color-dungeon",
+  "subtype": "standing",
+  "cond": "D0-8C & kill-goblin[heavy] & bombs"
+ },
+ "D0-rupee-3": {
+  "room": null,
+  "level": null,
+  "region": "color-dungeon",
+  "subtype": "standing",
+  "cond": "D0-8C & kill-goblin[heavy] & bombs"
+ },
+ "D0-rupee-4": {
+  "room": null,
+  "level": null,
+  "region": "color-dungeon",
+  "subtype": "standing",
+  "cond": "D0-8C & kill-goblin[heavy] & bombs"
+ },
+ "D0-rupee-5": {
+  "room": null,
+  "level": null,
+  "region": "color-dungeon",
+  "subtype": "standing",
+  "cond": "D0-8C & kill-goblin[heavy] & bombs"
+ },
+ "D0-rupee-6": {
+  "room": null,
+  "level": null,
+  "region": "color-dungeon",
+  "subtype": "standing",
+  "cond": "D0-8C & kill-goblin[heavy] & bombs"
+ },
+ "D0-rupee-7": {
+  "room": null,
+  "level": null,
+  "region": "color-dungeon",
+  "subtype": "standing",
+  "cond": "D0-8C & kill-goblin[heavy] & bombs"
+ },
+ "D0-rupee-8": {
+  "room": null,
+  "level": null,
+  "region": "color-dungeon",
+  "subtype": "standing",
+  "cond": "D0-8C & kill-goblin[heavy] & bombs"
+ },
+ "D0-rupee-9": {
+  "room": null,
+  "level": null,
+  "region": "color-dungeon",
+  "subtype": "standing",
+  "cond": "D0-8C & kill-goblin[heavy] & bombs"
+ },
+ "D0-rupee-10": {
+  "room": null,
+  "level": null,
+  "region": "color-dungeon",
+  "subtype": "standing",
+  "cond": "D0-8C & kill-goblin[heavy] & bombs"
+ },
+ "D0-rupee-11": {
+  "room": null,
+  "level": null,
+  "region": "color-dungeon",
+  "subtype": "standing",
+  "cond": "D0-8C & kill-goblin[heavy] & bombs"
+ },
+ "D0-rupee-12": {
+  "room": null,
+  "level": null,
+  "region": "color-dungeon",
+  "subtype": "standing",
+  "cond": "D0-8C & kill-goblin[heavy] & bombs"
+ },
+ "D0-rupee-13": {
+  "room": null,
+  "level": null,
+  "region": "color-dungeon",
+  "subtype": "standing",
+  "cond": "D0-8C & kill-goblin[heavy] & bombs"
+ },
+ "D0-rupee-14": {
+  "room": null,
+  "level": null,
+  "region": "color-dungeon",
+  "subtype": "standing",
+  "cond": "D0-8C & kill-goblin[heavy] & bombs"
+ },
+ "D0-rupee-15": {
+  "room": null,
+  "level": null,
+  "region": "color-dungeon",
+  "subtype": "standing",
+  "cond": "D0-8C & kill-goblin[heavy] & bombs"
+ },
+ "D0-rupee-16": {
+  "room": null,
+  "level": null,
+  "region": "color-dungeon",
+  "subtype": "standing",
+  "cond": "D0-8C & kill-goblin[heavy] & bombs"
+ },
+ "D0-rupee-17": {
+  "room": null,
+  "level": null,
+  "region": "color-dungeon",
+  "subtype": "standing",
+  "cond": "D0-8C & kill-goblin[heavy] & bombs"
+ },
+ "D0-rupee-18": {
+  "room": null,
+  "level": null,
+  "region": "color-dungeon",
+  "subtype": "standing",
+  "cond": "D0-8C & kill-goblin[heavy] & bombs"
+ },
+ "D0-rupee-19": {
+  "room": null,
+  "level": null,
+  "region": "color-dungeon",
+  "subtype": "standing",
+  "cond": "D0-8C & kill-goblin[heavy] & bombs"
+ },
+ "D0-rupee-20": {
+  "room": null,
+  "level": null,
+  "region": "color-dungeon",
+  "subtype": "standing",
+  "cond": "D0-8C & kill-goblin[heavy] & bombs"
+ },
+ "D0-rupee-21": {
+  "room": null,
+  "level": null,
+  "region": "color-dungeon",
+  "subtype": "standing",
+  "cond": "D0-8C & kill-goblin[heavy] & bombs"
+ },
+ "D0-rupee-22": {
+  "room": null,
+  "level": null,
+  "region": "color-dungeon",
+  "subtype": "standing",
+  "cond": "D0-8C & kill-goblin[heavy] & bombs"
+ },
+ "D0-rupee-23": {
+  "room": null,
+  "level": null,
+  "region": "color-dungeon",
+  "subtype": "standing",
+  "cond": "D0-8C & kill-goblin[heavy] & bombs"
+ },
+ "D0-rupee-24": {
+  "room": null,
+  "level": null,
+  "region": "color-dungeon",
+  "subtype": "standing",
+  "cond": "D0-8C & kill-goblin[heavy] & bombs"
+ },
+ "D0-rupee-25": {
+  "room": null,
+  "level": null,
+  "region": "color-dungeon",
+  "subtype": "standing",
+  "cond": "D0-8C & kill-goblin[heavy] & bombs"
+ },
+ "D0-rupee-26": {
+  "room": null,
+  "level": null,
+  "region": "color-dungeon",
+  "subtype": "standing",
+  "cond": "D0-8C & kill-goblin[heavy] & bombs"
+ },
+ "D0-rupee-27": {
+  "room": null,
+  "level": null,
+  "region": "color-dungeon",
+  "subtype": "standing",
+  "cond": "D0-8C & kill-goblin[heavy] & bombs"
+ },
+ "D0-rupee-28": {
+  "room": null,
+  "level": null,
+  "region": "color-dungeon",
+  "subtype": "standing",
+  "cond": "D0-8C & kill-goblin[heavy] & bombs"
+ },
+ "owl-statue-below-D8": {
+  "room": null,
+  "level": null,
+  "region": "mr-write-house",
+  "subtype": "overworld-statue",
+  "cond": null
+ },
+ "owl-statue-moblin-cave": {
+  "room": null,
+  "level": null,
+  "region": "wasteland",
+  "subtype": "overworld-statue",
+  "cond": null
+ },
+ "owl-statue-pothole": {
+  "room": null,
+  "level": null,
+  "region": "pothole",
+  "subtype": "overworld-statue",
+  "cond": "break-bush"
+ },
+ "owl-statue-above-cave": {
+  "room": null,
+  "level": null,
+  "region": "plains",
+  "subtype": "overworld-statue",
+  "cond": "bombs & (feather | rooster)"
+ },
+ "owl-statue-south-bay": {
+  "room": null,
+  "level": null,
+  "region": "animal-village",
+  "subtype": "overworld-statue",
+  "cond": null
+ },
+ "owl-statue-desert": {
+  "room": null,
+  "level": null,
+  "region": "desert",
+  "subtype": "overworld-statue",
+  "cond": null
+ },
+ "owl-statue-maze": {
+  "room": null,
+  "level": null,
+  "region": "armos-maze",
+  "subtype": "overworld-statue",
+  "cond": "bracelet"
+ },
+ "owl-statue-rapids": {
+  "room": null,
+  "level": null,
+  "region": "rapids",
+  "subtype": "overworld-statue",
+  "cond": null
+ },
+ "owl-statue-taltal-east": {
+  "room": null,
+  "level": null,
+  "region": "taltal-east-2",
+  "subtype": "overworld-statue",
+  "cond": null
+ }
+}

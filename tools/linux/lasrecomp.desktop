@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=LAS Recomp
+Comment=The Legend of Zelda: Link's Awakening, recompiled (bring your own game files)
+Exec=lasrecomp
+Icon=lasrecomp
+Categories=Game;
+Terminal=false

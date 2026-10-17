@@ -1,0 +1,22 @@
+diff --git a/RandomizerCore/ASM/assemble.py b/RandomizerCore/ASM/assemble.py
+index e6b9a85..83602a3 100644
+--- a/RandomizerCore/ASM/assemble.py
++++ b/RandomizerCore/ASM/assemble.py
+@@ -99,8 +99,15 @@ def readASM(asm, asm_data, settings):
+             offset = int(line.split(' ')[1][2:], 16)
+             continue
+ 
+-        # handle branch offsets
+-        if line.startswith('b'):
++        # handle branch offsets (b/bl/b.cond take the target as their only operand; cbz/cbnz/tbz/tbnz as the last)
++        # [LAS Recomp fix: cbz/cbnz/tbz/tbnz targets were left absolute, which keystone truncates]
++        mnemonic = line.split(' ')[0]
++        if mnemonic in ('cbz', 'cbnz', 'tbz', 'tbnz') and line.split(', ')[-1].startswith('0x'):
++            operands = line[len(mnemonic):].strip().split(', ')
++            diff = int(operands[-1], 16) - offset  # keystone assembles the whole patch at base 0 = patch start
++            operands[-1] = ('+' if diff >= 0 else '') + hex(diff)
++            line = f"{mnemonic} {', '.join(operands)}"
++        elif line.startswith('b'):
+             line_data = line.split(' ')
+             branch_offset = int(line_data[1][2:], 16)
+             diff = branch_offset - offset

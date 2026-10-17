@@ -1,0 +1,2 @@
+// The .exe's icon (Makefile: windres -I docs/icon). ID 1: Explorer and the taskbar use the first icon resource.
+1 ICON "icon.ico"

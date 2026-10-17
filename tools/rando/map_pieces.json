@@ -1,0 +1,11611 @@
+[
+{
+"id": 5,
+"key": "PanelLv01TailCave_01F",
+"item": 0,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 6,
+"key": "PanelLv01TailCave_01G",
+"item": 0,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 21,
+"key": "PanelLv01TailCave_02F",
+"item": 0,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 22,
+"key": "PanelLv01TailCave_02G",
+"item": 0,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 113,
+"key": "PanelLv01TailCave_08B",
+"item": 0,
+"doors": [
+0,
+0,
+6,
+0
+],
+"passages": [
+0,
+0,
+1,
+0
+],
+"cracked": [
+0,
+0,
+1,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 8,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 54,
+"key": "PanelLv01TailCave_04G",
+"item": 0,
+"doors": [
+0,
+0,
+0,
+10
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+1015
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 17,
+"sideview": -1,
+"flag": 11,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 64,
+"key": "PanelLv01TailCave_05A",
+"item": 0,
+"doors": [
+0,
+0,
+0,
+9
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 2,
+"sideview": -1,
+"flag": 8,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 69,
+"key": "PanelLv01TailCave_05F",
+"item": 0,
+"doors": [
+0,
+0,
+0,
+9
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+2
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 2,
+"sideview": -1,
+"flag": 8,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 80,
+"key": "PanelLv01TailCave_06A",
+"item": 0,
+"doors": [
+1,
+0,
+0,
+1
+],
+"passages": [
+1,
+0,
+0,
+1
+],
+"cracked": [
+1,
+0,
+0,
+1
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 3,
+"sideview": -1,
+"flag": 4,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 70,
+"key": "PanelLv01TailCave_05G",
+"item": 0,
+"doors": [
+5,
+0,
+0,
+2
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+22,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 2,
+"box": 0,
+"keyblock": 0,
+"room": 3,
+"sideview": -1,
+"flag": 8,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 81,
+"key": "PanelLv01TailCave_06B",
+"item": 2,
+"doors": [
+0,
+0,
+7,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+24,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 8,
+"sideview": -1,
+"flag": 4,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 85,
+"key": "PanelLv01TailCave_06F",
+"item": 0,
+"doors": [
+9,
+2,
+2,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+2,
+2,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 13,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 86,
+"key": "PanelLv01TailCave_06G",
+"item": 0,
+"doors": [
+6,
+6,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+2,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 5,
+"sideview": -1,
+"flag": 9,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 96,
+"key": "PanelLv01TailCave_07A",
+"item": 0,
+"doors": [
+1,
+0,
+0,
+0
+],
+"passages": [
+1,
+0,
+0,
+0
+],
+"cracked": [
+1,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 3,
+"box": 0,
+"keyblock": 0,
+"room": 1,
+"sideview": -1,
+"flag": 4,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 98,
+"key": "PanelLv01TailCave_07C",
+"item": 0,
+"doors": [
+6,
+0,
+6,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+2,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 9,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 99,
+"key": "PanelLv01TailCave_07D",
+"item": 0,
+"doors": [
+0,
+2,
+9,
+9
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+2,
+2,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 14,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 100,
+"key": "PanelLv01TailCave_07E",
+"item": 0,
+"doors": [
+2,
+9,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+2,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 5,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 49,
+"key": "PanelLv01TailCave_04B",
+"item": 0,
+"doors": [
+0,
+0,
+2,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 2,
+"box": 0,
+"keyblock": 0,
+"room": 8,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+2,
+500,
+-1,
+-1
+]
+},
+{
+"id": 114,
+"key": "PanelLv01TailCave_08C",
+"item": 0,
+"doors": [
+0,
+2,
+9,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 12,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 115,
+"key": "PanelLv01TailCave_08D",
+"item": 0,
+"doors": [
+9,
+9,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+2,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 16,
+"sideview": -1,
+"flag": 23,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 273,
+"key": "PanelLv02BottleGrotto_02B",
+"item": 1,
+"doors": [
+0,
+0,
+2,
+0
+],
+"passages": [
+0,
+0,
+3,
+0
+],
+"cracked": [
+0,
+0,
+2,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 8,
+"sideview": -1,
+"flag": 8,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 278,
+"key": "PanelLv02BottleGrotto_02G",
+"item": 1,
+"doors": [
+0,
+2,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 2,
+"box": 0,
+"keyblock": 0,
+"room": 4,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+53,
+501,
+-1,
+-1
+]
+},
+{
+"id": 290,
+"key": "PanelLv02BottleGrotto_03C",
+"item": 1,
+"doors": [
+9,
+0,
+0,
+9
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 3,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 293,
+"key": "PanelLv02BottleGrotto_03F",
+"item": 1,
+"doors": [
+9,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 1,
+"box": 1,
+"keyblock": 0,
+"room": 1,
+"sideview": -1,
+"flag": 8,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 305,
+"key": "PanelLv02BottleGrotto_04B",
+"item": 1,
+"doors": [
+0,
+0,
+6,
+6
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 10,
+"sideview": -1,
+"flag": 9,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 306,
+"key": "PanelLv02BottleGrotto_04C",
+"item": 1,
+"doors": [
+9,
+2,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 3,
+"box": 0,
+"keyblock": 0,
+"room": 5,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 307,
+"key": "PanelLv02BottleGrotto_04D",
+"item": 1,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 308,
+"key": "PanelLv02BottleGrotto_04E",
+"item": 1,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 310,
+"key": "PanelLv02BottleGrotto_04G",
+"item": 1,
+"doors": [
+0,
+0,
+0,
+10
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+1016
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 17,
+"sideview": -1,
+"flag": 11,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 321,
+"key": "PanelLv02BottleGrotto_05B",
+"item": 1,
+"doors": [
+5,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+91,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 4,
+"box": 0,
+"keyblock": 0,
+"room": 1,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 323,
+"key": "PanelLv02BottleGrotto_05D",
+"item": 1,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 324,
+"key": "PanelLv02BottleGrotto_05E",
+"item": 1,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 326,
+"key": "PanelLv02BottleGrotto_05G",
+"item": 1,
+"doors": [
+5,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+55,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 2,
+"box": 0,
+"keyblock": 0,
+"room": 1,
+"sideview": -1,
+"flag": 4,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 337,
+"key": "PanelLv02BottleGrotto_06B",
+"item": 1,
+"doors": [
+0,
+0,
+0,
+6
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 2,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 339,
+"key": "PanelLv02BottleGrotto_06D",
+"item": 1,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 340,
+"key": "PanelLv02BottleGrotto_06E",
+"item": 1,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 342,
+"key": "PanelLv02BottleGrotto_06G",
+"item": 1,
+"doors": [
+0,
+0,
+0,
+2
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 2,
+"box": 0,
+"keyblock": 0,
+"room": 2,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+56,
+502,
+-1,
+-1
+]
+},
+{
+"id": 353,
+"key": "PanelLv02BottleGrotto_07B",
+"item": 1,
+"doors": [
+6,
+0,
+2,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 9,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 354,
+"key": "PanelLv02BottleGrotto_07C",
+"item": 1,
+"doors": [
+0,
+5,
+6,
+9
+],
+"passages": [
+0,
+1,
+1,
+0
+],
+"cracked": [
+0,
+1,
+1,
+0
+],
+"door_switch": [
+0,
+35,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 14,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 355,
+"key": "PanelLv02BottleGrotto_07D",
+"item": 1,
+"doors": [
+0,
+2,
+1,
+5
+],
+"passages": [
+0,
+1,
+1,
+0
+],
+"cracked": [
+0,
+1,
+1,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+39
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 14,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 370,
+"key": "PanelLv02BottleGrotto_08C",
+"item": 1,
+"doors": [
+9,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 16,
+"sideview": -1,
+"flag": 23,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 371,
+"key": "PanelLv02BottleGrotto_08D",
+"item": 1,
+"doors": [
+2,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 1,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 373,
+"key": "PanelLv02BottleGrotto_08F",
+"item": 1,
+"doors": [
+9,
+9,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 5,
+"sideview": -1,
+"flag": 4,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 517,
+"key": "PanelLv03KeyCavern_01F",
+"item": 2,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 518,
+"key": "PanelLv03KeyCavern_01G",
+"item": 2,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 550,
+"key": "PanelLv03KeyCavern_03G",
+"item": 2,
+"doors": [
+0,
+0,
+0,
+2
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+2
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 2,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 562,
+"key": "PanelLv03KeyCavern_04C",
+"item": 2,
+"doors": [
+9,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 3,
+"box": 1,
+"keyblock": 0,
+"room": 1,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 565,
+"key": "PanelLv03KeyCavern_04F",
+"item": 2,
+"doors": [
+0,
+0,
+2,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+2,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 8,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 566,
+"key": "PanelLv03KeyCavern_04G",
+"item": 2,
+"doors": [
+5,
+5,
+5,
+5
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+68,
+69,
+70,
+71
+],
+"walls": [
+4,
+4,
+4,
+4
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 15,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 567,
+"key": "PanelLv03KeyCavern_04H",
+"item": 2,
+"doors": [
+0,
+2,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+2,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 4,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 582,
+"key": "PanelLv03KeyCavern_05G",
+"item": 2,
+"doors": [
+2,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+2,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 1,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 594,
+"key": "PanelLv03KeyCavern_06C",
+"item": 2,
+"doors": [
+0,
+2,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+2,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 4,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 614,
+"key": "PanelLv03KeyCavern_07G",
+"item": 2,
+"doors": [
+0,
+0,
+0,
+10
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+1017
+],
+"walls": [
+1,
+1,
+1,
+4
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 17,
+"sideview": -1,
+"flag": 267,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 625,
+"key": "PanelLv03KeyCavern_08B",
+"item": 2,
+"doors": [
+6,
+0,
+9,
+0
+],
+"passages": [
+1,
+0,
+0,
+0
+],
+"cracked": [
+1,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 16,
+"sideview": -1,
+"flag": 23,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 626,
+"key": "PanelLv03KeyCavern_08C",
+"item": 2,
+"doors": [
+0,
+9,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+3,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 4,
+"sideview": -1,
+"flag": 4,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 630,
+"key": "PanelLv03KeyCavern_08G",
+"item": 2,
+"doors": [
+5,
+0,
+2,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+79,
+0,
+0,
+0
+],
+"walls": [
+4,
+1,
+2,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 9,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 631,
+"key": "PanelLv03KeyCavern_08H",
+"item": 2,
+"doors": [
+0,
+6,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+4,
+1,
+1
+],
+"stairs": 2,
+"box": 0,
+"keyblock": 0,
+"room": 4,
+"sideview": -1,
+"flag": 8,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 787,
+"key": "PanelLv04AnglersTunnel_02D",
+"item": 3,
+"doors": [
+0,
+0,
+6,
+6
+],
+"passages": [
+0,
+0,
+1,
+0
+],
+"cracked": [
+0,
+0,
+1,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 10,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 788,
+"key": "PanelLv04AnglersTunnel_02E",
+"item": 3,
+"doors": [
+0,
+2,
+0,
+2
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 6,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 804,
+"key": "PanelLv04AnglersTunnel_03E",
+"item": 3,
+"doors": [
+6,
+0,
+0,
+6
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 3,
+"sideview": -1,
+"flag": 9,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 806,
+"key": "PanelLv04AnglersTunnel_03G",
+"item": 3,
+"doors": [
+0,
+0,
+0,
+2
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 2,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 817,
+"key": "PanelLv04AnglersTunnel_04B",
+"item": 3,
+"doors": [
+0,
+0,
+0,
+10
+],
+"passages": [
+0,
+0,
+0,
+1
+],
+"cracked": [
+0,
+0,
+0,
+1
+],
+"door_switch": [
+0,
+0,
+0,
+1018
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 17,
+"sideview": 14,
+"flag": 263,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 818,
+"key": "PanelLv04AnglersTunnel_04C",
+"item": 3,
+"doors": [
+0,
+0,
+9,
+2
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 2,
+"box": 0,
+"keyblock": 0,
+"room": 10,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+454,
+100,
+503,
+-1
+]
+},
+{
+"id": 833,
+"key": "PanelLv04AnglersTunnel_05B",
+"item": 3,
+"doors": [
+5,
+0,
+9,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+109,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 9,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 848,
+"key": "PanelLv04AnglersTunnel_06A",
+"item": 3,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 849,
+"key": "PanelLv04AnglersTunnel_06B",
+"item": 3,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 864,
+"key": "PanelLv04AnglersTunnel_07A",
+"item": 3,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 865,
+"key": "PanelLv04AnglersTunnel_07B",
+"item": 3,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 880,
+"key": "PanelLv04AnglersTunnel_08A",
+"item": 3,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 881,
+"key": "PanelLv04AnglersTunnel_08B",
+"item": 3,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 883,
+"key": "PanelLv04AnglersTunnel_08D",
+"item": 3,
+"doors": [
+9,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 16,
+"sideview": -1,
+"flag": 23,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 884,
+"key": "PanelLv04AnglersTunnel_08E",
+"item": 3,
+"doors": [
+6,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 1,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 885,
+"key": "PanelLv04AnglersTunnel_04AU",
+"item": 3,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 25,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 886,
+"key": "PanelLv04AnglersTunnel_04AL",
+"item": 3,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 26,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 887,
+"key": "PanelLv04AnglersTunnel_04HU",
+"item": 3,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 25,
+"sideview": -1,
+"flag": 59,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 888,
+"key": "PanelLv04AnglersTunnel_04HL",
+"item": 3,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 26,
+"sideview": -1,
+"flag": 59,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1025,
+"key": "PanelLv05CatfishsMaw_01B",
+"item": 4,
+"doors": [
+0,
+0,
+6,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+2,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 8,
+"sideview": -1,
+"flag": 265,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1026,
+"key": "PanelLv05CatfishsMaw_01C",
+"item": 4,
+"doors": [
+0,
+2,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+2,
+1,
+1
+],
+"stairs": 4,
+"box": 1,
+"keyblock": 0,
+"room": 4,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1028,
+"key": "PanelLv05CatfishsMaw_01E",
+"item": 4,
+"doors": [
+0,
+0,
+6,
+0
+],
+"passages": [
+0,
+0,
+2,
+0
+],
+"cracked": [
+0,
+0,
+2,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+2,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 8,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1029,
+"key": "PanelLv05CatfishsMaw_01F",
+"item": 4,
+"doors": [
+0,
+6,
+0,
+6
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+2,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 6,
+"sideview": -1,
+"flag": 265,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1043,
+"key": "PanelLv05CatfishsMaw_02D",
+"item": 4,
+"doors": [
+0,
+0,
+0,
+10
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+1019
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 17,
+"sideview": -1,
+"flag": 139,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1045,
+"key": "PanelLv05CatfishsMaw_02F",
+"item": 4,
+"doors": [
+6,
+0,
+2,
+2
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+2,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 11,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1057,
+"key": "PanelLv05CatfishsMaw_03B",
+"item": 4,
+"doors": [
+0,
+0,
+2,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+2,
+1
+],
+"stairs": 1,
+"box": 0,
+"keyblock": 0,
+"room": 8,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1058,
+"key": "PanelLv05CatfishsMaw_03C",
+"item": 4,
+"doors": [
+0,
+6,
+6,
+0
+],
+"passages": [
+0,
+1,
+1,
+0
+],
+"cracked": [
+0,
+1,
+1,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 12,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1061,
+"key": "PanelLv05CatfishsMaw_03F",
+"item": 4,
+"doors": [
+2,
+0,
+0,
+2
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 4,
+"box": 0,
+"keyblock": 0,
+"room": 3,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1072,
+"key": "PanelLv05CatfishsMaw_04A",
+"item": 4,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1073,
+"key": "PanelLv05CatfishsMaw_04B",
+"item": 4,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1077,
+"key": "PanelLv05CatfishsMaw_04F",
+"item": 4,
+"doors": [
+2,
+0,
+9,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+2,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 9,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1078,
+"key": "PanelLv05CatfishsMaw_04G",
+"item": 4,
+"doors": [
+1,
+1,
+6,
+1
+],
+"passages": [
+1,
+1,
+1,
+1
+],
+"cracked": [
+1,
+1,
+1,
+1
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+2,
+2,
+2
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 15,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1079,
+"key": "PanelLv05CatfishsMaw_04H",
+"item": 4,
+"doors": [
+0,
+6,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+2,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 4,
+"sideview": -1,
+"flag": 265,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1088,
+"key": "PanelLv05CatfishsMaw_05A",
+"item": 4,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1089,
+"key": "PanelLv05CatfishsMaw_05B",
+"item": 4,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1091,
+"key": "PanelLv05CatfishsMaw_05D",
+"item": 4,
+"doors": [
+0,
+0,
+6,
+6
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+2,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 10,
+"sideview": -1,
+"flag": 9,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1093,
+"key": "PanelLv05CatfishsMaw_05F",
+"item": 4,
+"doors": [
+0,
+0,
+6,
+6
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+2
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 10,
+"sideview": -1,
+"flag": 265,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1094,
+"key": "PanelLv05CatfishsMaw_05G",
+"item": 4,
+"doors": [
+9,
+2,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+2,
+1,
+1,
+1
+],
+"stairs": 4,
+"box": 1,
+"keyblock": 0,
+"room": 5,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1104,
+"key": "PanelLv05CatfishsMaw_06A",
+"item": 4,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1105,
+"key": "PanelLv05CatfishsMaw_06B",
+"item": 4,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1120,
+"key": "PanelLv05CatfishsMaw_07A",
+"item": 4,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1121,
+"key": "PanelLv05CatfishsMaw_07B",
+"item": 4,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1123,
+"key": "PanelLv05CatfishsMaw_07D",
+"item": 4,
+"doors": [
+0,
+0,
+2,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+2,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 8,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1136,
+"key": "PanelLv05CatfishsMaw_08A",
+"item": 4,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1137,
+"key": "PanelLv05CatfishsMaw_08B",
+"item": 4,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1140,
+"key": "PanelLv05CatfishsMaw_08E",
+"item": 4,
+"doors": [
+0,
+0,
+6,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 1,
+"box": 1,
+"keyblock": 0,
+"room": 8,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1143,
+"key": "PanelLv05CatfishsMaw_08H",
+"item": 4,
+"doors": [
+0,
+2,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+2,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 16,
+"sideview": -1,
+"flag": 23,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1280,
+"key": "PanelLv06FaceShrine_01A",
+"item": 5,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1281,
+"key": "PanelLv06FaceShrine_01B",
+"item": 5,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1282,
+"key": "PanelLv06FaceShrine_01C",
+"item": 5,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1283,
+"key": "PanelLv06FaceShrine_01D",
+"item": 5,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1284,
+"key": "PanelLv06FaceShrine_01E",
+"item": 5,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1285,
+"key": "PanelLv06FaceShrine_01F",
+"item": 5,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1296,
+"key": "PanelLv06FaceShrine_02A",
+"item": 5,
+"doors": [
+0,
+0,
+0,
+6
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+2
+],
+"stairs": 2,
+"box": 1,
+"keyblock": 0,
+"room": 2,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1303,
+"key": "PanelLv06FaceShrine_02H",
+"item": 5,
+"doors": [
+0,
+0,
+0,
+6
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+2
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 2,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1312,
+"key": "PanelLv06FaceShrine_03A",
+"item": 5,
+"doors": [
+6,
+0,
+2,
+2
+],
+"passages": [
+0,
+0,
+0,
+1
+],
+"cracked": [
+0,
+0,
+0,
+2
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+2,
+1,
+2,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 11,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1319,
+"key": "PanelLv06FaceShrine_03H",
+"item": 5,
+"doors": [
+2,
+0,
+0,
+2
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+2,
+1,
+1,
+2
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 3,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1328,
+"key": "PanelLv06FaceShrine_04A",
+"item": 5,
+"doors": [
+6,
+0,
+9,
+9
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+2,
+1,
+1,
+2
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 11,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1332,
+"key": "PanelLv06FaceShrine_04E",
+"item": 5,
+"doors": [
+0,
+0,
+0,
+10
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+1020
+],
+"walls": [
+1,
+1,
+1,
+3
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 17,
+"sideview": -1,
+"flag": 11,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1333,
+"key": "PanelLv06FaceShrine_04F",
+"item": 5,
+"doors": [
+2,
+0,
+0,
+2
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+2,
+1,
+1,
+2
+],
+"stairs": 1,
+"box": 0,
+"keyblock": 0,
+"room": 3,
+"sideview": -1,
+"flag": 8,
+"stairs_switch": [
+207,
+504,
+-1,
+-1
+]
+},
+{
+"id": 1344,
+"key": "PanelLv06FaceShrine_05A",
+"item": 5,
+"doors": [
+9,
+0,
+2,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+2,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 9,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1346,
+"key": "PanelLv06FaceShrine_05C",
+"item": 5,
+"doors": [
+0,
+7,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+3,
+0,
+0
+],
+"door_switch": [
+0,
+211,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 2,
+"box": 0,
+"keyblock": 0,
+"room": 4,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+210,
+505,
+-1,
+-1
+]
+},
+{
+"id": 1348,
+"key": "PanelLv06FaceShrine_05E",
+"item": 5,
+"doors": [
+5,
+0,
+0,
+2
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+225,
+0,
+0,
+0
+],
+"walls": [
+2,
+1,
+1,
+2
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 3,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1349,
+"key": "PanelLv06FaceShrine_05F",
+"item": 5,
+"doors": [
+6,
+0,
+0,
+6
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+213
+],
+"walls": [
+2,
+1,
+1,
+2
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 3,
+"sideview": -1,
+"flag": 9,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1351,
+"key": "PanelLv06FaceShrine_05H",
+"item": 5,
+"doors": [
+2,
+2,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 5,
+"sideview": -1,
+"flag": 9,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1363,
+"key": "PanelLv06FaceShrine_06D",
+"item": 5,
+"doors": [
+6,
+0,
+6,
+0
+],
+"passages": [
+1,
+0,
+0,
+0
+],
+"cracked": [
+1,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+2,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 9,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1364,
+"key": "PanelLv06FaceShrine_06E",
+"item": 5,
+"doors": [
+6,
+6,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+2,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 5,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1365,
+"key": "PanelLv06FaceShrine_06F",
+"item": 5,
+"doors": [
+7,
+0,
+0,
+2
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+220,
+0,
+0,
+0
+],
+"walls": [
+2,
+1,
+1,
+2
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 3,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1377,
+"key": "PanelLv06FaceShrine_07B",
+"item": 5,
+"doors": [
+2,
+0,
+0,
+2
+],
+"passages": [
+1,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+2,
+1,
+1,
+2
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 3,
+"sideview": -1,
+"flag": 4,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1381,
+"key": "PanelLv06FaceShrine_07F",
+"item": 5,
+"doors": [
+5,
+0,
+6,
+2
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+222,
+0,
+0,
+0
+],
+"walls": [
+2,
+1,
+1,
+2
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 11,
+"sideview": -1,
+"flag": 4,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1393,
+"key": "PanelLv06FaceShrine_08B",
+"item": 5,
+"doors": [
+6,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+2,
+1,
+1,
+1
+],
+"stairs": 3,
+"box": 0,
+"keyblock": 0,
+"room": 1,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1395,
+"key": "PanelLv06FaceShrine_08D",
+"item": 5,
+"doors": [
+0,
+9,
+9,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 16,
+"sideview": -1,
+"flag": 23,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1396,
+"key": "PanelLv06FaceShrine_08E",
+"item": 5,
+"doors": [
+0,
+1,
+1,
+0
+],
+"passages": [
+0,
+1,
+1,
+0
+],
+"cracked": [
+0,
+1,
+1,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 12,
+"sideview": -1,
+"flag": 8,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1397,
+"key": "PanelLv06FaceShrine_08F",
+"item": 5,
+"doors": [
+6,
+9,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+2,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 5,
+"sideview": -1,
+"flag": 8,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1537,
+"key": "PanelLv07EagleTower_01B",
+"item": 6,
+"doors": [
+0,
+0,
+0,
+9
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+3
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+2,
+1,
+1,
+2
+],
+"stairs": 2,
+"box": 1,
+"keyblock": 0,
+"room": 2,
+"sideview": -1,
+"flag": 8,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1538,
+"key": "PanelLv07EagleTower_01C",
+"item": 6,
+"doors": [
+0,
+0,
+0,
+9
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+3
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+2,
+1,
+1,
+2
+],
+"stairs": 1,
+"box": 1,
+"keyblock": 0,
+"room": 2,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1543,
+"key": "PanelLv07EagleTower_01H",
+"item": 6,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1552,
+"key": "PanelLv07EagleTower_02A",
+"item": 6,
+"doors": [
+0,
+0,
+6,
+2
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 10,
+"sideview": -1,
+"flag": 8,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1555,
+"key": "PanelLv07EagleTower_02D",
+"item": 6,
+"doors": [
+0,
+2,
+0,
+9
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+2,
+1,
+2
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 6,
+"sideview": -1,
+"flag": 4,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1559,
+"key": "PanelLv07EagleTower_02H",
+"item": 6,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1568,
+"key": "PanelLv07EagleTower_03A",
+"item": 6,
+"doors": [
+5,
+0,
+9,
+9
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+263,
+0,
+0,
+0
+],
+"walls": [
+2,
+1,
+1,
+1
+],
+"stairs": 2,
+"box": 0,
+"keyblock": 0,
+"room": 11,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1574,
+"key": "PanelLv07EagleTower_03G",
+"item": 6,
+"doors": [
+0,
+0,
+0,
+10
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+1021
+],
+"walls": [
+1,
+1,
+1,
+2
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 17,
+"sideview": 20,
+"flag": 7,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1584,
+"key": "PanelLv07EagleTower_04A",
+"item": 6,
+"doors": [
+6,
+0,
+6,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 9,
+"sideview": -1,
+"flag": 9,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1586,
+"key": "PanelLv07EagleTower_04C",
+"item": 6,
+"doors": [
+2,
+2,
+9,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 2,
+"box": 0,
+"keyblock": 0,
+"room": 13,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1605,
+"key": "PanelLv07EagleTower_05F",
+"item": 6,
+"doors": [
+0,
+0,
+2,
+1
+],
+"passages": [
+0,
+0,
+0,
+1
+],
+"cracked": [
+0,
+0,
+0,
+1
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+2,
+3
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 10,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1606,
+"key": "PanelLv07EagleTower_05G",
+"item": 6,
+"doors": [
+0,
+2,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+3,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+2,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 4,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1608,
+"key": "PanelLv07EagleTower_05EL",
+"item": 6,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 28,
+"sideview": -1,
+"flag": 48,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1610,
+"key": "PanelLv07EagleTower_05HL",
+"item": 6,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 28,
+"sideview": -1,
+"flag": 16,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1623,
+"key": "PanelLv07EagleTower_06H",
+"item": 6,
+"doors": [
+0,
+0,
+0,
+2
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+2
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 2,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1638,
+"key": "PanelLv07EagleTower_07G",
+"item": 6,
+"doors": [
+0,
+0,
+2,
+2
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+2,
+2
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 10,
+"sideview": -1,
+"flag": 4,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1639,
+"key": "PanelLv07EagleTower_07H",
+"item": 6,
+"doors": [
+0,
+6,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+2
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 4,
+"sideview": -1,
+"flag": 9,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1649,
+"key": "PanelLv07EagleTower_08B",
+"item": 6,
+"doors": [
+0,
+9,
+9,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 16,
+"sideview": -1,
+"flag": 23,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1654,
+"key": "PanelLv07EagleTower_08G",
+"item": 6,
+"doors": [
+2,
+2,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+2,
+2,
+1
+],
+"stairs": 2,
+"box": 0,
+"keyblock": 0,
+"room": 5,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1792,
+"key": "PanelLv08TurtleRock_01A",
+"item": 7,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1793,
+"key": "PanelLv08TurtleRock_01B",
+"item": 7,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+2,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1796,
+"key": "PanelLv08TurtleRock_01E",
+"item": 7,
+"doors": [
+0,
+0,
+0,
+1
+],
+"passages": [
+0,
+0,
+0,
+1
+],
+"cracked": [
+0,
+0,
+0,
+1
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+2
+],
+"stairs": 2,
+"box": 0,
+"keyblock": 0,
+"room": 2,
+"sideview": -1,
+"flag": 4,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1798,
+"key": "PanelLv08TurtleRock_01G",
+"item": 7,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1799,
+"key": "PanelLv08TurtleRock_01H",
+"item": 7,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1808,
+"key": "PanelLv08TurtleRock_02A",
+"item": 7,
+"doors": [
+0,
+0,
+0,
+2
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 2,
+"sideview": -1,
+"flag": 4,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1809,
+"key": "PanelLv08TurtleRock_02B",
+"item": 7,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1810,
+"key": "PanelLv08TurtleRock_02C",
+"item": 7,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+2,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1811,
+"key": "PanelLv08TurtleRock_02D",
+"item": 7,
+"doors": [
+0,
+0,
+0,
+10
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+1022
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 17,
+"sideview": -1,
+"flag": 11,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1813,
+"key": "PanelLv08TurtleRock_02F",
+"item": 7,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+2,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1814,
+"key": "PanelLv08TurtleRock_02G",
+"item": 7,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1824,
+"key": "PanelLv08TurtleRock_03A",
+"item": 7,
+"doors": [
+6,
+0,
+6,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+2,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 9,
+"sideview": -1,
+"flag": 9,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1827,
+"key": "PanelLv08TurtleRock_03D",
+"item": 7,
+"doors": [
+5,
+9,
+5,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+306,
+0,
+340,
+0
+],
+"walls": [
+1,
+2,
+2,
+1
+],
+"stairs": 2,
+"box": 0,
+"keyblock": 0,
+"room": 13,
+"sideview": -1,
+"flag": 4,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1829,
+"key": "PanelLv08TurtleRock_03F",
+"item": 7,
+"doors": [
+0,
+2,
+0,
+0
+],
+"passages": [
+0,
+3,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+2,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 4,
+"sideview": -1,
+"flag": 9,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1830,
+"key": "PanelLv08TurtleRock_03G",
+"item": 7,
+"doors": [
+0,
+2,
+0,
+2
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+2,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 6,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1831,
+"key": "PanelLv08TurtleRock_03H",
+"item": 7,
+"doors": [
+6,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 1,
+"sideview": -1,
+"flag": 265,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1842,
+"key": "PanelLv08TurtleRock_04C",
+"item": 7,
+"doors": [
+0,
+9,
+7,
+9
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+309,
+0
+],
+"walls": [
+1,
+2,
+2,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 14,
+"sideview": -1,
+"flag": 8,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1845,
+"key": "PanelLv08TurtleRock_04F",
+"item": 7,
+"doors": [
+0,
+2,
+7,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+312,
+0
+],
+"walls": [
+1,
+2,
+2,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 12,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1846,
+"key": "PanelLv08TurtleRock_04G",
+"item": 7,
+"doors": [
+6,
+7,
+0,
+2
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+313,
+0,
+0
+],
+"walls": [
+1,
+2,
+2,
+2
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 7,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1858,
+"key": "PanelLv08TurtleRock_05C",
+"item": 7,
+"doors": [
+9,
+0,
+9,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+2,
+2,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 9,
+"sideview": -1,
+"flag": 4,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1862,
+"key": "PanelLv08TurtleRock_05G",
+"item": 7,
+"doors": [
+5,
+2,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+307,
+0,
+0,
+0
+],
+"walls": [
+2,
+2,
+1,
+1
+],
+"stairs": 4,
+"box": 0,
+"keyblock": 0,
+"room": 5,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1872,
+"key": "PanelLv08TurtleRock_06A",
+"item": 7,
+"doors": [
+0,
+0,
+0,
+2
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 2,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1873,
+"key": "PanelLv08TurtleRock_06B",
+"item": 7,
+"doors": [
+9,
+0,
+2,
+1
+],
+"passages": [
+0,
+0,
+0,
+1
+],
+"cracked": [
+0,
+0,
+0,
+1
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+2,
+1,
+1,
+2
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 11,
+"sideview": -1,
+"flag": 4,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1874,
+"key": "PanelLv08TurtleRock_06C",
+"item": 7,
+"doors": [
+0,
+6,
+0,
+6
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+2,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 6,
+"sideview": -1,
+"flag": 9,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1878,
+"key": "PanelLv08TurtleRock_06G",
+"item": 7,
+"doors": [
+0,
+7,
+0,
+7
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+320,
+0,
+321
+],
+"walls": [
+1,
+2,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 6,
+"sideview": -1,
+"flag": 4,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1879,
+"key": "PanelLv08TurtleRock_06H",
+"item": 7,
+"doors": [
+0,
+0,
+0,
+6
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 1,
+"box": 0,
+"keyblock": 0,
+"room": 2,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1888,
+"key": "PanelLv08TurtleRock_07A",
+"item": 7,
+"doors": [
+6,
+0,
+6,
+6
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+2,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 11,
+"sideview": -1,
+"flag": 9,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1889,
+"key": "PanelLv08TurtleRock_07B",
+"item": 7,
+"doors": [
+9,
+2,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+2,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 5,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1890,
+"key": "PanelLv08TurtleRock_07C",
+"item": 7,
+"doors": [
+6,
+0,
+2,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+2,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 9,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1891,
+"key": "PanelLv08TurtleRock_07D",
+"item": 7,
+"doors": [
+9,
+6,
+6,
+9
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+2,
+2,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 15,
+"sideview": -1,
+"flag": 8,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1892,
+"key": "PanelLv08TurtleRock_07E",
+"item": 7,
+"doors": [
+0,
+2,
+6,
+6
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+2,
+2,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 14,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1893,
+"key": "PanelLv08TurtleRock_07F",
+"item": 7,
+"doors": [
+0,
+2,
+1,
+0
+],
+"passages": [
+0,
+0,
+1,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+2,
+2,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 12,
+"sideview": -1,
+"flag": 4,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1894,
+"key": "PanelLv08TurtleRock_07G",
+"item": 7,
+"doors": [
+7,
+9,
+2,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+331,
+0,
+0,
+0
+],
+"walls": [
+1,
+2,
+2,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 13,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1895,
+"key": "PanelLv08TurtleRock_07H",
+"item": 7,
+"doors": [
+6,
+6,
+0,
+6
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+2,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 7,
+"sideview": -1,
+"flag": 9,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1904,
+"key": "PanelLv08TurtleRock_08A",
+"item": 7,
+"doors": [
+2,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 1,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1905,
+"key": "PanelLv08TurtleRock_08B",
+"item": 7,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1906,
+"key": "PanelLv08TurtleRock_08C",
+"item": 7,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1907,
+"key": "PanelLv08TurtleRock_08D",
+"item": 7,
+"doors": [
+1,
+0,
+0,
+0
+],
+"passages": [
+1,
+0,
+0,
+0
+],
+"cracked": [
+1,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 16,
+"sideview": -1,
+"flag": 23,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1908,
+"key": "PanelLv08TurtleRock_08E",
+"item": 7,
+"doors": [
+2,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 2,
+"box": 0,
+"keyblock": 0,
+"room": 1,
+"sideview": -1,
+"flag": 256,
+"stairs_switch": [
+334,
+506,
+-1,
+-1
+]
+},
+{
+"id": 1909,
+"key": "PanelLv08TurtleRock_08F",
+"item": 7,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1910,
+"key": "PanelLv08TurtleRock_08G",
+"item": 7,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 24,
+"sideview": -1,
+"flag": 27,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1911,
+"key": "PanelLv08TurtleRock_08H",
+"item": 7,
+"doors": [
+6,
+0,
+0,
+0
+],
+"passages": [
+2,
+0,
+0,
+0
+],
+"cracked": [
+2,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+2,
+1,
+1
+],
+"stairs": 3,
+"box": 1,
+"keyblock": 0,
+"room": 1,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 2353,
+"key": "PanelLv10ClothesDungeon_04B",
+"item": 9,
+"doors": [
+0,
+0,
+0,
+10
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+1023
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 17,
+"sideview": -1,
+"flag": 11,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 2354,
+"key": "PanelLv10ClothesDungeon_04C",
+"item": 9,
+"doors": [
+0,
+2,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 4,
+"sideview": -1,
+"flag": 4,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 2357,
+"key": "PanelLv10ClothesDungeon_04F",
+"item": 9,
+"doors": [
+0,
+0,
+2,
+0
+],
+"passages": [
+0,
+0,
+1,
+0
+],
+"cracked": [
+0,
+0,
+1,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+2,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 8,
+"sideview": -1,
+"flag": 4,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 2358,
+"key": "PanelLv10ClothesDungeon_04G",
+"item": 9,
+"doors": [
+0,
+6,
+0,
+6
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 6,
+"sideview": -1,
+"flag": 265,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 2369,
+"key": "PanelLv10ClothesDungeon_05B",
+"item": 9,
+"doors": [
+5,
+0,
+2,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+353,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 9,
+"sideview": -1,
+"flag": 4,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 2370,
+"key": "PanelLv10ClothesDungeon_05C",
+"item": 9,
+"doors": [
+0,
+5,
+0,
+2
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+354,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 6,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 2371,
+"key": "PanelLv10ClothesDungeon_05D",
+"item": 9,
+"doors": [
+0,
+0,
+2,
+2
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 10,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 2372,
+"key": "PanelLv10ClothesDungeon_05E",
+"item": 9,
+"doors": [
+0,
+2,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 4,
+"sideview": -1,
+"flag": 8,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 2373,
+"key": "PanelLv10ClothesDungeon_05F",
+"item": 9,
+"doors": [
+0,
+0,
+2,
+2
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 10,
+"sideview": -1,
+"flag": 4,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 2374,
+"key": "PanelLv10ClothesDungeon_05G",
+"item": 9,
+"doors": [
+5,
+6,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+361,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 5,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 2386,
+"key": "PanelLv10ClothesDungeon_06C",
+"item": 9,
+"doors": [
+6,
+0,
+6,
+0
+],
+"passages": [
+0,
+0,
+1,
+0
+],
+"cracked": [
+0,
+0,
+1,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+2,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 9,
+"sideview": -1,
+"flag": 4,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 2387,
+"key": "PanelLv10ClothesDungeon_06D",
+"item": 9,
+"doors": [
+6,
+6,
+2,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 13,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 2388,
+"key": "PanelLv10ClothesDungeon_06E",
+"item": 9,
+"doors": [
+0,
+6,
+0,
+6
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 6,
+"sideview": -1,
+"flag": 9,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 2389,
+"key": "PanelLv10ClothesDungeon_06F",
+"item": 9,
+"doors": [
+2,
+0,
+0,
+2
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 3,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 2402,
+"key": "PanelLv10ClothesDungeon_07C",
+"item": 9,
+"doors": [
+0,
+0,
+6,
+2
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 10,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 2403,
+"key": "PanelLv10ClothesDungeon_07D",
+"item": 9,
+"doors": [
+0,
+2,
+9,
+7
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+367
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 14,
+"sideview": -1,
+"flag": 4,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 2404,
+"key": "PanelLv10ClothesDungeon_07E",
+"item": 9,
+"doors": [
+5,
+9,
+9,
+2
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+377,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 15,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 2405,
+"key": "PanelLv10ClothesDungeon_07F",
+"item": 9,
+"doors": [
+2,
+9,
+0,
+2
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 7,
+"sideview": -1,
+"flag": 8,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 2418,
+"key": "PanelLv10ClothesDungeon_08C",
+"item": 9,
+"doors": [
+2,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 16,
+"sideview": -1,
+"flag": 23,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 2419,
+"key": "PanelLv10ClothesDungeon_08D",
+"item": 9,
+"doors": [
+7,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+370,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 1,
+"sideview": -1,
+"flag": 4,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 2420,
+"key": "PanelLv10ClothesDungeon_08E",
+"item": 9,
+"doors": [
+6,
+0,
+6,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 9,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 2421,
+"key": "PanelLv10ClothesDungeon_08F",
+"item": 9,
+"doors": [
+6,
+6,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 5,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 71,
+"key": "PanelLv01TailCave_05H",
+"item": 13,
+"doors": [
+0,
+0,
+6,
+6
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+2,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 10,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 352,
+"key": "PanelLv02BottleGrotto_07A",
+"item": 14,
+"doors": [
+0,
+6,
+2,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 12,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 55,
+"key": "PanelLv01TailCave_04H",
+"item": 15,
+"doors": [
+6,
+0,
+0,
+6
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 3,
+"sideview": -1,
+"flag": 43,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 311,
+"key": "PanelLv02BottleGrotto_04H",
+"item": 16,
+"doors": [
+0,
+6,
+6,
+6
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 14,
+"sideview": -1,
+"flag": 43,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 563,
+"key": "PanelLv03KeyCavern_04D",
+"item": 17,
+"doors": [
+9,
+2,
+0,
+2
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 7,
+"sideview": -1,
+"flag": 256,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 615,
+"key": "PanelLv03KeyCavern_07H",
+"item": 18,
+"doors": [
+6,
+6,
+6,
+6
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+4,
+4,
+4,
+4
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 15,
+"sideview": -1,
+"flag": 299,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1042,
+"key": "PanelLv05CatfishsMaw_02C",
+"item": 19,
+"doors": [
+6,
+6,
+0,
+6
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+2,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 7,
+"sideview": -1,
+"flag": 171,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 3588,
+"key": "PanelSpecialAddition_01E",
+"item": 20,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 27,
+"sideview": -1,
+"flag": 75,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 805,
+"key": "PanelLv04AnglersTunnel_03F",
+"item": 21,
+"doors": [
+6,
+6,
+0,
+6
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 7,
+"sideview": -1,
+"flag": 9,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 832,
+"key": "PanelLv04AnglersTunnel_05A",
+"item": 22,
+"doors": [
+6,
+0,
+6,
+6
+],
+"passages": [
+1,
+0,
+1,
+1
+],
+"cracked": [
+1,
+0,
+1,
+1
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 11,
+"sideview": 15,
+"flag": 295,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1298,
+"key": "PanelLv06FaceShrine_02C",
+"item": 23,
+"doors": [
+0,
+0,
+9,
+6
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+2,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 10,
+"sideview": -1,
+"flag": 8,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1299,
+"key": "PanelLv06FaceShrine_02D",
+"item": 24,
+"doors": [
+2,
+2,
+2,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+2,
+2,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 13,
+"sideview": -1,
+"flag": 9,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1090,
+"key": "PanelLv05CatfishsMaw_05C",
+"item": 25,
+"doors": [
+0,
+6,
+0,
+6
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+2,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 6,
+"sideview": -1,
+"flag": 9,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 3604,
+"key": "PanelSpecialAddition_02E",
+"item": 26,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 27,
+"sideview": -1,
+"flag": 11,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1300,
+"key": "PanelLv06FaceShrine_02E",
+"item": 27,
+"doors": [
+6,
+9,
+0,
+6
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+2,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 7,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1301,
+"key": "PanelLv06FaceShrine_02F",
+"item": 28,
+"doors": [
+0,
+6,
+6,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+4,
+4,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 12,
+"sideview": -1,
+"flag": 43,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1540,
+"key": "PanelLv07EagleTower_01E",
+"item": 29,
+"doors": [
+6,
+6,
+6,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+2,
+2,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 13,
+"sideview": 19,
+"flag": 39,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1794,
+"key": "PanelLv08TurtleRock_01C",
+"item": 30,
+"doors": [
+0,
+2,
+2,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+2,
+2,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 12,
+"sideview": -1,
+"flag": 4,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 3620,
+"key": "PanelSpecialAddition_03E",
+"item": 31,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 27,
+"sideview": -1,
+"flag": 11,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 3636,
+"key": "PanelSpecialAddition_04E",
+"item": 32,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 27,
+"sideview": -1,
+"flag": 11,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1847,
+"key": "PanelLv08TurtleRock_04H",
+"item": 33,
+"doors": [
+0,
+0,
+6,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+2,
+2,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 8,
+"sideview": -1,
+"flag": 265,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1863,
+"key": "PanelLv08TurtleRock_05H",
+"item": 34,
+"doors": [
+0,
+2,
+0,
+2
+],
+"passages": [
+0,
+3,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+2,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 6,
+"sideview": -1,
+"flag": 9,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1840,
+"key": "PanelLv08TurtleRock_04A",
+"item": 35,
+"doors": [
+2,
+2,
+0,
+2
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+2,
+1,
+1
+],
+"stairs": 0,
+"box": 1,
+"keyblock": 0,
+"room": 7,
+"sideview": -1,
+"flag": 0,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 1856,
+"key": "PanelLv08TurtleRock_05A",
+"item": 36,
+"doors": [
+6,
+0,
+6,
+6
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+2,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 11,
+"sideview": -1,
+"flag": 43,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 3652,
+"key": "PanelSpecialAddition_05E",
+"item": 37,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 27,
+"sideview": -1,
+"flag": 75,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 2355,
+"key": "PanelLv10ClothesDungeon_04D",
+"item": 38,
+"doors": [
+0,
+2,
+2,
+2
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 14,
+"sideview": -1,
+"flag": 4,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 2352,
+"key": "PanelLv10ClothesDungeon_04A",
+"item": 39,
+"doors": [
+6,
+6,
+6,
+6
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 15,
+"sideview": -1,
+"flag": 43,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 2580,
+"key": "PanelLv11PanelOnlyDungeon_02E",
+"item": 40,
+"doors": [
+0,
+2,
+0,
+2
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 6,
+"sideview": -1,
+"flag": 516,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 2596,
+"key": "PanelLv11PanelOnlyDungeon_03E",
+"item": 41,
+"doors": [
+6,
+6,
+0,
+6
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 7,
+"sideview": -1,
+"flag": 521,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 2611,
+"key": "PanelLv11PanelOnlyDungeon_04D",
+"item": 42,
+"doors": [
+6,
+6,
+6,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+3,
+3,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 13,
+"sideview": -1,
+"flag": 521,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 2595,
+"key": "PanelLv11PanelOnlyDungeon_03D",
+"item": 43,
+"doors": [
+2,
+2,
+2,
+2
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+3,
+3,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 15,
+"sideview": -1,
+"flag": 517,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 2579,
+"key": "PanelLv11PanelOnlyDungeon_02D",
+"item": 44,
+"doors": [
+6,
+6,
+6,
+6
+],
+"passages": [
+0,
+1,
+1,
+0
+],
+"cracked": [
+0,
+1,
+1,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+2,
+2,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 15,
+"sideview": -1,
+"flag": 521,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+},
+{
+"id": 3668,
+"key": "PanelSpecialAddition_06E",
+"item": 45,
+"doors": [
+0,
+0,
+0,
+0
+],
+"passages": [
+0,
+0,
+0,
+0
+],
+"cracked": [
+0,
+0,
+0,
+0
+],
+"door_switch": [
+0,
+0,
+0,
+0
+],
+"walls": [
+1,
+1,
+1,
+1
+],
+"stairs": 0,
+"box": 0,
+"keyblock": 0,
+"room": 27,
+"sideview": -1,
+"flag": 523,
+"stairs_switch": [
+-1,
+-1,
+-1,
+-1
+]
+}
+]

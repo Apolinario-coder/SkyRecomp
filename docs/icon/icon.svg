@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0d234a"/>
+      <stop offset="0.45" stop-color="#1e5799"/>
+      <stop offset="0.82" stop-color="#4ca5d8"/>
+      <stop offset="1" stop-color="#a8e0f7"/>
+    </linearGradient>
+    <radialGradient id="sunglow" cx="0.5" cy="0.36" r="0.42">
+      <stop offset="0" stop-color="#fff4b8" stop-opacity="0.95"/>
+      <stop offset="0.35" stop-color="#ffd269" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#ffd269" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="cloudBack" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f6d8a8"/>
+      <stop offset="1" stop-color="#c9937c"/>
+    </linearGradient>
+    <linearGradient id="cloudFront" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.7" stop-color="#eaf4fc"/>
+      <stop offset="1" stop-color="#bfd6eb"/>
+    </linearGradient>
+    <linearGradient id="islandRock" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6b584c"/>
+      <stop offset="1" stop-color="#3a2d27"/>
+    </linearGradient>
+    <linearGradient id="islandGrass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#66c96b"/>
+      <stop offset="1" stop-color="#2e8540"/>
+    </linearGradient>
+    <clipPath id="sq"><rect x="100" y="100" width="824" height="824" rx="185"/></clipPath>
+  </defs>
+  <g clip-path="url(#sq)">
+    <rect x="100" y="100" width="824" height="824" fill="url(#sky)"/>
+    <!-- sun and rays -->
+    <circle cx="512" cy="365" r="340" fill="url(#sunglow)"/>
+    <circle cx="512" cy="365" r="105" fill="#fff7d6"/>
+    <!-- distant floating islands -->
+    <g transform="translate(250, 390)">
+      <polygon points="-55,0 55,0 32,42 0,68 -28,45" fill="url(#islandRock)"/>
+      <path d="M-60,2 Q0,-18 60,2 Q30,10 -60,2 Z" fill="url(#islandGrass)"/>
+    </g>
+    <g transform="translate(765, 345)">
+      <polygon points="-45,0 45,0 24,36 0,56 -22,34" fill="url(#islandRock)"/>
+      <path d="M-48,2 Q0,-15 48,2 Q20,8 -48,2 Z" fill="url(#islandGrass)"/>
+    </g>
+    <!-- central floating sky island with waterfall -->
+    <g transform="translate(512, 475)">
+      <polygon points="-135,0 135,0 92,95 35,142 0,190 -42,135 -95,88" fill="url(#islandRock)"/>
+      <polygon points="0,190 35,142 15,0 -18,0" fill="#4f3e36" opacity="0.55"/>
+      <path d="M-144,4 Q-60,-28 0,-22 Q70,-28 144,4 Q70,18 0,14 Q-70,18 -144,4 Z" fill="url(#islandGrass)"/>
+      <!-- waterfall -->
+      <path d="M18,6 L36,6 L44,185 L12,185 Z" fill="#a8ecff" opacity="0.85"/>
+    </g>
+    <!-- wind currents -->
+    <path d="M160 280 Q320 220 490 265 T830 235" stroke="#ffffff" stroke-width="6" stroke-linecap="round" fill="none" opacity="0.45"/>
+    <path d="M190 540 Q360 495 540 535 T860 500" stroke="#ffffff" stroke-width="5" stroke-linecap="round" fill="none" opacity="0.38"/>
+    <!-- warm horizon clouds -->
+    <g fill="url(#cloudBack)" opacity="0.9">
+      <circle cx="210" cy="705" r="115"/>
+      <circle cx="370" cy="690" r="130"/>
+      <circle cx="660" cy="685" r="135"/>
+      <circle cx="825" cy="705" r="115"/>
+      <rect x="100" y="700" width="824" height="224"/>
+    </g>
+    <!-- foreground sea of clouds -->
+    <g fill="url(#cloudFront)">
+      <circle cx="175" cy="760" r="120"/>
+      <circle cx="330" cy="735" r="145"/>
+      <circle cx="512" cy="720" r="160"/>
+      <circle cx="695" cy="735" r="145"/>
+      <circle cx="850" cy="760" r="120"/>
+      <rect x="100" y="750" width="824" height="174"/>
+    </g>
+  </g>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="none" stroke="#ffffff" stroke-opacity="0.16" stroke-width="4"/>
+</svg>

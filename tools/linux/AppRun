@@ -1,0 +1,4 @@
+#!/bin/sh
+# AppImage entry: the game, with its shipped files next to it (runtime/paths.c rt_resource)
+HERE=$(dirname "$(readlink -f "$0")")
+exec "$HERE/usr/bin/lasrecomp" "$@"

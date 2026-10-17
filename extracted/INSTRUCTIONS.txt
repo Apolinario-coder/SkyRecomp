@@ -1,0 +1,7 @@
+This directory contains extracted game assets and binaries:
+- exefs/ (main, sdk, subsdk0, subsdk1)
+- romfs.bin (~7.55 GB game assets)
+- skygame.dll (~274 MB native recompiled game library)
+- skygame.dll.id (build ID)
+
+These files are generated or extracted during first launch setup and are not distributed in the repository.
