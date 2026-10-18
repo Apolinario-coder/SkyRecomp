@@ -47,6 +47,7 @@ jobs:
             libavformat-dev \
             libavutil-dev \
             libswscale-dev \
+            libvulkan-memory-allocator-dev \
             libshaderc-dev || true
 
       - name: Build & Install SDL3
