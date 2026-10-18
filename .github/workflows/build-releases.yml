@@ -39,6 +39,9 @@ jobs:
             libxrandr-dev \
             libxcursor-dev \
             libxi-dev \
+            libxss-dev \
+            libxfixes-dev \
+            libxtst-dev \
             libxkbcommon-dev \
             libavcodec-dev \
             libavformat-dev \
@@ -49,7 +52,7 @@ jobs:
       - name: Build & Install SDL3
         run: |
           git clone --depth 1 --branch release-3.4.18 https://github.com/libsdl-org/SDL.git
-          cmake -S SDL -B SDL/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+          cmake -S SDL -B SDL/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DSDL_X11_XSCRNSAVER=OFF -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF
           sudo cmake --build SDL/build --target install
           sudo ldconfig
 
@@ -72,8 +75,8 @@ jobs:
           cp build/skyrecomp "$DIST_DIR/"
           cp docs/icon/icon_1024.png "$DIST_DIR/icon.png"
           cp README.md LICENSE "$DIST_DIR/"
-          cp third_party/fonts/Baloo2/Baloo2-SemiBold.ttf "$DIST_DIR/"
-          cp third_party/fonts/Baloo2/OFL.txt "$DIST_DIR/Baloo2-OFL.txt"
+          [ -f Baloo2-SemiBold.ttf ] && cp Baloo2-SemiBold.ttf "$DIST_DIR/"
+          [ -f Baloo2-OFL.txt ] && cp Baloo2-OFL.txt "$DIST_DIR/"
           cp tools/linux/skyrecomp.desktop "$DIST_DIR/"
           echo "Place your vanilla game files (romfs.bin or romfs/ and exefs/) here." > "$DIST_DIR/extracted/INSTRUCTIONS.txt"
           touch "$DIST_DIR/mods/.gitkeep"
@@ -109,8 +112,8 @@ jobs:
           strip -S "$APP/Contents/MacOS/skyrecomp"
           cp docs/icon/icon.icns "$APP/Contents/Resources/icon.icns"
           cp docs/icon/icon_1024.png "$APP/Contents/Resources/icon.png"
-          cp third_party/fonts/Baloo2/Baloo2-SemiBold.ttf "$APP/Contents/Resources/"
-          cp third_party/fonts/Baloo2/OFL.txt "$APP/Contents/Resources/"
+          [ -f Baloo2-SemiBold.ttf ] && cp Baloo2-SemiBold.ttf "$APP/Contents/Resources/"
+          [ -f Baloo2-OFL.txt ] && cp Baloo2-OFL.txt "$APP/Contents/Resources/"
           cp README.md LICENSE "$APP/Contents/Resources/"
 
           cat > "$APP/Contents/Info.plist" <<EOF
@@ -135,6 +138,16 @@ jobs:
           </plist>
           EOF
           printf 'APPL????' > "$APP/Contents/PkgInfo"
+
+          # Bundle Homebrew dylibs
+          for d in $(otool -L "$APP/Contents/MacOS/skyrecomp" | awk '{print $1}' | grep '/opt/homebrew'); do
+            name=$(basename "$d")
+            cp "$d" "$APP/Contents/Frameworks/$name" || true
+            chmod u+w "$APP/Contents/Frameworks/$name" 2>/dev/null || true
+            install_name_tool -change "$d" "@rpath/$name" "$APP/Contents/MacOS/skyrecomp" 2>/dev/null || true
+          done
+          install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP/Contents/MacOS/skyrecomp" 2>/dev/null || true
+
           codesign -f -s - "$APP"
 
           STAGE=$(mktemp -d)
