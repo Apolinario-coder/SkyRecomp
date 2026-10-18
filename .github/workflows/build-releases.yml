@@ -59,12 +59,12 @@ jobs:
 
       - name: Compile Sky Recomp
         run: |
-          if [ -f /usr/lib/x86_64-linux-gnu/libshaderc_combined.a ]; then
-            SHADERC_FLAG="SHADERC=-lshaderc_combined"
-          elif [ -f /usr/lib/x86_64-linux-gnu/libshaderc_shared.so ]; then
+          if [ -f /usr/lib/x86_64-linux-gnu/libshaderc_shared.so ]; then
             SHADERC_FLAG="SHADERC=-lshaderc_shared"
-          else
+          elif [ -f /usr/lib/x86_64-linux-gnu/libshaderc.so ]; then
             SHADERC_FLAG="SHADERC=-lshaderc"
+          else
+            SHADERC_FLAG="SHADERC=-lshaderc_shared"
           fi
           echo "Using $SHADERC_FLAG"
           make -j$(nproc) build/skyrecomp "$SHADERC_FLAG"
@@ -74,6 +74,9 @@ jobs:
           DIST_DIR="SkyRecomp-v1.0.3-Linux"
           mkdir -p "$DIST_DIR/extracted" "$DIST_DIR/mods"
           cp build/skyrecomp "$DIST_DIR/"
+          cp -P /usr/lib/x86_64-linux-gnu/libshaderc_shared.so* "$DIST_DIR/" 2>/dev/null || true
+          cp -P /usr/lib/libSDL3.so* "$DIST_DIR/" 2>/dev/null || cp -P /usr/local/lib/libSDL3.so* "$DIST_DIR/" 2>/dev/null || true
+          patchelf --set-rpath '$ORIGIN' "$DIST_DIR/skyrecomp" || true
           cp docs/icon/icon_1024.png "$DIST_DIR/icon.png"
           cp README.md LICENSE "$DIST_DIR/"
           [ -f Baloo2-SemiBold.ttf ] && cp Baloo2-SemiBold.ttf "$DIST_DIR/"
