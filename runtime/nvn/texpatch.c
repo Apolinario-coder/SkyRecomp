@@ -41,7 +41,8 @@ enum { K_BC5, K_BC3, K_ASTC4, K_RGBA8, K_BC1, K_RG8 };
 enum { R_A = 1, R_B, R_X, R_Y, R_L, R_R, R_ZL, R_ZR, R_PLUS, R_MINUS, R_HERO, R_SHEET,
        R_SHEET_1, R_SHEET_3, R_SHEET_4,
        R_BOTTLE, R_BOTTLE_MODEL, R_FAIRY_MODEL,
-       R_ITEM_CURSOR, R_TUNIC, R_TUNIC_RED, R_TUNIC_BLUE, R_HEART, R_POWDER_MODEL };
+       R_ITEM_CURSOR, R_TUNIC, R_TUNIC_RED, R_TUNIC_BLUE, R_HEART, R_POWDER_MODEL,
+       R_BASICINFO_BG };
 enum { STYLE_NINTENDO, STYLE_XBOX, STYLE_PS, STYLE_KEYBOARD };
 // labels: R_A..R_MINUS = the button that role is on by default; or these
 enum { L_LS = 32, L_RS, L_DUP, L_DDOWN, L_DLEFT, L_DRIGHT, L_OTHER };
@@ -123,6 +124,7 @@ static int role_of(const char *name) {
         {"tr_crossBtnBasic_", L_OTHER},
         {"tr_lStick_", L_LS}, {"tr_rStick_", L_RS},
         {"th_zBtn_", R_ZL}, {"th_nunchakuBtn_", L_LS}, {"tr_nunchakuBtn_", L_LS}, {"tr_cBtn_", R_L},
+        {"tr_basicInfoWinLT_", R_BASICINFO_BG},
         {"Spicy_00^t", R_HERO},  // Ld_Spicy (StartUp.arc): the HUD's Hero Mode icon (the file select uses Spicy_00^f)
         // the empty bottle's item icon and its 3D model's colour map (ItemBottle.bfres): identified only, never edited
         // (the gold Escape Bottle's draws are tinted: runtime/hle/escape.c)
@@ -1442,6 +1444,16 @@ void texpatch_apply(int id, uint32_t lv, uint8_t *blocks, uint32_t w, uint32_t h
         r->role == R_HEART) return;
     if (r->role == R_HERO) {  // fully transparent (BC5 blocks of zeros)
         if (hide_hero()) for (uint32_t y = 0; y < (h + 3) / 4; y++) memset(blocks + y * row, 0, (w + 3) / 4 * 16);
+        return;
+    }
+    if (r->role == R_BASICINFO_BG) {
+        int bw = (int)(w + 3) / 4;
+        uint8_t *img = malloc((size_t)w * h * 4), *dirty = malloc((size_t)bw * ((h + 3) / 4));
+        memset(img, 0, (size_t)w * h * 4);
+        memset(dirty, 1, (size_t)bw * ((h + 3) / 4));
+        encode_image(r, img, dirty, blocks, row);
+        free(img);
+        free(dirty);
         return;
     }
     int style = prompt_style();

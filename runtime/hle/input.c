@@ -16,6 +16,8 @@
 #include "../settings.h"
 #include "../input_bind.h"
 
+extern bool menu_input_captured(void);  // runtime/ui/menu.mm: overlay menu or name entry up
+
 enum {
     BTN_A = 0, BTN_B, BTN_X, BTN_Y, BTN_LSTICK, BTN_RSTICK, BTN_L, BTN_R, BTN_ZL, BTN_ZR, BTN_PLUS, BTN_MINUS,
     BTN_LEFT, BTN_UP, BTN_RIGHT, BTN_DOWN
@@ -25,6 +27,7 @@ _Static_assert(BTN_DOWN == BIND_DOWN && BTN_ZL == BIND_ZL, "bindings follow the 
 
 static _Atomic uint64_t key_buttons, pad_buttons;
 static _Atomic int32_t key_lx, key_ly, key_rx, key_ry, pad_lx, pad_ly, pad_rx, pad_ry;
+static _Atomic bool mouse_btn_left, mouse_btn_right, mouse_btn_middle, mouse_btn_x1, mouse_btn_x2;
 static uint8_t keys_down[SDL_SCANCODE_COUNT];
 static SDL_Gamepad *pad;
 static _Atomic int64_t sampling;
@@ -35,7 +38,18 @@ static _Atomic uint32_t test_pad;
 static _Atomic int32_t test_lx, test_ly;  // (a resting stick's drift: "lstick" in LARECOMP_HOST_INPUT)
 static bool host_test;  // (then a real controller is left out: the player's own pad must not spoil the test)
 
-static int held_key(int sc) { return sc > 0 && sc < SDL_SCANCODE_COUNT && (keys_down[sc] || test_keys[sc]); }
+static int held_key(int sc) {
+    if (sc > 512 && sc <= 512 + 5) {
+        int btn = sc - 512;
+        if (btn == SDL_BUTTON_LEFT) return atomic_load(&mouse_btn_left);
+        if (btn == SDL_BUTTON_MIDDLE) return atomic_load(&mouse_btn_middle);
+        if (btn == SDL_BUTTON_RIGHT) return atomic_load(&mouse_btn_right);
+        if (btn == SDL_BUTTON_X1) return atomic_load(&mouse_btn_x1);
+        if (btn == SDL_BUTTON_X2) return atomic_load(&mouse_btn_x2);
+        return 0;
+    }
+    return sc > 0 && sc < SDL_SCANCODE_COUNT && (keys_down[sc] || test_keys[sc]);
+}
 
 // Through the bindings (runtime/hle/bindings.c: g_bind_key), read on every key event, so a rebind applies at once.
 static void recompute_keyboard(void) {
@@ -72,6 +86,11 @@ static void recompute_pad(void) {
 // Forget held keys (the menu took focus); the gamepad is re-read on its next event.
 void input_reset(void) {
     memset(keys_down, 0, sizeof keys_down);
+    atomic_store(&mouse_btn_left, false);
+    atomic_store(&mouse_btn_right, false);
+    atomic_store(&mouse_btn_middle, false);
+    atomic_store(&mouse_btn_x1, false);
+    atomic_store(&mouse_btn_x2, false);
     recompute_keyboard();
 }
 
@@ -150,6 +169,18 @@ void input_handle_event(const SDL_Event *e) {
         if (e->type == SDL_EVENT_KEY_DOWN && e->key.scancode == SDL_SCANCODE_F9 && !e->key.repeat) g_debug_frame_request = 1;
         if (e->key.scancode < SDL_SCANCODE_COUNT) keys_down[e->key.scancode] = e->type == SDL_EVENT_KEY_DOWN;
         recompute_keyboard();
+        break;
+    case SDL_EVENT_MOUSE_BUTTON_DOWN: case SDL_EVENT_MOUSE_BUTTON_UP:
+        if (!menu_input_captured()) {
+            bool down = (e->type == SDL_EVENT_MOUSE_BUTTON_DOWN);
+            uint8_t btn = e->button.button;
+            if (btn == SDL_BUTTON_LEFT) atomic_store(&mouse_btn_left, down);
+            else if (btn == SDL_BUTTON_RIGHT) atomic_store(&mouse_btn_right, down);
+            else if (btn == SDL_BUTTON_MIDDLE) atomic_store(&mouse_btn_middle, down);
+            else if (btn == SDL_BUTTON_X1) atomic_store(&mouse_btn_x1, down);
+            else if (btn == SDL_BUTTON_X2) atomic_store(&mouse_btn_x2, down);
+            recompute_keyboard();
+        }
         break;
     case SDL_EVENT_GAMEPAD_ADDED:
         if (!pad) { pad = SDL_OpenGamepad(e->gdevice.which); LOG("[input] gamepad: %s\n", SDL_GetGamepadName(pad)); note_family(); }
@@ -379,6 +410,7 @@ static void fill_state(Cpu *c) {
     memset(s, 0, 0x28);
     *(int64_t *)s = ++sampling;
     if (id != 0) return;
+
     if (g_is_las) {
         extern void warp_game_tick(Cpu *c);
         warp_game_tick(c);  // game main thread, once per frame: apply a queued warp
@@ -412,6 +444,8 @@ static void fill_state(Cpu *c) {
     }
     int32_t lx = clamp_axis((menu ? 0 : key_lx + pad_lx) + script_lx), ly = clamp_axis((menu ? 0 : key_ly + pad_ly) + script_ly);
     int32_t rx = clamp_axis((menu ? 0 : key_rx + pad_rx) + script_rx), ry = clamp_axis((menu ? 0 : key_ry + pad_ry) + script_ry);
+
+
     extern bool mirror_input(void);  // mirror mode, the world on screen (runtime/hle/mirror.c): left and right swap
     bool mirrored = !menu && mirror_input();
     if (mirrored) {
@@ -582,3 +616,6 @@ HLE_FUNC("_ZN2nn3hid22GetVibrationDeviceInfoEPNS0_19VibrationDeviceInfoERKNS0_21
     info[0] = 1;        // VibrationDeviceType_LinearResonantActuator
     info[1] = h & 1;    // position: left / right
 }
+
+
+

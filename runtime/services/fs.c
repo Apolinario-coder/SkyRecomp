@@ -10,6 +10,8 @@
 #include "../hle.h"
 #include "../rando.h"
 #include "../ipc.h"
+#include "../settings.h"
+#include "../mods.h"
 
 #define FS_PATH_NOT_FOUND MAKE_RESULT(2, 1)
 #define FS_PATH_EXISTS MAKE_RESULT(2, 2)
@@ -23,7 +25,7 @@ static int romfs_fd = -1;
 typedef struct { uint64_t start, size; char *path; int fd; const uint8_t *mem; } Overlay;
 // in-image patches (copies of RomFS tables with changes): header, dir meta, file hash, file meta
 typedef struct { uint64_t off, size; uint8_t *data; } Patch;
-static Patch patches[8];
+static Patch patches[16];
 static int npatches;
 static Overlay *ov;
 static int ov_n, ov_cap;
@@ -34,6 +36,8 @@ typedef struct { uint64_t off, size; char *path; uint32_t meta; } RomFile;
 static RomFile *rom_files;
 static int rom_nfiles;
 static uint64_t rom_data_off;
+
+bool romfs_find_file(const char *rel, int *out_fd, uint64_t *out_off, uint64_t *out_size);
 
 // Reboot: the next seed builds its own index / overlay when the game opens the RomFS again.
 RT_ON_RESET(fs_reset) {
@@ -105,6 +109,11 @@ static void walk_new(const char *root, const char *rel, char **known, int nknown
         if (S_ISDIR(sb.st_mode)) { walk_new(root, r2, known, nknown, out, n, cap); continue; }
         const char *key = r2;
         if (bsearch(&key, known, nknown, sizeof *known, path_cmp)) continue;  // replaces an existing file
+        bool already = false;
+        for (int j = 0; j < *n; j++) {
+            if (!strcmp((*out)[j].rel, r2)) { already = true; break; }
+        }
+        if (already) continue;
         if (*n == *cap) { *cap = *cap ? *cap * 2 : 64; *out = realloc(*out, sizeof **out * *cap); }
         strlcpy((*out)[*n].rel, r2, sizeof (*out)[*n].rel);
         strlcpy((*out)[*n].host, h2, sizeof (*out)[*n].host);
@@ -135,16 +144,26 @@ static int64_t dir_lookup(const uint8_t *dm, uint64_t dsz, const char *path) {
 }
 
 static void add_new_files(int fd, const uint64_t *h, const uint8_t *dmeta, uint64_t dsz, uint64_t fsz) {
-    const char *seed = rando_seed_dir();
-    if (!seed) return;
-    char root[1100];
-    snprintf(root, sizeof root, "%s/romfs", seed);
     char **known = malloc(sizeof *known * rom_nfiles);
     for (int i = 0; i < rom_nfiles; i++) known[i] = rom_files[i].path;
     qsort(known, rom_nfiles, sizeof *known, path_cmp);
     NewFile *nf = NULL;
     int n = 0, cap = 0;
-    walk_new(root, "", known, rom_nfiles, &nf, &n, &cap);
+
+    // Scan active mods in priority order
+    char mod_dirs[MAX_MODS][1100];
+    int nmod_dirs = mods_get_active_romfs_dirs(mod_dirs, MAX_MODS);
+    for (int m = 0; m < nmod_dirs; m++) {
+        walk_new(mod_dirs[m], "", known, rom_nfiles, &nf, &n, &cap);
+    }
+
+    // Scan rando seed if present
+    const char *seed = rando_seed_dir();
+    if (seed) {
+        char root[1100];
+        snprintf(root, sizeof root, "%s/romfs", seed);
+        walk_new(root, "", known, rom_nfiles, &nf, &n, &cap);
+    }
     free(known);
     if (!n) return;
     rom_files = realloc(rom_files, sizeof(RomFile) * (rom_nfiles + n));
@@ -249,11 +268,14 @@ static void rom_index(int fd) {
         rom_files[rom_nfiles++] = (RomFile){rom_data_off + data, size, path, (uint32_t)o};
         o += 0x20 + ((namelen + 3) & ~3u);
     }
-    // Randomizer seed: replacement files are served from the seed folder. The file-meta table is patched
-    // (in a copy) to point them at data appended past the end of the image; reads there go to host files.
+    mods_init();
+    // Mod & Randomizer seed: replacement files are served from mod folders or seed folder.
+    // The file-meta table is patched (in a copy) to point them at data appended past the end of the image;
+    // reads there go to host files.
     for (int i = 0; i < rom_nfiles; i++) {
         char host[1200];
-        if (!rando_romfs_override(rom_files[i].path, host, sizeof host)) continue;
+        if (!mods_romfs_override(rom_files[i].path, host, sizeof host) &&
+            !rando_romfs_override(rom_files[i].path, host, sizeof host)) continue;
         struct stat sb;
         if (stat(host, &sb)) continue;
         if (!ov_meta) {
@@ -277,7 +299,7 @@ static void rom_index(int fd) {
         ov_n++;
         ov_end = (ov_end + size + 0xF) & ~0xFull;
     }
-    if (ov_n) LOG("[fs] randomizer: %d romfs files replaced\n", ov_n);
+    if (ov_n) LOG("[fs] layeredfs: %d romfs files replaced\n", ov_n);
     if (ov_meta) { patches[npatches++] = (Patch){ov_meta_off, ov_meta_size, ov_meta}; }
     add_new_files(fd, h, dmeta, dsz, fsz);
     qsort(rom_files, rom_nfiles, sizeof *rom_files, rom_cmp);
@@ -288,11 +310,11 @@ static void rom_index(int fd) {
 
 // Virtual RomFS image read: original bytes, with the patched file table and appended replacement files.
 static ssize_t romfs_read(int fd, uint8_t *dst, uint64_t size, uint64_t off) {
-    if (!ov_n) return pread(fd, dst, size, (off_t)off);
+    if (!ov_n && !npatches) return pread(fd, dst, size, (off_t)off);
     uint64_t done = 0;
     while (done < size) {
         uint64_t o = off + done, n = size - done;
-        if (o >= ov[0].start) {  // appended region
+        if (ov_n && o >= ov[0].start) {  // appended region
             int i = 0;
             while (i < ov_n && !(o >= ov[i].start && o < ov[i].start + ((ov[i].size + 0xF) & ~0xFull))) i++;
             if (i == ov_n) { memset(dst + done, 0, n); done += n; break; }
@@ -309,7 +331,7 @@ static ssize_t romfs_read(int fd, uint8_t *dst, uint64_t size, uint64_t off) {
             if (r < 0) r = 0;
             if ((uint64_t)r < n) memset(dst + done + r, 0, n - r);
         } else {
-            if (o + n > ov[0].start) n = ov[0].start - o;
+            if (ov_n && o + n > ov[0].start) n = ov[0].start - o;
             ssize_t r = pread(fd, dst + done, n, (off_t)o);
             if (r < 0) r = 0;
             if ((uint64_t)r < n) memset(dst + done + r, 0, n - r);

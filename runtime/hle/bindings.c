@@ -76,6 +76,11 @@ const char *bind_pad_label(int host, int fam) {
 }
 
 const char *bind_key_label(int sc) {
+    if (sc == 512 + SDL_BUTTON_LEFT) return "Left Click";
+    if (sc == 512 + SDL_BUTTON_MIDDLE) return "Middle Click";
+    if (sc == 512 + SDL_BUTTON_RIGHT) return "Right Click";
+    if (sc == 512 + SDL_BUTTON_X1) return "Mouse 4";
+    if (sc == 512 + SDL_BUTTON_X2) return "Mouse 5";
     if (sc <= 0 || sc >= SDL_SCANCODE_COUNT) return "(none)";
     const char *n = SDL_GetScancodeName((SDL_Scancode)sc);
     return n && *n ? n : "(unnamed key)";
@@ -196,6 +201,13 @@ bool bind_capture_event(const SDL_Event *e) {
             assign(dev, cap_slot, e->gaxis.axis == SDL_GAMEPAD_AXIS_LEFT_TRIGGER ? PADB_LTRIGGER : PADB_RTRIGGER);
         }
         return true;  // (sticks: no menu movement while waiting)
+    case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        if (dev == BIND_DEV_KEY && e->button.button >= 1 && e->button.button <= 5) {
+            cap_dev = -1;
+            assign(dev, cap_slot, 512 + e->button.button);
+            return true;
+        }
+        return false;
     default:
         return false;
     }
@@ -211,8 +223,15 @@ bool bind_settings_load(const char *key, const char *val) {
             for (int h = 0; h < PADB_HOST_COUNT; h++)
                 if (!strcmp(val, k_pad_ini[h])) g_bind_pad[i] = (int16_t)h;
         } else {
-            SDL_Scancode sc = strcmp(val, "none") ? SDL_GetScancodeFromName(val) : SDL_SCANCODE_UNKNOWN;
-            if (sc != SDL_SCANCODE_UNKNOWN || !strcmp(val, "none")) g_bind_key[i] = (int16_t)sc;
+            if (!strcmp(val, "Left Click") || !strcmp(val, "mouse_left")) g_bind_key[i] = 512 + SDL_BUTTON_LEFT;
+            else if (!strcmp(val, "Middle Click") || !strcmp(val, "mouse_middle")) g_bind_key[i] = 512 + SDL_BUTTON_MIDDLE;
+            else if (!strcmp(val, "Right Click") || !strcmp(val, "mouse_right")) g_bind_key[i] = 512 + SDL_BUTTON_RIGHT;
+            else if (!strcmp(val, "Mouse 4") || !strcmp(val, "mouse_x1")) g_bind_key[i] = 512 + SDL_BUTTON_X1;
+            else if (!strcmp(val, "Mouse 5") || !strcmp(val, "mouse_x2")) g_bind_key[i] = 512 + SDL_BUTTON_X2;
+            else {
+                SDL_Scancode sc = strcmp(val, "none") ? SDL_GetScancodeFromName(val) : SDL_SCANCODE_UNKNOWN;
+                if (sc != SDL_SCANCODE_UNKNOWN || !strcmp(val, "none")) g_bind_key[i] = (int16_t)sc;
+            }
         }
     }
     return true;
@@ -224,5 +243,6 @@ void bind_settings_save(FILE *f) {
             fprintf(f, "bind_pad_%s = %s\n", k_ini[i], k_pad_ini[g_bind_pad[i]]);
     for (int i = 0; i < BIND_KEY_COUNT; i++)
         if (g_bind_key[i] != k_def_key[i])
-            fprintf(f, "bind_key_%s = %s\n", k_ini[i], g_bind_key[i] ? SDL_GetScancodeName((SDL_Scancode)g_bind_key[i]) : "none");
+            fprintf(f, "bind_key_%s = %s\n", k_ini[i], g_bind_key[i] > 512 ? bind_key_label(g_bind_key[i]) :
+                                                        g_bind_key[i] ? SDL_GetScancodeName((SDL_Scancode)g_bind_key[i]) : "none");
 }

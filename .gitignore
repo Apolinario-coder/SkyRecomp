@@ -26,6 +26,10 @@ cache/
 save/
 scratch/
 
+# User installed mods
+mods/*
+!mods/.gitkeep
+
 # Local user configuration
 skyrecomp.ini
 larecomp.ini
