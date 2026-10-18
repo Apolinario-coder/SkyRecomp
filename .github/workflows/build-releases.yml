@@ -1,0 +1,142 @@
+name: Build & Upload Releases
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux:
+    name: Build Linux Release
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang \
+            lld \
+            make \
+            cmake \
+            ninja-build \
+            pkg-config \
+            patchelf \
+            zip \
+            libvulkan-dev \
+            libasound2-dev \
+            libpulse-dev \
+            libpipewire-0.3-dev \
+            libwayland-dev \
+            libx11-dev \
+            libxrandr-dev \
+            libxcursor-dev \
+            libxi-dev \
+            libxkbcommon-dev \
+            libshaderc-dev \
+            libavcodec-dev \
+            libavformat-dev \
+            libavutil-dev \
+            libswscale-dev
+
+      - name: Build & Install SDL3
+        run: |
+          git clone --depth 1 --branch release-3.4.18 https://github.com/libsdl-org/SDL.git
+          cmake -S SDL -B SDL/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+          sudo cmake --build SDL/build --target install
+          sudo ldconfig
+
+      - name: Compile Sky Recomp
+        run: |
+          make -j$(nproc) build/skyrecomp
+
+      - name: Package Linux Release Archive
+        run: |
+          DIST_DIR="SkyRecomp-v1.0.3-Linux"
+          mkdir -p "$DIST_DIR/extracted" "$DIST_DIR/mods"
+          cp build/skyrecomp "$DIST_DIR/"
+          cp docs/icon/icon_1024.png "$DIST_DIR/icon.png"
+          cp README.md LICENSE "$DIST_DIR/"
+          cp third_party/fonts/Baloo2/Baloo2-SemiBold.ttf "$DIST_DIR/"
+          cp third_party/fonts/Baloo2/OFL.txt "$DIST_DIR/Baloo2-OFL.txt"
+          cp tools/linux/skyrecomp.desktop "$DIST_DIR/"
+          echo "Place your vanilla game files (romfs.bin or romfs/ and exefs/) here." > "$DIST_DIR/extracted/INSTRUCTIONS.txt"
+          touch "$DIST_DIR/mods/.gitkeep"
+          tar -czvf SkyRecomp-v1.0.3-Linux.tar.gz "$DIST_DIR"
+          zip -r SkyRecomp-v1.0.3-Linux.zip "$DIST_DIR"
+
+      - name: Upload to GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload v1.0.3 SkyRecomp-v1.0.3-Linux.tar.gz SkyRecomp-v1.0.3-Linux.zip --clobber
+
+  build-macos:
+    name: Build macOS Release
+    runs-on: macos-14
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies via Homebrew
+        run: |
+          brew install sdl3 ffmpeg cmake ninja
+
+      - name: Compile Sky Recomp
+        run: |
+          make -j$(sysctl -n hw.ncpu) build/skyrecomp
+
+      - name: Create macOS App Bundle & DMG
+        run: |
+          APP="Sky Recomp.app"
+          mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Frameworks"
+          cp build/skyrecomp "$APP/Contents/MacOS/skyrecomp"
+          strip -S "$APP/Contents/MacOS/skyrecomp"
+          cp docs/icon/icon.icns "$APP/Contents/Resources/icon.icns"
+          cp docs/icon/icon_1024.png "$APP/Contents/Resources/icon.png"
+          cp third_party/fonts/Baloo2/Baloo2-SemiBold.ttf "$APP/Contents/Resources/"
+          cp third_party/fonts/Baloo2/OFL.txt "$APP/Contents/Resources/"
+          cp README.md LICENSE "$APP/Contents/Resources/"
+
+          cat > "$APP/Contents/Info.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>CFBundleDevelopmentRegion</key><string>en</string>
+              <key>CFBundleExecutable</key><string>skyrecomp</string>
+              <key>CFBundleIdentifier</key><string>com.skyrecomp.app</string>
+              <key>CFBundleName</key><string>Sky Recomp</string>
+              <key>CFBundleDisplayName</key><string>Sky Recomp</string>
+              <key>CFBundleIconFile</key><string>icon</string>
+              <key>CFBundlePackageType</key><string>APPL</string>
+              <key>CFBundleShortVersionString</key><string>1.0.3</string>
+              <key>CFBundleVersion</key><string>1.0.3</string>
+              <key>LSMinimumSystemVersion</key><string>11.0</string>
+              <key>LSArchitecturePriority</key><array><string>arm64</string></array>
+              <key>LSApplicationCategoryType</key><string>public.app-category.games</string>
+              <key>NSHighResolutionCapable</key><true/>
+          </dict>
+          </plist>
+          EOF
+          printf 'APPL????' > "$APP/Contents/PkgInfo"
+          codesign -f -s - "$APP"
+
+          STAGE=$(mktemp -d)
+          ditto "$APP" "$STAGE/Sky Recomp.app"
+          ln -s /Applications "$STAGE/Applications"
+          hdiutil create -volname "Sky Recomp v1.0.3" -srcfolder "$STAGE" -fs HFS+ -format UDZO -imagekey zlib-level=9 -ov SkyRecomp-v1.0.3-macOS.dmg
+          rm -rf "$STAGE"
+          zip -r SkyRecomp-v1.0.3-macOS.zip "$APP"
+
+      - name: Upload to GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload v1.0.3 SkyRecomp-v1.0.3-macOS.dmg SkyRecomp-v1.0.3-macOS.zip --clobber
