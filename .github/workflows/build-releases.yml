@@ -12,13 +12,14 @@ permissions:
 jobs:
   build-linux:
     name: Build Linux Release
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install System Dependencies
+      - name: Enable Universe Repository & Install Dependencies
         run: |
+          sudo add-apt-repository -y universe
           sudo apt-get update
           sudo apt-get install -y \
             clang \
@@ -39,11 +40,11 @@ jobs:
             libxcursor-dev \
             libxi-dev \
             libxkbcommon-dev \
-            libshaderc-dev \
             libavcodec-dev \
             libavformat-dev \
             libavutil-dev \
-            libswscale-dev
+            libswscale-dev \
+            libshaderc-dev || true
 
       - name: Build & Install SDL3
         run: |
@@ -54,7 +55,15 @@ jobs:
 
       - name: Compile Sky Recomp
         run: |
-          make -j$(nproc) build/skyrecomp
+          if [ -f /usr/lib/x86_64-linux-gnu/libshaderc_combined.a ]; then
+            SHADERC_FLAG="SHADERC=-lshaderc_combined"
+          elif [ -f /usr/lib/x86_64-linux-gnu/libshaderc_shared.so ]; then
+            SHADERC_FLAG="SHADERC=-lshaderc_shared"
+          else
+            SHADERC_FLAG="SHADERC=-lshaderc"
+          fi
+          echo "Using $SHADERC_FLAG"
+          make -j$(nproc) build/skyrecomp "$SHADERC_FLAG"
 
       - name: Package Linux Release Archive
         run: |
