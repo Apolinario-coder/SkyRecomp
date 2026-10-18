@@ -202,7 +202,7 @@ $(B)/rt/platform/windows_rc.o: runtime/platform/windows.rc docs/icon/icon.ico
 
 VERSION  := $(shell sed -n 's/^\#define LARECOMP_VERSION "\(.*\)"/\1/p' runtime/ui/launcher.mm)
 
-# macOS: build/LAS Recomp.app, runs on macOS $(APP_MIN)+: the game rebuilt for that in build/mac15 against build/deps
+# macOS: build/Sky Recomp.app, runs on macOS $(APP_MIN)+: the game rebuilt for that in build/mac15 against build/deps
 # (`make deps`: SDL3, LGPL FFmpeg, keystone, Python, from pinned sources), the generator helper when built
 # (`make rando-helper` after `make deps`), packaged by tools/bundle_macos.sh. No game files or fonts.
 APP_MIN  := 15.0
@@ -211,23 +211,23 @@ deps:
 	MACOS_MIN=$(APP_MIN) tools/build_deps_macos.sh
 app:
 	@[ -f build/deps/lib/libSDL3.0.dylib ] || { echo "make deps first"; exit 1; }
-	$(MAKE) B=$(APP_B) MACOS_MIN=$(APP_MIN) DEPS=$(CURDIR)/build/deps $(APP_B)/lasrecomp
-	MACOS_MIN=$(APP_MIN) tools/bundle_macos.sh $(APP_B)/lasrecomp
+	$(MAKE) B=$(APP_B) MACOS_MIN=$(APP_MIN) DEPS=$(CURDIR)/build/deps $(APP_B)/skyrecomp
+	MACOS_MIN=$(APP_MIN) tools/bundle_macos.sh $(APP_B)/skyrecomp
 
-# macOS release disk image (the .app + an Applications shortcut to drag it onto): build/dist/LAS Recomp-<v>-macOS.dmg
+# macOS release disk image (the .app + an Applications shortcut to drag it onto): build/dist/Sky Recomp-<v>-macOS.dmg
 dmg: app
 	tools/make_dmg.sh
 
-# Windows: build/dist/LAS Recomp-<version>-windows.zip, top folder "LAS Recomp/": the exe, the seed generator
+# Windows: build/dist/Sky Recomp-<version>-windows.zip, top folder "Sky Recomp/": the exe, the seed generator
 # helper (make rando-helper), what the start screen builds the game code with on the player's machine (make gen-helper,
 # tools/fetch_zig.sh slimmed by tools/zig_slim.sh: its runtime built ahead of time, gamelib-src/, the exe's import library)
 # and the DLLs they load (runs without MSYS2). No game code. The exe is a release build in $(WIN_B):
 # linked against the LGPL FFmpeg from `make deps-windows` (MSYS2's is a GPLv3 build) and without a console window
-# (RELEASE=1: the log goes to lasrecomp.log next to the exe, fatal errors show a message box). Its DLLs are looked up
+# (RELEASE=1: the log goes to skyrecomp.log next to the exe, fatal errors show a message box). Its DLLs are looked up
 # with build/deps-win/bin first (the FFmpeg DLL names are the same as MSYS2's GPL ones). vulkan-1.dll is left
 # out: every Vulkan driver installs the loader in System32. Saves, seeds and game files go next to the exe at run time.
 # Needs: Windows 10+ x64, a Vulkan 1.3 driver, an AVX2 CPU (GENARCH x86-64-v3; checked at startup).
-DIST     := build/dist/LAS Recomp
+DIST     := build/dist/Sky Recomp
 WIN_B    := build/win-release
 deps-windows:
 	tools/build_deps_windows.sh
@@ -236,10 +236,10 @@ dist:
 	@[ -d build/helper/rando-gen ] || { echo "make rando-helper first (the seed generator)"; exit 1; }
 	@[ -d build/helper/lasgen ] || { echo "make gen-helper first (the game code generator)"; exit 1; }
 	@[ -x build/zig/zig.exe ] || { echo "tools/fetch_zig.sh first (the compiler)"; exit 1; }
-	$(MAKE) B=$(WIN_B) DEPS=$(CURDIR)/build/deps-win RELEASE=1 $(WIN_B)/lasrecomp.exe
-	! nm $(WIN_B)/lasrecomp.exe | grep ' f_70' >/dev/null  # (no game code inside)
+	$(MAKE) B=$(WIN_B) DEPS=$(CURDIR)/build/deps-win RELEASE=1 $(WIN_B)/skyrecomp.exe
+	! nm $(WIN_B)/skyrecomp.exe | grep ' f_70' >/dev/null  # (no game code inside)
 	rm -rf build/dist && mkdir -p "$(DIST)/gamelib-src"
-	cp $(WIN_B)/lasrecomp.exe $(WIN_B)/lasrecomp.dll.a "$(DIST)/"
+	cp $(WIN_B)/skyrecomp.exe $(WIN_B)/skyrecomp.dll.a "$(DIST)/"
 	tools/zig_slim.sh $(strip $(filter-out -Iruntime,$(GENFLAGS)))  # (zig with its runtime built ahead of time)
 	cp -R build/helper/lasgen "$(DIST)/"
 	cp -R build/zig-slim "$(DIST)/zig"
@@ -250,12 +250,12 @@ dist:
 	cp third_party/fonts/Baloo2/OFL.txt "$(DIST)/Baloo2-OFL.txt"
 	cp README.md LICENSE "$(DIST)/"  # (licenses and source links of the bundled components: README "License")
 	cp -R build/helper/rando-gen "$(DIST)/"
-	PATH="$(CURDIR)/build/deps-win/bin:$$PATH" ldd $(WIN_B)/lasrecomp.exe | awk '(/ucrt64/ || /deps-win/) && !/vulkan-1/ {print $$3}' | sort -u | \
+	PATH="$(CURDIR)/build/deps-win/bin:$$PATH" ldd $(WIN_B)/skyrecomp.exe | awk '(/ucrt64/ || /deps-win/) && !/vulkan-1/ {print $$3}' | sort -u | \
 	    xargs -I{} cp -u {} "$(DIST)/"
 	! ls "$(DIST)" | grep -iE 'x264|x265|xvid|postproc'  # (no GPL codec libraries in the release)
-	cd build/dist && if command -v zip >/dev/null; then zip -qr "LAS Recomp-$(VERSION)-windows.zip" "LAS Recomp"; \
-	    else /c/Windows/System32/tar.exe -a -cf "LAS Recomp-$(VERSION)-windows.zip" "LAS Recomp"; fi
-	@echo "build/dist/LAS Recomp-$(VERSION)-windows.zip"
+	cd build/dist && if command -v zip >/dev/null; then zip -qr "Sky Recomp-$(VERSION)-windows.zip" "Sky Recomp"; \
+	    else /c/Windows/System32/tar.exe -a -cf "Sky Recomp-$(VERSION)-windows.zip" "Sky Recomp"; fi
+	@echo "build/dist/Sky Recomp-$(VERSION)-windows.zip"
 
 # Seed generator as a standalone helper, so players need no Python: build/helper/rando-gen/ (rando-gen[.exe] +
 # _internal/), frozen by PyInstaller from tools/rando/rando_gen.spec in its own venv (build/rando-venv). Ship the
@@ -299,7 +299,7 @@ build/rando-venv/.ok: third_party/LAS-Randomizer/requirements.txt
 	$(RANDO_VPY) -m pip install -q -r third_party/LAS-Randomizer/requirements.txt pyinstaller==6.22.3
 	touch $@
 
-# Linux: build/dist/LAS Recomp-<version>-linux-<arch>.AppImage, built in Ubuntu 22.04 containers (podman) with SDL3, LGPL
+# Linux: build/dist/Sky Recomp-<version>-linux-<arch>.AppImage, built in Ubuntu 22.04 containers (podman) with SDL3, LGPL
 # FFmpeg, shaderc and the seed generator helper inside; the Vulkan loader and GPU drivers are the system's.
 # `make appimage` (ARCH: this machine's, or aarch64 cross-compiled), `make appimages` both. See docs/linux.md.
 appimage:

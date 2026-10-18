@@ -1,5 +1,5 @@
 #!/bin/bash
-# make appimage ARCH=<x86_64|aarch64>: build/dist/LAS Recomp-<version>-linux-<arch>.AppImage, built in Ubuntu 22.04
+# make appimage ARCH=<x86_64|aarch64>: build/dist/Sky Recomp-<version>-linux-<arch>.AppImage, built in Ubuntu 22.04
 # containers (podman; tools/linux/Containerfile) so it runs on glibc 2.35+ distributions. Everything is built inside
 # the amd64 container - aarch64 cross-compiled against the arm64 image's root filesystem (build/linux/aarch64/sysroot)
 # - except the generator helpers, which PyInstaller freezes in a container of their own arch (arm64: QEMU, binfmt).
@@ -11,8 +11,8 @@ case $ARCH in x86_64) PODARCH=amd64 ;; aarch64) PODARCH=arm64 ;;
     *) echo "unknown arch $ARCH"; exit 1 ;; esac
 
 image() {  # arch -> tag (built once, then cached by podman)
-    podman build -q --arch "$1" -t "localhost/lasrecomp-build:$1" -f tools/linux/Containerfile tools/linux >/dev/null
-    echo "localhost/lasrecomp-build:$1"
+    podman build -q --arch "$1" -t "localhost/skyrecomp-build:$1" -f tools/linux/Containerfile tools/linux >/dev/null
+    echo "localhost/skyrecomp-build:$1"
 }
 run() {  # image, command...: the checkout mounted at /src
     local img=$1; shift

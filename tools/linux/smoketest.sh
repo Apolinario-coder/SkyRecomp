@@ -1,6 +1,6 @@
 #!/bin/bash
 # make smoketest (tools/linux/smoketest.sh [AppImage]): release check of the x86-64 AppImage on this machine, in four
-# launches of the AppImage itself (default build/dist/LAS Recomp-<version>-linux-x86_64.AppImage):
+# launches of the AppImage itself (default build/dist/Sky Recomp-<version>-linux-x86_64.AppImage):
 #   0. setup, as the start screen's Set up does it: this checkout's extracted/ (exefs, romfs) into an empty data folder,
 #      and the game code built from it with the bundled generator and compiler (runtime/gamebuild.c)
 #   1. start screen: rendered with the game files found ("Game files ready")
@@ -11,14 +11,14 @@
 # Result: build/smoke/report.txt (PASS / FAIL per check), build/smoke/sheet.png (every screenshot, labelled) and the
 # screenshots in build/smoke/shots/. Exit status 0 = ready for release.
 # Uses this checkout's extracted/ (as the folder a player picks) and a test save that is never in git: $LARECOMP_SMOKE_SAVE (a save folder with
-# save_0/, default ~/.local/share/lasrecomp-smoketest/save). Make one by starting a new game once (any build, data
-# folder's save/) and copying that save/ there. Nothing in ~/.local/share/lasrecomp is used or changed.
+# save_0/, default ~/.local/share/skyrecomp-smoketest/save). Make one by starting a new game once (any build, data
+# folder's save/) and copying that save/ there. Nothing in ~/.local/share/skyrecomp is used or changed.
 set -uo pipefail
 cd "$(dirname "$0")/../.."
 REPO=$PWD
 VERSION=$(sed -n 's/^#define LARECOMP_VERSION "\(.*\)"/\1/p' runtime/ui/launcher.mm)
-APP=$(realpath "${1:-build/dist/LAS Recomp-$VERSION-linux-x86_64.AppImage}")
-SAVE=${LARECOMP_SMOKE_SAVE:-$HOME/.local/share/lasrecomp-smoketest/save}
+APP=$(realpath "${1:-build/dist/Sky Recomp-$VERSION-linux-x86_64.AppImage}")
+SAVE=${LARECOMP_SMOKE_SAVE:-$HOME/.local/share/skyrecomp-smoketest/save}
 O=$REPO/build/smoke
 [ -x "$APP" ] || { echo "smoketest: no AppImage at $APP (make appimage)"; exit 2; }
 [ -d "$SAVE/save_0" ] || { echo "smoketest: no test save in $SAVE (see the top of this script)"; exit 2; }
@@ -27,7 +27,7 @@ O=$REPO/build/smoke
 rm -rf "$O" && mkdir -p "$O/root/build" "$O/shots"
 cp -R "$SAVE" "$O/save"
 # test runs: no update check, no sound, a data folder of their own (runtime/paths.h), the AppImage run without FUSE
-export LARECOMP_DATA_ROOT=$O/root LARECOMP_SAVE_DIR=$O/save LARECOMP_SETTINGS=$O/root/larecomp.ini \
+export LARECOMP_DATA_ROOT=$O/root LARECOMP_SAVE_DIR=$O/save LARECOMP_SETTINGS=$O/root/skyrecomp.ini \
        LARECOMP_NO_UPDATE_CHECK=1 LARECOMP_NO_AUDIO=1 APPIMAGE_EXTRACT_AND_RUN=1
 FAILS=0
 report() {  # PASS|FAIL, text
@@ -63,8 +63,8 @@ wait_app() {  # seconds: status 0 = the game ended by itself in time, else it is
 t0=$(date +%s)
 start_app LARECOMP_LAUNCHER_EXTRACT="$REPO/extracted"
 wait_app 1800
-mv "$O/root/lasrecomp.log" "$O/setup.log" 2>/dev/null
-lib=$(ls "$O/root/extracted"/lasgame.* 2>/dev/null | head -1)
+mv "$O/root/skyrecomp.log" "$O/setup.log" 2>/dev/null
+lib=$(ls "$O/root/extracted"/skygame.* 2>/dev/null | head -1)
 if grep -q '\[launcher\] setup: .* -> READY' "$O/setup.log" && [ -n "$lib" ]; then
     report PASS "setup: game files and game code built ($(( $(date +%s) - t0 )) s, $(basename "$lib") $(du -m "$lib" | cut -f1) MB)"
 else
@@ -72,10 +72,10 @@ else
 fi
 
 # ---- 1. start screen
-# (no terminal: the app logs to lasrecomp.log in its data folder, runtime/platform/linux.c)
+# (no terminal: the app logs to skyrecomp.log in its data folder, runtime/platform/linux.c)
 start_app LARECOMP_LAUNCHER_SHOT=150 LARECOMP_SHOT_PATH="$O/shots/00_start_screen.png"
 wait_app 90
-mv "$O/root/lasrecomp.log" "$O/start_screen.log" 2>/dev/null
+mv "$O/root/skyrecomp.log" "$O/start_screen.log" 2>/dev/null
 if [ -f "$O/shots/00_start_screen.png" ] && [ "$(dark "$O/shots/00_start_screen.png")" = 0 ] &&
    ! grep -qE '\*\*\* |FATAL' "$O/start_screen.log"; then
     report PASS "start screen ($(grep -o 'using .*' "$O/start_screen.log" | head -1))"
@@ -116,7 +116,7 @@ start_app LARECOMP_NO_LAUNCHER=1 LARECOMP_INPUT="${IN%,}" LARECOMP_WARP_ON_LOAD=
     LARECOMP_WARP_AT="${AT%,}" LARECOMP_SHOT_AT="${SHOTS%,}" LARECOMP_WINDOW_SHOT=$LAST LARECOMP_EXIT_AFTER_SHOT=1
 wait_app 600
 rc=$?
-mv "$O/root/lasrecomp.log" "$O/game.log" 2>/dev/null
+mv "$O/root/skyrecomp.log" "$O/game.log" 2>/dev/null
 L=$O/game.log
 if grep -q '\[warp\] jumping to ' "$L"; then report PASS "into the game (save loaded)"
 else report FAIL "into the game: the save never got in play (see build/smoke/game.log)"; fi
@@ -149,7 +149,7 @@ rm -rf "$O/save" && cp -R "$SAVE" "$O/save"  # (the warps above saved in the dun
 IN=$(for f in $(seq 600 100 40000); do printf '%d:L:12,%d:R:12,%d:A:6,' $f $f $((f + 50)); done)
 start_app LARECOMP_NO_LAUNCHER=1 LARECOMP_INPUT="${IN%,}" LARECOMP_MENU_AT=7000 LARECOMP_MENU_TAB=3 \
     LARECOMP_RANDO_GEN_TEST=$SEED LARECOMP_RANDO_GEN_SHOTS="$O/shots/17_seed" LARECOMP_SCREENSHOT_EVERY=120
-L=$O/root/lasrecomp.log
+L=$O/root/skyrecomp.log
 in_seed() {  # after the switch: the seed active, then the renderer reports a level (not the title screen, "-")
     sed -n "/\[rando\] seed \"$SEED\" active/,\$p" "$L" 2>/dev/null | grep -cE ' level [A-Za-z0-9_]+ \(' >/dev/null
 }

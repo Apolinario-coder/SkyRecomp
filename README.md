@@ -1,25 +1,29 @@
 # Sky Recomp - Native PC Recompilation
 
-**Sky Recomp** is a native PC port (Windows x86-64 with Vulkan) based on static AArch64 -> C recompilation of *The Legend of Zelda: Skyward Sword HD*.
+**Sky Recomp** is a native cross-platform port (**Windows**, **Linux**, and **macOS**) based on static AArch64 -> C recompilation of *The Legend of Zelda: Skyward Sword HD*.
 
 > [!IMPORTANT]
 > **No game files are included.** Sky Recomp requires your own legally obtained copy of the game files for *The Legend of Zelda: Skyward Sword HD* (**v1.0.0**, without updates).
 > Instructions on how to obtain these files will **NOT** be provided.
-> This project consists exclusively of the open-source static recompiler tooling, compatibility layers, and the Vulkan/SDL3 native runtime.
+> This project consists exclusively of the open-source static recompiler tooling, compatibility layers, and the native runtime.
 
-![The Legend of Zelda: Skyward Sword HD running natively on PC via Vulkan](docs/gameplay.png)
+![The Legend of Zelda: Skyward Sword HD running natively on PC](docs/gameplay.png)
 
 ---
 
 ## Port Features
 
-- **Native C/C++ Execution**: This is NOT an emulator (no JIT or dynamic interpretation). Guest AArch64 (ARM64) machine instructions are statically decompiled and lifted to native C code (`-march=x86-64-v3` with AVX2 and FMA).
-- **Vulkan 1.3/1.4 Graphics Backend**: Graphics API calls and shaders are translated directly into high-performance Vulkan pipelines for NVIDIA, AMD, and Intel GPUs.
+- **Native C/C++ Execution**: This is NOT an emulator (no JIT or dynamic interpretation). Guest AArch64 (ARM64) machine instructions are statically decompiled and lifted to native C code (`-march=x86-64-v3` with AVX2 and FMA, or native ARM64 on Apple Silicon).
+- **Multi-Platform Support**: Runs natively on:
+  - **Windows**: Windows 10/11 (64-bit) with Vulkan 1.3+.
+  - **Linux**: Ubuntu, Fedora, Arch, Steam Deck / SteamOS with Vulkan 1.3+ and standalone AppImage distribution.
+  - **macOS**: Apple Silicon (M1/M2/M3/M4) and Intel Macs running macOS 11.0+ via native Metal 3 and MetalFX upscaling.
+- **High-Performance Graphics Backends**: Shaders and rendering commands are translated directly into optimized **Vulkan 1.3/1.4** pipelines (Windows and Linux) and native Apple **Metal 3** (macOS).
 - **1:1 Virtual Memory Layout**: The runtime reserves a 12.5 GB virtual address window matching the 39-bit guest address space, enabling pointer operations with zero address-translation overhead.
 - **SDL3 Input & Controller Support**: Seamless support for modern gamepads (Xbox, DualSense/DualShock, Nintendo Pro Controller) and keyboard/mouse. Includes standard button-controls mapping (right stick sword combat).
-- **Solid 60 FPS Performance**: Harnesses modern multi-core CPUs and dedicated desktop GPUs for rock-solid 60.0 FPS gameplay at native resolutions (1080p, 1440p, 4K, and Ultrawide).
+- **Solid 60 FPS Performance**: Harnesses modern multi-core CPUs and GPUs for rock-solid 60.0 FPS gameplay at native resolutions (1080p, 1440p, 4K, and Ultrawide).
 - **In-Game Settings Menu**: Press **`ESC`** at any time while playing to open the overlay menu (adjust graphics, toggle fullscreen/windowed, change aspect ratio, audio volume, or quit).
-- **In-Game Mod Manager**: Dedicated **Mods** tab with one-click folder opening, live rescan, individual mod enable/disable toggles, and LayeredFS priority reordering. Supports loose `romfs/` files and `romfs_metadata.bin`.
+- **Cross-Platform Mod Manager**: Dedicated **Mods** tab with one-click folder opening (`ShellExecute` on Windows, `xdg-open` on Linux, `open` on macOS), live rescan, individual mod enable/disable toggles, and LayeredFS priority reordering. Supports loose `romfs/` files and `romfs_metadata.bin`.
 - **Embedded Setup GUI**: No batch scripts or command-line steps required. The standalone launcher GUI allows picking your game files folder on first launch and boots directly to PLAY on subsequent launches.
 
 ---
@@ -33,10 +37,13 @@
 [ Local Game Data & Assets Directory ]
                   │
                   ▼ (Pre-compiled Native Recompiled Library)
-[ skygame.dll ]
+[ skygame.dll (Win) / skygame.so (Linux) / skygame.dylib (macOS) ]
                   │
-                  ▼ (skyrecomp.exe)
-[ Native PC Execution via Vulkan at 60 FPS! ]
+                  ▼
+[ skyrecomp.exe / skyrecomp / Sky Recomp.app ]
+                  │
+                  ▼
+[ Native Execution at 60 FPS (Vulkan / Metal) ]
 ```
 
 ---
@@ -44,29 +51,51 @@
 ## Getting Started
 
 ### System Requirements
-- **Operating System**: Windows 10/11 64-bit
-- **Processor**: x86-64 CPU with AVX2 support (Intel Haswell / 4th Gen Core or newer, AMD Ryzen or newer)
-- **Graphics Card**: Vulkan 1.3+ compatible GPU (NVIDIA GeForce 900 series+, AMD Radeon RX 400+, Intel Arc / Iris Xe)
-- **RAM**: 8 GB minimum (16 GB recommended)
-- **Storage**: ~15 GB free space for game assets
 
-### How to Play (Release Package)
-1. Download the latest release `.zip` package and extract it to a folder.
-2. Prepare your own legally obtained, uncompressed game files of *The Legend of Zelda: Skyward Sword HD* (v1.0.0) in a folder on your PC.
-3. Launch `skyrecomp.exe`.
-4. On the **Game Files** setup screen:
-   - Click **Game files folder** and select the folder containing your game files.
+| Specification | Windows | Linux | macOS |
+|---|---|---|---|
+| **OS** | Windows 10/11 64-bit | Glibc 2.35+ (Ubuntu 22.04+, Arch, Fedora, SteamOS) | macOS 11.0+ (15.0+ recommended) |
+| **CPU** | x86-64 with AVX2 & FMA (Intel 4th Gen+, AMD Zen+) | x86-64 with AVX2 or ARM64 | Apple Silicon (M1+) or Intel AVX2 |
+| **GPU** | Vulkan 1.3+ (NVIDIA 900+, AMD RX 400+, Intel Arc) | Vulkan 1.3+ (RADV, ANV, NVIDIA 515+) | Apple Metal 3 (MetalFX supported) |
+| **RAM** | 8 GB minimum (16 GB recommended) | 8 GB minimum (16 GB recommended) | 8 GB unified memory or higher |
+| **Storage** | ~15 GB free space | ~15 GB free space | ~15 GB free space |
+
+### How to Play (Release Packages)
+1. Download the release package for your operating system:
+   - **Windows**: `Sky Recomp-<version>-windows.zip`
+   - **Linux**: `Sky Recomp-<version>-linux-x86_64.AppImage` (or `aarch64`)
+   - **macOS**: `Sky Recomp-<version>-macOS.dmg`
+2. Prepare your legally obtained, uncompressed game files of *The Legend of Zelda: Skyward Sword HD* (v1.0.0).
+3. Start Sky Recomp:
+   - **Windows**: Run `skyrecomp.exe`.
+   - **Linux**: Make executable (`chmod +x *.AppImage`) and run.
+   - **macOS**: Open the `.dmg`, drag **Sky Recomp** to Applications, and open.
+4. On the **Game Files** setup screen, click **Game files folder** and select your game files.
 5. Click **Set up game files**.
-   - The launcher automatically prepares and validates the game files in seconds.
 6. Click **PLAY** to start the game! (Press **`ESC`** at any time while playing to open the settings menu).
 
-### Developer Setup (Compiling from Source)
-If you wish to build or modify the runtime from source:
-1. Ensure **MSYS2 UCRT64** with `clang`, `lld`, and `make` is installed.
-2. Compile the launcher runtime:
-   ```bash
-   make build/skyrecomp.exe
-   ```
+---
+
+## Compiling from Source
+
+- **Windows**:
+  Ensure **MSYS2 UCRT64** with `clang`, `lld`, and `make` is installed. Run:
+  ```bash
+  make build/skyrecomp.exe
+  ```
+- **Linux**:
+  See detailed instructions in [docs/BUILD-linux.md](docs/BUILD-linux.md).
+  ```bash
+  make build/skyrecomp
+  make appimage
+  ```
+- **macOS**:
+  See detailed instructions in [docs/BUILD-macos.md](docs/BUILD-macos.md).
+  ```bash
+  make deps
+  make app
+  make dmg
+  ```
 
 ---
 
@@ -127,4 +156,3 @@ Release builds distribute pre-compiled binaries and dynamic libraries of open-so
 | **python-lz4** (recompiler tooling) | 4.4.5 | BSD 3-clause | https://github.com/python-lz4/python-lz4/releases/tag/v4.4.5 |
 
 The Windows release libraries (`SDL3`, `shaderc`, `libiconv`, and runtime DLLs) are built via the MSYS2 UCRT64 toolchain environment ([MSYS2 Packages](https://packages.msys2.org)).
-

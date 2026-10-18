@@ -1147,7 +1147,7 @@ void ui_window_init(void) {
     // LARECOMP_HIDDEN=1: never shown (automated test runs render off screen without taking the user's focus)
     SDL_WindowFlags wflags = SDL_WINDOW_METAL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY;
     if (getenv("LARECOMP_HIDDEN")) wflags |= SDL_WINDOW_HIDDEN;
-    window = SDL_CreateWindow("LAS Recomp", win_w, win_h, wflags);
+    window = SDL_CreateWindow("Sky Recomp", win_w, win_h, wflags);
     if (!window) FATAL("SDL_CreateWindow: %s\n", SDL_GetError());
     rt_window_icon(window);
     // the Fullscreen setting applies from the start screen on (not only once the game runs); test windows stay windows

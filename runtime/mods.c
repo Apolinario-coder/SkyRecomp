@@ -73,9 +73,12 @@ void mods_open_folder(void) {
 #ifdef _WIN32
     CreateDirectoryA("mods", NULL);
     ShellExecuteA(NULL, "open", "mods", NULL, NULL, SW_SHOWNORMAL);
+#elif defined(__APPLE__)
+    mkdir("mods", 0755);
+    system("open mods &");
 #else
     mkdir("mods", 0755);
-    system("xdg-open mods & || open mods &");
+    system("xdg-open mods & >/dev/null 2>&1");
 #endif
 }
 

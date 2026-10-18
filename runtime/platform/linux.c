@@ -75,7 +75,7 @@ void plat_thread_realtime(uint64_t period_ns) {
 }
 
 // ---- process
-// Started from a desktop (the AppImage) there is no terminal: stdout / stderr go to lasrecomp.log in the data folder
+// Started from a desktop (the AppImage) there is no terminal: stdout / stderr go to skyrecomp.log in the data folder
 // (runtime/paths.h; rt_paths_init runs later, so the same rule is applied here). Processes started by this one (the
 // start screen re-executing itself for the game) append to the same log.
 static char g_log_path[1024];
@@ -87,16 +87,16 @@ static void log_to_file_without_terminal(void) {
     struct stat st;
     if (env && *env) snprintf(dir, sizeof dir, "%s", env);
     else if (stat("extracted", &st) == 0 && S_ISDIR(st.st_mode)) return;  // dev mode: wherever stderr goes already
-    else if (xdg && *xdg == '/') snprintf(dir, sizeof dir, "%s/lasrecomp", xdg);
-    else snprintf(dir, sizeof dir, "%s/.local/share/lasrecomp", home && *home ? home : "/tmp");
+    else if (xdg && *xdg == '/') snprintf(dir, sizeof dir, "%s/skyrecomp", xdg);
+    else snprintf(dir, sizeof dir, "%s/.local/share/skyrecomp", home && *home ? home : "/tmp");
     for (char *c = dir + 1; *c; c++)
         if (*c == '/') { *c = 0; mkdir(dir, 0755); *c = '/'; }
     mkdir(dir, 0755);
-    snprintf(g_log_path, sizeof g_log_path, "%s/lasrecomp.log", dir);
-    bool append = getenv("LASRECOMP_LOG_APPEND") != NULL;
+    snprintf(g_log_path, sizeof g_log_path, "%s/skyrecomp.log", dir);
+    bool append = getenv("SKYRECOMP_LOG_APPEND") != NULL;
     if (!freopen(g_log_path, append ? "a" : "w", stderr)) { g_log_path[0] = 0; return; }
     dup2(STDERR_FILENO, STDOUT_FILENO);
-    setenv("LASRECOMP_LOG_APPEND", "1", 1);
+    setenv("SKYRECOMP_LOG_APPEND", "1", 1);
 }
 
 #if defined(__x86_64__)
@@ -105,7 +105,7 @@ static void log_to_file_without_terminal(void) {
 static void require_cpu(void) {
     __builtin_cpu_init();
     if (__builtin_cpu_supports("avx2") && __builtin_cpu_supports("fma") && __builtin_cpu_supports("bmi2")) return;
-    fprintf(stderr, "FATAL: LAS Recomp needs a CPU with AVX2 (Intel Haswell / 2013 or newer, AMD Excavator / Zen or "
+    fprintf(stderr, "FATAL: Sky Recomp needs a CPU with AVX2 (Intel Haswell / 2013 or newer, AMD Excavator / Zen or "
                     "newer).\n");
     exit(1);
 }
@@ -152,7 +152,7 @@ void plat_exec(char *const argv[]) {
 // ---- diagnostics
 // Exported symbols only (the Makefile links with -rdynamic); frames in the generated code are left to the caller,
 // which maps them to guest functions (runtime/dispatch.c). Static runtime functions come out as the nearest guest
-// function, so backtrace lines also give the offset in the executable (addr2line -fe lasrecomp <offset>).
+// function, so backtrace lines also give the offset in the executable (addr2line -fe skyrecomp <offset>).
 const char *plat_symbol(uint64_t pc, uint64_t *offset) {
     Dl_info di = {0};
     if (!dladdr((void *)(uintptr_t)pc, &di) || !di.dli_sname) return NULL;
@@ -165,8 +165,8 @@ void plat_fatal_notice(void) {
     if (!g_log_path[0]) return;
     fflush(stderr);
     char text[1200];
-    snprintf(text, sizeof text, "LAS Recomp stopped because of an error.\n\nDetails: %s", g_log_path);
-    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "LAS Recomp", text, NULL);
+    snprintf(text, sizeof text, "Sky Recomp stopped because of an error.\n\nDetails: %s", g_log_path);
+    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Sky Recomp", text, NULL);
 }
 
 const char *rt_host_fn_name(uint64_t pc, uint64_t *offset);  // runtime/dispatch.c
@@ -185,7 +185,7 @@ void plat_print_backtrace(void) {
         if (!s && ours) s = rt_host_fn_name(pc, &off);
         const char *mod = di.dli_fname ? (strrchr(di.dli_fname, '/') ? strrchr(di.dli_fname, '/') + 1 : di.dli_fname) : "?";
         uint64_t moff = pc - (uint64_t)(uintptr_t)di.dli_fbase;
-        if (s && ours) fprintf(stderr, "  #%-2d %016llx %s+%llx (lasrecomp+%llx)\n", i, (unsigned long long)pc, s,
+        if (s && ours) fprintf(stderr, "  #%-2d %016llx %s+%llx (skyrecomp+%llx)\n", i, (unsigned long long)pc, s,
                                (unsigned long long)off, (unsigned long long)moff);
         else if (s) fprintf(stderr, "  #%-2d %016llx %s+%llx (%s)\n", i, (unsigned long long)pc, s, (unsigned long long)off, mod);
         else fprintf(stderr, "  #%-2d %016llx %s+%llx\n", i, (unsigned long long)pc, mod, (unsigned long long)moff);
