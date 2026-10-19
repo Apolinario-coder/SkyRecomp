@@ -1781,6 +1781,9 @@ static ShaderInfo *glsl_finish(Ctx *c, bool any_branch, bool dbg) {
     ShaderInfo *info = c->info;
     const ShaderKey *key = c->key;
     int stage = c->stage;
+    bool alpha_test = stage == STAGE_FRAGMENT && key && key->alpha_func > 0 && key->alpha_func < 8 &&
+                      (c->omap_target & 8) && key->rt_kind[0] == 0;
+    if (alpha_test) c->uses_rscale = true;
     Str body = {0};
     glsl_rewrite(c, &body, c->body.buf ? c->body.buf : "");
     if (info->uses_gmem && (info->cbuf_mask & (1u << GMEM_BUFFER_INDEX))) fail(c, "cbuf %d clashes with gmem", GMEM_BUFFER_INDEX);
@@ -1811,7 +1814,7 @@ static ShaderInfo *glsl_finish(Ctx *c, bool any_branch, bool dbg) {
     }
     if (c->uses_rscale && stage != STAGE_VERTEX) {
         sp(&s, "layout(std140, set = %d, binding = 18) uniform RScale { vec4 rscale[%d]; };\n", set,
-           key && key->flip_x ? 66 : 65);  // ([65]: mirror mode's render target width)
+           (key && key->flip_x) || alpha_test ? 66 : 65);  // [65]: mirror width and alpha reference
         info->uses_rscale = true;
     }
     bool tint = stage == STAGE_FRAGMENT && !dbg && (c->omap_target & 0x7) == 0x7 && (!key || key->rt_kind[0] == 0);
@@ -1852,7 +1855,11 @@ static ShaderInfo *glsl_finish(Ctx *c, bool any_branch, bool dbg) {
         for (int rt = 0; rt < 8; rt++) {
             if (!((c->omap_target >> (rt * 4)) & 0xF)) continue;
             int kind = key ? key->rt_kind[rt] : 0;
-            sp(&s, "layout(location = %d) out %s c%d;\n", rt, kind == 1 ? "ivec4" : kind == 2 ? "uvec4" : "vec4", rt);
+            if (key && key->dual_source && rt < 2)
+                sp(&s, "layout(location = 0, index = %d) out %s c%d;\n", rt,
+                   kind == 1 ? "ivec4" : kind == 2 ? "uvec4" : "vec4", rt);
+            else
+                sp(&s, "layout(location = %d) out %s c%d;\n", rt, kind == 1 ? "ivec4" : kind == 2 ? "uvec4" : "vec4", rt);
         }
         if (c->omap_depth) info->writes_depth = true;
     } else {
@@ -1910,6 +1917,13 @@ static ShaderInfo *glsl_finish(Ctx *c, bool any_branch, bool dbg) {
         if (tint)
             sp(&s, "  if (ltint[0].w > 0.0f) { vec3 g = c0.rgb; float l = dot(g, vec3(0.299f, 0.587f, 0.114f));\n"
                    "    c0.rgb = mix(g, ltint[0].rgb * pow(l, ltint[1].w) + ltint[1].rgb * l, ltint[0].w); }\n");
+        if (alpha_test) {
+            // Vulkan has no fixed-function alpha test. Discard before depth/stencil writes,
+            // using the original fragment alpha (before optional cosmetic tinting).
+            static const char *const cmp[] = {NULL, NULL, "<", "==", "<=", ">", "!=", ">="};
+            if (key->alpha_func == 1) sp(&s, "  discard;\n");
+            else sp(&s, "  if (!(c0.a %s rscale[65].y)) discard;\n", cmp[key->alpha_func]);
+        }
         if (c->omap_depth) {
             if (c->reg_used[r + 1]) sp(&s, "  gl_FragDepth = as_f(r%d);\n", r + 1);
             else sp(&s, "  gl_FragDepth = gl_FragCoord.z;\n");

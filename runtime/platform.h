@@ -35,6 +35,15 @@ int plat_protect(uint64_t addr, uint64_t size, int prot);  // 0 on success
 uint64_t plat_now_ns(void);                // monotonic
 void plat_sleep_until_ns(uint64_t t);      // precise wait for plat_now_ns() >= t
 void plat_thread_realtime(uint64_t period_ns);  // periodic timing thread (vsync): don't coalesce its timers
+#ifdef _WIN32
+// One waiter per guest thread. Reset while holding the kernel lock, then unlock
+// before waiting; signalers hold that same lock, so a wake cannot be lost.
+void *plat_waiter_create(void);
+void plat_waiter_destroy(void *waiter);
+void plat_waiter_reset(void *waiter);
+void plat_waiter_signal(void *waiter);
+bool plat_waiter_wait(void *waiter, int64_t timeout_ns);
+#endif
 
 // ---- process
 void plat_init(void);                                // first thing in main()

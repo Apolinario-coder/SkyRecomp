@@ -117,6 +117,41 @@ void plat_thread_realtime(uint64_t period_ns) {
     SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
 }
 
+typedef struct { HANDLE event, timer; } PreciseWaiter;
+
+void *plat_waiter_create(void) {
+    PreciseWaiter *w = calloc(1, sizeof *w);
+    if (!w) return NULL;
+    w->event = CreateEventW(NULL, FALSE, FALSE, NULL);
+    w->timer = CreateWaitableTimerExW(NULL, NULL, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
+    if (!w->timer) w->timer = CreateWaitableTimerExW(NULL, NULL, 0, TIMER_ALL_ACCESS);
+    if (!w->event || !w->timer) { plat_waiter_destroy(w); return NULL; }
+    return w;
+}
+
+void plat_waiter_destroy(void *waiter) {
+    PreciseWaiter *w = waiter;
+    if (!w) return;
+    if (w->event) CloseHandle(w->event);
+    if (w->timer) CloseHandle(w->timer);
+    free(w);
+}
+
+void plat_waiter_reset(void *waiter) { ResetEvent(((PreciseWaiter *)waiter)->event); }
+void plat_waiter_signal(void *waiter) { SetEvent(((PreciseWaiter *)waiter)->event); }
+
+bool plat_waiter_wait(void *waiter, int64_t timeout_ns) {
+    PreciseWaiter *w = waiter;
+    if (timeout_ns < 0) return WaitForSingleObject(w->event, INFINITE) == WAIT_OBJECT_0;
+    if (!timeout_ns) return WaitForSingleObject(w->event, 0) == WAIT_OBJECT_0;
+    LARGE_INTEGER due = {.QuadPart = -(LONGLONG)((timeout_ns + 99) / 100)};
+    if (!SetWaitableTimer(w->timer, &due, 0, NULL, NULL, FALSE)) return false;
+    HANDLE handles[] = {w->event, w->timer};
+    DWORD result = WaitForMultipleObjects(2, handles, FALSE, INFINITE);
+    CancelWaitableTimer(w->timer);
+    return result == WAIT_OBJECT_0;
+}
+
 // ---- process
 // Release builds are GUI-subsystem executables (no console window): stdout / stderr go to lasrecomp.log next to the
 // exe, and a fatal error shows a message box (plat_fatal_notice) instead of vanishing. Processes started by this one

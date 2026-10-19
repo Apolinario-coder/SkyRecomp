@@ -78,7 +78,7 @@ typedef struct Effect Effect;
 typedef struct {
     uint32_t sample_rate, sample_count, mix_buffers, submixes, voices, sinks, effects, perf_frames;
     uint32_t splitters, revision;
-    uint64_t elapsed_frames;
+    uint64_t elapsed_frames, update_count;
     uint32_t event_r, event_w;
     KEvent *event;
     uint32_t state;  // 0 started, 1 stopped
@@ -94,6 +94,7 @@ typedef struct {
     Effect *fx;
     SDL_AudioStream *stream;
     FILE *wav;
+    FILE *trace;
     uint32_t wav_bytes;
     pthread_t thread;
     volatile bool quit;  // reboot (audio_reset)
@@ -512,7 +513,10 @@ static void render_frame(Renderer *r, float *stereo) {
             }
         }
         if (!play || v->wb_count == 0 || v->drop) continue;
-        float ratio = (float)v->rate / r->sample_rate * v->pitch;
+        // The guest can submit samples already converted to the renderer's rate.
+        // Applying pitch/SRC again stretches those effects and changes their pitch.
+        bool bypass_src = (v->behaviour & 2) != 0;  // SkipPitchAndSampleRateConversion
+        float ratio = bypass_src ? 1.0f : (float)v->rate / r->sample_rate * v->pitch;
         if (!(ratio > 0) || ratio > 8) ratio = 1;
         int nch = v->chans > 6 ? 6 : v->chans;
         for (int c = 0; c < nch; c++) {
@@ -530,6 +534,7 @@ static void render_frame(Renderer *r, float *stereo) {
                 float f = pos - k;
                 if (k + 3 > need + HIST - 1) k = need + HIST - 4;
                 float y0 = tmp[k], y1 = tmp[k + 1], y2 = tmp[k + 2], y3 = tmp[k + 3];
+                if (bypass_src) { smp[i] = tmp[HIST + i]; continue; }
                 if (ratio == 1.0f && f == 0) { smp[i] = y1; continue; }
                 // 4-point Hermite between y1 and y2
                 float c1 = 0.5f * (y2 - y0), c2 = y0 - 2.5f * y1 + 2 * y2 - 0.5f * y3;
@@ -644,8 +649,8 @@ static void apply_gain(SDL_AudioStream *st) {
     if (st && SDL_GetAudioStreamGain(st) != g) SDL_SetAudioStreamGain(st, g);
 }
 
-static void wav_header(FILE *f, uint32_t bytes) {
-    uint32_t h[11] = {0x46464952, 36 + bytes, 0x45564157, 0x20746d66, 16, 0x00020003, 48000, 48000 * 8,
+static void wav_header(FILE *f, uint32_t bytes, uint32_t rate) {
+    uint32_t h[11] = {0x46464952, 36 + bytes, 0x45564157, 0x20746d66, 16, 0x00020003, rate, rate * 8,
                       0x00200008, 0x61746164, bytes};
     fseek(f, 0, SEEK_SET);
     fwrite(h, 4, 11, f);
@@ -657,8 +662,10 @@ static void *renderer_tick(void *arg) {
     float out[2 * 4096];
     uint32_t N = r->sample_count > 4096 ? 4096 : r->sample_count;
     int frame_bytes = (int)(N * 2 * sizeof(float));
-    uint64_t next = 0;
-    struct timespec now;
+    uint64_t next = SDL_GetTicksNS();
+    bool timing_log = getenv("LARECOMP_AUDIO_TIMING") != NULL;
+    uint64_t timing_start = next, timing_updates = 0, timing_busy = 0, timing_wait = 0;
+    const uint64_t period = (uint64_t)N * 1000000000ull / r->sample_rate;
     int target = 4 * frame_bytes;  // queued audio to keep ahead of the device: >= 2 device periods
     if (r->stream) {
         SDL_AudioSpec dev;
@@ -669,42 +676,76 @@ static void *renderer_tick(void *arg) {
             LOG("[audren] device %d Hz, %d frames/period; queue target %d samples\n", dev.freq, dev_frames,
                 target / (2 * (int)sizeof(float)));
         }
+        // Keep enough audio queued for the device without using its consumption
+        // bursts as the guest renderer's clock. A 10 ms device period otherwise
+        // generates two 5 ms blocks back-to-back; their event signals coalesce
+        // and the game's sequence player advances too slowly.
+        memset(out, 0, sizeof out);
+        for (int queued = 0; queued + frame_bytes < target; queued += frame_bytes)
+            SDL_PutAudioStreamData(r->stream, out, frame_bytes);
     }
     while (!r->quit) {
         if (r->stream) {
-            while (SDL_GetAudioStreamQueued(r->stream) >= target && !r->quit) {
-                struct timespec ts = {0, 1000000};
-                nanosleep(&ts, NULL);
+            // One block of headroom accommodates the phase difference between
+            // the device's period and our clock without delaying every other tick.
+            while (SDL_GetAudioStreamQueued(r->stream) >= target + frame_bytes && !r->quit) {
+                SDL_DelayPrecise(1000000);
             }
-        } else {
-            clock_gettime(CLOCK_MONOTONIC, &now);
-            uint64_t t = now.tv_sec * 1000000000ull + now.tv_nsec;
-            if (!next) next = t;
-            if (next > t) { struct timespec ts = {0, (long)(next - t)}; nanosleep(&ts, NULL); }
-            next += (uint64_t)N * 1000000000ull / r->sample_rate;
         }
+        uint64_t t = SDL_GetTicksNS();
+        if (next > t) SDL_DelayPrecise(next - t);
+        t = SDL_GetTicksNS();
+        // After a host stall, resume a regular cadence instead of emitting a
+        // burst of catch-up events that the guest cannot distinguish.
+        if (t > next + period / 2) next = t;
+        next += period;
+        uint64_t timing_lock = timing_log ? SDL_GetTicksNS() : 0;
         pthread_mutex_lock(&r->lock);
+        uint64_t timing_render = timing_log ? SDL_GetTicksNS() : 0;
         if (r->state == 0) {
             render_frame(r, out);
             r->elapsed_frames++;
         } else {
             memset(out, 0, frame_bytes);
         }
+        uint64_t updates = r->update_count;
         pthread_mutex_unlock(&r->lock);
+        if (timing_log) {
+            uint64_t done = SDL_GetTicksNS();
+            timing_wait += timing_render - timing_lock;
+            timing_busy += done - timing_render;
+            if (r->state == 0 && r->elapsed_frames % 200 == 0) {
+                LOG("[audren-clock] frame %llu wall %.1f ms updates %llu mix %.1f ms lock %.1f ms queue %d\n",
+                    (unsigned long long)r->elapsed_frames, (done - timing_start) / 1e6,
+                    (unsigned long long)(updates - timing_updates), timing_busy / 1e6, timing_wait / 1e6,
+                    r->stream ? SDL_GetAudioStreamQueued(r->stream) / (2 * (int)sizeof(float)) : 0);
+                timing_start = done; timing_updates = updates; timing_busy = timing_wait = 0;
+            }
+        }
         if (r->stream) { apply_gain(r->stream); SDL_PutAudioStreamData(r->stream, out, frame_bytes); }
         if (r->wav && r->state == 0) {
             fwrite(out, 1, frame_bytes, r->wav);
             r->wav_bytes += frame_bytes;
-            if ((r->elapsed_frames & 255) == 0) { wav_header(r->wav, r->wav_bytes); fflush(r->wav); }
+            if ((r->elapsed_frames & 255) == 0) { wav_header(r->wav, r->wav_bytes, r->sample_rate); fflush(r->wav); }
         }
         pthread_mutex_lock(&g_klock);
         kernel_signal(r->event);
         pthread_mutex_unlock(&g_klock);
+        if (r->trace && r->elapsed_frames % 200 == 0) fflush(r->trace);
     }
     return NULL;
 }
 
 static void update_voice(Renderer *r, Voice *v, const uint8_t *p, uint8_t *out) {
+    if (r->trace) {
+        bool changed = p[8] != 0;
+        for (int i = 0; i < WB_COUNT; i++) changed |= p[96 + i * 0x38 + 26] == 0;
+        if (changed) {
+            uint64_t header[2] = {SDL_GetTicksNS(), r->elapsed_frames};
+            fwrite(header, sizeof header, 1, r->trace);
+            fwrite(p, 0x170, 1, r->trace);
+        }
+    }
     uint8_t is_new = p[8];
     if (is_new) {
         memset(v, 0, sizeof *v);
@@ -794,7 +835,7 @@ static void update_voice(Renderer *r, Voice *v, const uint8_t *p, uint8_t *out) 
                 }
             }
             static int vlog = -1;
-            if (vlog < 0) vlog = getenv("LARECOMP_AUDIO_LOG") ? 1 : 0;
+            if (vlog < 0) vlog = (getenv("LARECOMP_AUDIO_LOG") || getenv("LARECOMP_AUDIO_VOICE_LOG")) ? 1 : 0;
             if (vlog)
                 LOG("[audren] f%llu v%ld wb%d fmt %u rate %u ch %u pitch %.3f vol %.3f mix %d res %u addr %llx size %llx "
                     "[%u,%u) loop %u/%d eos %u ctx %llx ds %llx\n", (unsigned long long)r->elapsed_frames,
@@ -838,6 +879,33 @@ static void update_mix(Renderer *r, const uint8_t *p, int id) {
     }
 }
 
+// SNDH contains variable-length SNDI records before the fixed-size SNDD
+// destinations. Reserved SNDI bytes may themselves contain an old SNDD magic;
+// scanning at destination-sized strides mistakes those bytes for gain values.
+static void update_splitters(Renderer *r, const uint8_t *data, size_t size) {
+    if (size < 0x20 || *(const uint32_t *)data != 0x48444E53) return;
+    uint32_t state_count = *(const uint32_t *)(data + 4);
+    uint32_t dest_count = *(const uint32_t *)(data + 8);
+    size_t offset = 0x20;
+    for (uint32_t i = 0; i < state_count; i++) {
+        if (size - offset < 0x1c || *(const uint32_t *)(data + offset) != 0x49444E53) return;
+        uint32_t count = *(const uint32_t *)(data + offset + 12);
+        // 16-byte state header, destination IDs, then 12 reserved bytes.
+        if (count > (size - offset - 0x1c) / 4) return;
+        offset += 0x1c + (size_t)count * 4;
+    }
+    if (dest_count > (size - offset) / 0x70) return;
+    for (uint32_t i = 0; i < dest_count; i++, offset += 0x70) {
+        const uint8_t *p = data + offset;
+        if (*(const uint32_t *)p != 0x44444E53) return;
+        int32_t id = *(const int32_t *)(p + 4);
+        if (id >= 0 && (uint32_t)id < r->nspl_dest) {
+            r->spl_dest[id].mix_id = *(const int32_t *)(p + 0x68);
+            memcpy(r->spl_dest[id].mix, p + 8, sizeof r->spl_dest[id].mix);
+        }
+    }
+}
+
 // RequestUpdate: input is an UpdateDataHeader + sections; write a matching output.
 static void request_update(Renderer *r, IpcReq *req, IpcResp *resp) {
     IpcBuf *in = in_buf(req, 0), *out = out_buf(req, 0);
@@ -869,6 +937,7 @@ static void request_update(Renderer *r, IpcReq *req, IpcResp *resp) {
     oh[0] = h[0];
     uint32_t o = 0x40;
     pthread_mutex_lock(&r->lock);
+    r->update_count++;
     // memory pools: acknowledge attach/detach requests
     const uint8_t *pin = ip + 0x40 + behavior_sz;
     oh[2] = npools * 0x10;
@@ -919,21 +988,9 @@ static void request_update(Renderer *r, IpcReq *req, IpcResp *resp) {
     }
     const uint8_t *min = ein + effects_sz;
     uint32_t splitters_sz = h[9];
-    if (r->splitters && splitters_sz >= 0x20 && *(const uint32_t *)min == 0x48444E53) {
-        uint32_t dst_cnt = *(const uint32_t *)(min + 8);
-        const uint8_t *p = min + 0x20;
-        const uint8_t *sin_end = ip + h[15] - perf_sz - sinks_sz;
-        for (uint32_t i = 0; i < dst_cnt && p + 0x70 <= sin_end; i++, p += 0x70) {
-            if (*(const uint32_t *)p == 0x44444E53) {  // 'SNDD'
-                int32_t id = *(const int32_t *)(p + 4);
-                int32_t dest_mix = *(const int32_t *)(p + 0x68);
-                if (id >= 0 && id < (int32_t)r->nspl_dest) {
-                    r->spl_dest[id].mix_id = dest_mix;
-                    memcpy(r->spl_dest[id].mix, p + 8, sizeof(float) * MIXBUF_MAX);
-                }
-            }
-        }
-    }
+    if (r->splitters && min >= ip && (uint64_t)(min - ip) <= in->size &&
+        splitters_sz <= in->size - (uint64_t)(min - ip))
+        update_splitters(r, min, splitters_sz);
     // mixes: the section ends right before the sinks
     const uint8_t *sin = ip + h[15] - perf_sz - sinks_sz;
     min = sin - mixes_sz;
@@ -974,9 +1031,10 @@ static void request_update(Renderer *r, IpcReq *req, IpcResp *resp) {
 }
 
 static void renderer_open_output(Renderer *r) {
+    if (getenv("LARECOMP_AUDIO_TRACE")) r->trace = fopen(getenv("LARECOMP_AUDIO_TRACE"), "wb");
     if (getenv("LARECOMP_AUDIO_WAV")) {
         r->wav = fopen(getenv("LARECOMP_AUDIO_WAV"), "wb");
-        if (r->wav) wav_header(r->wav, 0);
+        if (r->wav) wav_header(r->wav, 0, r->sample_rate);
     }
     if (getenv("LARECOMP_NO_AUDIO") && strcmp(getenv("LARECOMP_NO_AUDIO"), "0")) return;
     if (!SDL_InitSubSystem(SDL_INIT_AUDIO)) { LOG("[audren] SDL audio init failed: %s\n", SDL_GetError()); return; }
@@ -1111,7 +1169,8 @@ static void audren_free(Renderer *r) {
     r->quit = true;
     pthread_join(r->thread, NULL);
     if (r->stream) SDL_DestroyAudioStream(r->stream);
-    if (r->wav) { wav_header(r->wav, r->wav_bytes); fclose(r->wav); }
+    if (r->wav) { wav_header(r->wav, r->wav_bytes, r->sample_rate); fclose(r->wav); }
+    if (r->trace) fclose(r->trace);
     for (uint32_t m = 0; m < r->nmix; m++) free(r->mix[m].buf);
     free(r->voice), free(r->chres), free(r->chst), free(r->mix), free(r->fx), free(r->spl_dest);  // (reverb delay lines leak)
     free(r);
@@ -1183,16 +1242,15 @@ static void *audout_thread(void *arg) {
         uint64_t size = 0, tag = 0, data = 0;
         if (a->state == 0 && a->queued) { size = a->sizes[0]; tag = a->tags[0]; data = a->datas[0]; }
         pthread_mutex_unlock(&a->lock);
-        if (!size) { struct timespec ts = {0, 1000000}; nanosleep(&ts, NULL); continue; }
+        if (!size) { SDL_DelayPrecise(1000000); continue; }
         uint64_t frames = size / (2 * ch);
         if (a->stream) {
             apply_gain(a->stream);
             if (data) SDL_PutAudioStreamData(a->stream, (const void *)(uintptr_t)data, (int)size);
-            while (SDL_GetAudioStreamQueued(a->stream) > target && !a->quit) { struct timespec ts = {0, 1000000}; nanosleep(&ts, NULL); }
+            while (SDL_GetAudioStreamQueued(a->stream) > target && !a->quit) SDL_DelayPrecise(1000000);
         } else {
             uint64_t ns = frames * 1000000000ull / (a->rate ? a->rate : 48000);
-            struct timespec ts = {(time_t)(ns / 1000000000ull), (long)(ns % 1000000000ull)};
-            nanosleep(&ts, NULL);
+            SDL_DelayPrecise(ns);
         }
         if (a->wav && data) { fwrite((const void *)(uintptr_t)data, 1, size, a->wav); a->wav_bytes += (uint32_t)size; }
         pthread_mutex_lock(&a->lock);

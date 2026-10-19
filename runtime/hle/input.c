@@ -271,6 +271,16 @@ static void host_test_frame(uint64_t frame) {
     static const char *hspec, *bspec;
     static int init;
     if (!init) { init = 1; hspec = getenv("LARECOMP_HOST_INPUT"); bspec = getenv("LARECOMP_BIND_TEST"); host_test = hspec; }
+    static char live_spec[16384];
+    const char *live_path = getenv("LARECOMP_INPUT_FILE");
+    if (live_path) {
+        FILE *f = fopen(live_path, "rb");
+        size_t n = f ? fread(live_spec, 1, sizeof live_spec - 1, f) : 0;
+        if (f) fclose(f);
+        live_spec[n] = 0;
+        hspec = live_spec;
+        host_test = true;
+    }
     char buf[2048];
     if (hspec) {
         uint8_t keys[SDL_SCANCODE_COUNT] = {0};
@@ -355,6 +365,17 @@ void input_frame(uint64_t frame) {
     watch_arm();
     host_test_frame(frame);
     const char *spec = getenv("LARECOMP_INPUT");
+    // Optional live test script: edit frame:BUTTON:duration entries without
+    // restarting a long gameplay reproduction. Inactive in normal gameplay.
+    static char file_spec[16384];
+    const char *script_path = getenv("LARECOMP_INPUT_FILE");
+    if (script_path) {
+        FILE *f = fopen(script_path, "rb");
+        size_t n = f ? fread(file_spec, 1, sizeof file_spec - 1, f) : 0;
+        if (f) fclose(f);
+        file_spec[n] = 0;
+        spec = file_spec;
+    }
     if (!spec) return;
     static const char *const names[] = {"A", "B", "X", "Y", "LSTICK", "RSTICK", "L", "R", "ZL", "ZR", "PLUS",
                                         "MINUS", "LEFT", "UP", "RIGHT", "DOWN"};

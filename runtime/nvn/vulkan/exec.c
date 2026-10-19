@@ -580,8 +580,9 @@ static VkSpan guest_copy(uint64_t addr, uint64_t size) {
 }
 
 // ================================================================== worker threads (shader / pipeline builds)
-// First-use compiles run off the render thread; draws needing them are skipped until ready (as on Metal).
-// LARECOMP_SYNC_SHADERS=1 builds on first use, blocking (deterministic tests).
+// Complete first-use compiles before drawing. Skipping draws can omit a shadow-map
+// update (or a compute result) that the game will reuse on subsequent frames.
+// LARECOMP_SYNC_SHADERS=0 opts into the old asynchronous, draw-skipping behaviour.
 typedef struct Job { void (*fn)(void *); void *arg; struct Job *next; } Job;
 static Job *jobs_head, *jobs_tail;
 static pthread_mutex_t jobs_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -604,7 +605,10 @@ static void *worker(void *a) {
 
 static bool sync_shaders(void) {
     static int v = -1;
-    if (v < 0) v = getenv("LARECOMP_SYNC_SHADERS") != NULL;
+    if (v < 0) {
+        const char *e = getenv("LARECOMP_SYNC_SHADERS");
+        v = !e || atoi(e) != 0;
+    }
     return v;
 }
 
@@ -694,8 +698,9 @@ static struct {
     int32_t scissor[16][4];
     float depth_range[16][2];
     float blend_color[4];
+    float alpha_ref;
     uint32_t stencil_ref[2], stencil_mask[2], stencil_vmask[2];
-    bool prim_restart;
+    bool prim_restart, depth_clamp;
     uint32_t restart_index;
     uint64_t copy_row_stride, copy_image_stride;
 } st;
@@ -794,6 +799,7 @@ static void st_defaults(void) {
         st.depth_range[i][1] = 1.0f;
     }
     st.channel_mask = 0xFFFFFFFF;
+    st.color_state[2] = 8;  // alpha test ALWAYS
     st.stencil_mask[0] = st.stencil_mask[1] = 0xFF;
     st.stencil_vmask[0] = st.stencil_vmask[1] = 0xFF;
     st.ds[1] = 1; st.ds[2] = 2;
@@ -1252,6 +1258,8 @@ static Prog *get_program(NvnProgram *np, ShaderKey *vkey, ShaderKey *fkey) {
     const uint8_t *vb = (const uint8_t *)vkey;
     for (size_t i = 0; i < sizeof *vkey; i++) { h ^= vb[i]; h *= 0x100000001B3ull; }
     for (int i = 0; i < 8; i++) { h ^= fkey->rt_kind[i]; h *= 0x100000001B3ull; }
+    h ^= fkey->alpha_func; h *= 0x100000001B3ull;
+    h ^= fkey->dual_source; h *= 0x100000001B3ull;
     if (!h) h = 1;
     uint32_t slot = (uint32_t)(h ^ (h >> 31)) & (PROG_TAB - 1);
     while (prog_tab[slot].key && prog_tab[slot].key != h) slot = (slot + 1) & (PROG_TAB - 1);
@@ -1450,7 +1458,7 @@ typedef struct {
     uint32_t attr_mask;
     uint32_t stride[17], divisor[17], used_streams;
     uint8_t blend[8][8];
-    uint8_t blend_on, a2c, topo_class, poly_fill;
+    uint8_t blend_on, a2c, topo_class, poly_fill, depth_clamp;
     uint32_t write_mask[8];
 } PipeKey;
 
@@ -1504,6 +1512,7 @@ static void build_pipeline(void *arg) {
                                                  .topology = topo_class_base(k->topo_class)};
     VkPipelineViewportStateCreateInfo vs = {.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO, .viewportCount = 1, .scissorCount = 1};
     VkPipelineRasterizationStateCreateInfo rs = {.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+                                                 .depthClampEnable = k->depth_clamp,
                                                  .polygonMode = k->poly_fill ? VK_POLYGON_MODE_FILL : VK_POLYGON_MODE_LINE, .lineWidth = 1};
     VkPipelineMultisampleStateCreateInfo ms = {.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
                                                .rasterizationSamples = (VkSampleCountFlagBits)k->samples, .alphaToCoverageEnable = k->a2c};
@@ -2333,14 +2342,18 @@ static void texture_info(int stage, ShaderInfo *si, int i, VkDescriptorImageInfo
             static int nomemo = -1;
             if (nomemo < 0) nomemo = getenv("LARECOMP_VK_NO_TEX_MEMO") != NULL;
             static struct { NvnTexture *tex; uint64_t vh, frame; uint32_t gen; uint8_t type, has_view; VkImageView view; } memo[1024];
+            // A deferred depth copy can change which image owns this texture's
+            // contents within the same frame. Cache the resolved source, not
+            // the destination object (otherwise a shadow lookup can reuse old depth).
+            NvnTexture *read_tex = naliases ? alias_read(e->tex) : e->tex;
             uint64_t vh = e->has_view ? hash_words(0, &e->view, sizeof e->view) : 0, frame = vk_frame_counter();
-            uint32_t ms = (uint32_t)((((uintptr_t)e->tex >> 4) ^ vh ^ (uint64_t)st_->type * 0x9E3779B97F4A7C15ull) & 1023);
-            if (!nomemo && memo[ms].tex == e->tex && memo[ms].vh == vh && memo[ms].frame == frame && memo[ms].gen == vk_view_gen &&
+            uint32_t ms = (uint32_t)((((uintptr_t)read_tex >> 4) ^ vh ^ (uint64_t)st_->type * 0x9E3779B97F4A7C15ull) & 1023);
+            if (!nomemo && memo[ms].tex == read_tex && memo[ms].vh == vh && memo[ms].frame == frame && memo[ms].gen == vk_view_gen &&
                 memo[ms].type == st_->type && memo[ms].has_view == e->has_view) {
                 view = memo[ms].view;
             } else {
-                view = vk_view(naliases ? alias_read(e->tex) : e->tex, &e->view, e->has_view, false, st_->type);
-                memo[ms].tex = e->tex; memo[ms].vh = vh; memo[ms].frame = frame; memo[ms].gen = vk_view_gen;
+                view = vk_view(read_tex, &e->view, e->has_view, false, st_->type);
+                memo[ms].tex = read_tex; memo[ms].vh = vh; memo[ms].frame = frame; memo[ms].gen = vk_view_gen;
                 memo[ms].type = (uint8_t)st_->type; memo[ms].has_view = e->has_view; memo[ms].view = view;
             }
             renderer_texture_scale(e->tex, &sc[0], &sc[1]);
@@ -2374,6 +2387,7 @@ static VkDescriptorSet stage_set(Prog *p, VkDescriptorSetLayout layout, uint32_t
     float rs[66][4] = {{1, 1, 0, 0}};  // ([65]: mirror mode, renderer.m)
     if (rscale_row0) memcpy(rs[0], rscale_row0, 16);
     rs[65][0] = g_mirror_w;
+    rs[65][1] = st.alpha_ref;
     for (int i = 0; i < p->nbinds; i++) {
         VkBindingInfo *b = &p->binds[i];
         if (b->set != set) continue;
@@ -2573,10 +2587,19 @@ static void draw_(CmdRec *r, bool indexed) {
     if (!st.program) { stat_skipped++; return; }
     ShaderKey vkey = {0}, fkey = {0};
     vkey.glsl = fkey.glsl = 1;
+    fkey.alpha_func = st.color_state[2] < 8 ? st.color_state[2] : 0;
     vkey.flip_y = fkey.flip_y = nvn_window_origin() == 0;
     vkey.depth_minus_one = nvn_depth_mode() == 0;
     for (int i = 0; i < st.nattrib; i++) vkey.attr_kind[i] = (uint8_t)attr_kind(st.attrib[i] & 0xFF);
     for (int i = 0; i < st.rt.ncolor; i++) if (st.rt.color[i]) fkey.rt_kind[i] = (uint8_t)rt_kind(st.rt.color[i]->format);
+    // SRC1 factors consume a second fragment output at location 0, index 1.
+    // Treating it as MRT location 1 leaves the blend mask undefined (SSHD eyes).
+    if ((st.color_state[0] & 1) && st.rt.ncolor == 1) {
+        const uint8_t *b = st.blend[0];
+        for (int i = 1; i <= 4; i++)
+            if (b[i] >= 0x10 && b[i] <= 0x13) fkey.dual_source = true;
+        if (fkey.dual_source) fkey.rt_kind[1] = fkey.rt_kind[0];
+    }
     Prog *pr = get_program(st.program, &vkey, &fkey);
     if (!pr || atomic_load(&pr->state) != 1) { stat_skipped++; return; }
     g_mirror_w = 0;
@@ -2686,6 +2709,7 @@ static void draw_(CmdRec *r, bool indexed) {
     k.a2c = st.ms[0xC] != 0;
     k.topo_class = cls;
     k.poly_fill = st.poly[2] != 1;
+    k.depth_clamp = st.depth_clamp;
     uint64_t ph = hash_words(0xcbf29ce484222325ull, &k, sizeof k);
     if (!ph) ph = 1;
     uint32_t pslot = (uint32_t)(ph ^ (ph >> 29)) & (PIPE_TAB - 1);
@@ -3587,6 +3611,16 @@ static void exec_list(uint64_t handle, int depth) {
         switch (r->op) {
         case CMD_END: return;
         case CMD_JUMP: p = r->x[0]; continue;
+        case CMD_BARRIER:
+            if (r->x[0]) {
+                // NVN barriers can order attachment writes and subsequent texture reads.
+                // A Vulkan memory barrier must be outside dynamic rendering.
+                vk_end_pass();
+                st.rt_dirty = true;
+                vk_full_barrier(vk_cmd());
+                guest_copy_flush();
+            }
+            break;
         case CMD_CALL: {
             const uint64_t *h = x;
             for (uint64_t i = 0; i < r->x[0] && depth < 8; i++) exec_list(h[i], depth + 1);
@@ -3596,6 +3630,8 @@ static void exec_list(uint64_t handle, int depth) {
         case CMD_BIND_BLEND: { uint8_t *b = x; memcpy(st.blend[b[0] & 7], b, 8); break; }
         case CMD_BIND_CHANNEL_MASK: memcpy(&st.channel_mask, x, 4); break;
         case CMD_BIND_COLOR: memcpy(st.color_state, x, 4); break;
+        case CMD_SET_ALPHA_REF: st.alpha_ref = r->f[0]; break;
+        case CMD_SET_DEPTH_CLAMP: st.depth_clamp = r->x[0] != 0; break;
         case CMD_BIND_DEPTH_STENCIL: memcpy(st.ds, x, 8); break;
         case CMD_BIND_MULTISAMPLE: memcpy(st.ms, x, 0x18); break;
         case CMD_BIND_POLYGON: memcpy(st.poly, x, 4); break;

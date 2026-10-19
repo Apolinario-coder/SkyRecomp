@@ -16,6 +16,8 @@
 // ---- what shaders.c needs from the rest of the runtime
 VkG g_vk;
 void rt_fatal_trace(void) { abort(); }
+void vk_device_fault_report(void) { abort(); }
+const char smaa_hlsl_src[] = ""; // built-in postprocessing is not used by this pipeline test
 ShaderInfo *old_maxwell_translate(const uint8_t *c, size_t m, int s, const ShaderKey *k) { (void)c, (void)m, (void)s, (void)k; return NULL; }
 void old_maxwell_free(ShaderInfo *s) { (void)s; }
 uint64_t old_maxwell_gmem_base, old_maxwell_gmem_size;
@@ -118,12 +120,23 @@ static void fail(const char *what, const char *a, const char *b) {
     if (n_fail++ < 10) fprintf(stderr, "FAIL %s\n---\n%s\n---\n%s\n", what, a ? a : "", b ? b : "");
 }
 
-static void test_graphics(void) {
+static void test_graphics(bool dual_source) {
     static uint8_t vp[0x80 + 64 * 32 + 128], fp[0x80 + 64 * 32 + 128];
     size_t vl = gen_program(vp, sizeof vp, STAGE_VERTEX), fl = gen_program(fp, sizeof fp, STAGE_FRAGMENT);
     ShaderKey vk_, fk;
     gen_key(&vk_, STAGE_VERTEX);
     gen_key(&fk, STAGE_FRAGMENT);
+    if (dual_source) {
+        // Regression: the second output must be source 1 of attachment 0,
+        // rather than an unbound MRT at location 1 (Skyward Sword HD eyes).
+        memset(vp, 0, sizeof vp); memset(fp, 0, sizeof fp);
+        vl = fl = 0xa0;
+        *(uint32_t *)(fp + 0x78) = 0xff;
+        *(uint64_t *)(vp + 0x88) = *(uint64_t *)(fp + 0x88) = 0xe30000000007000full;
+        *(uint64_t *)(vp + 0x90) = *(uint64_t *)(fp + 0x90) = 0xe2400fffff87000full;
+        memset(&vk_, 0, sizeof vk_); memset(&fk, 0, sizeof fk);
+        fk.dual_source = true;
+    }
     vk_.glsl = fk.glsl = 1;
     ShaderInfo *vi = maxwell_translate(vp, vl, STAGE_VERTEX, &vk_);
     // (fuzz artifact: 31+ varyings plus position exceed every GPU's output limit; real shaders can't)
@@ -156,12 +169,20 @@ static void test_graphics(void) {
         VkPipelineColorBlendAttachmentState cba[8] = {0};
         uint32_t nc = 0, omap = *(const uint32_t *)(fp + 0x30 + 0x48);
         for (int rt = 0; rt < 8; rt++) if ((omap >> (rt * 4)) & 0xF) nc = (uint32_t)rt + 1;
+        if (dual_source) nc = 1;
         for (uint32_t rt = 0; rt < nc; rt++) {
             cf[rt] = fk.rt_kind[rt] == 1 ? VK_FORMAT_R32G32B32A32_SINT : fk.rt_kind[rt] == 2 ? VK_FORMAT_R32G32B32A32_UINT : VK_FORMAT_R8G8B8A8_UNORM;
             cba[rt].colorWriteMask = 0xF;
             cba[rt].blendEnable = fk.rt_kind[rt] == 0 && (rt & 1);
             cba[rt].srcColorBlendFactor = cba[rt].srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
             cba[rt].dstColorBlendFactor = cba[rt].dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        }
+        if (dual_source) {
+            cba[0].blendEnable = VK_TRUE;
+            cba[0].srcColorBlendFactor = VK_BLEND_FACTOR_SRC1_COLOR;
+            cba[0].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC1_COLOR;
+            cba[0].srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC1_ALPHA;
+            cba[0].dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA;
         }
         VkPipelineShaderStageCreateInfo stages[2] = {
             {.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = vm, .pName = "main"},
@@ -243,8 +264,9 @@ int main(int argc, char **argv) {
     maxwell_gmem_size = 0xD0000000ull;
     init_device();
     vk_shaders_init();
+    test_graphics(true);
     for (long i = 0; i < count; i++) {
-        if (rnd(4) == 0) test_compute(); else test_graphics();
+        if (rnd(4) == 0) test_compute(); else test_graphics(false);
         if ((i + 1) % 500 == 0) fprintf(stderr, "%ld: %ld pairs, %ld compute, %ld skipped (translation failed), %ld failures\n",
                                         i + 1, n_pairs, n_cs, n_skip, n_fail);
     }

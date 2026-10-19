@@ -45,6 +45,8 @@ typedef struct {
                             // after flip_y: keys without it hash as before - shader caches stay valid.)
     uint32_t vs_out_mask;   // fragment: varyings the vertex shader provides
     uint8_t glsl;           // emit Vulkan GLSL (see the contract above) instead of MSL
+    uint8_t alpha_func;     // Vulkan alpha test: 0/8 always, 1..7 NVN compare function; ref in rscale[65].y
+    bool dual_source;       // Vulkan: colour outputs 0/1 are the two sources of attachment 0
 } ShaderKey;
 
 typedef struct {
