@@ -70,6 +70,7 @@ jobs:
 
       - name: Compile Sky Recomp
         run: |
+          sed -i.bak "s/^#define LARECOMP_VERSION .*/#define LARECOMP_VERSION \"$RELEASE_TAG\"/" runtime/ui/launcher.mm
           if [ -f /usr/lib/x86_64-linux-gnu/libshaderc_shared.so ]; then
             SHADERC_FLAG="SHADERC=-lshaderc_shared"
           elif [ -f /usr/lib/x86_64-linux-gnu/libshaderc.so ]; then
@@ -119,6 +120,7 @@ jobs:
 
       - name: Compile Sky Recomp
         run: |
+          sed -i.bak "s/^#define LARECOMP_VERSION .*/#define LARECOMP_VERSION \"$RELEASE_TAG\"/" runtime/ui/launcher.mm
           make -j$(sysctl -n hw.ncpu) build/skyrecomp
 
       - name: Create macOS App Bundle & DMG
