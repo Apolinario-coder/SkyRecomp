@@ -184,7 +184,7 @@ static std::string check_copied_files(const std::string &root) {
 // "" = ready to play, else what is wrong
 static std::string check_game_files(const std::string &root) {
     std::string why = check_copied_files(root);
-    if (why.empty() && !gamelib_present(root.c_str()) && !file_exists(root + "/skygame.dll") && !file_exists("extracted/skygame.dll")) return "Game code not built yet";
+    if (why.empty() && !gamelib_present(root.c_str())) return "Game code not built yet";
     return why;
 }
 
@@ -280,27 +280,21 @@ static float extract_progress(void) {
     return f < 0 ? 0 : f > 0.99f ? 0.99f : f;
 }
 
-// Verifies the precompiled game code exists (skygame.dll); false = missing
+// The game code: a prebuilt library this build can load (GAMELIB_NAME with a matching id, next to the exe or in the
+// game folder: runtime/gamelib.c) or else built from the copied files (a few minutes); false = failed (the job line
+// says so). Only gamelib_present decides: a skygame.dll on Linux / macOS, or one for another version, can't be loaded.
 static bool build_game_code(void) {
-    if (file_exists(g_root + "/skygame.dll") || gamelib_present(g_root.c_str()) ||
-        file_exists("extracted/skygame.dll") || file_exists("skygame.dll")) {
-        return true;
+    if (gamelib_present(g_root.c_str())) return true;
+    int cores = SDL_GetNumLogicalCPUCores(), ram_gb = SDL_GetSystemRAM() / 1024;
+    GameBuildOpts o = {build_progress, cores < ram_gb - 2 ? cores : ram_gb - 2 > 1 ? ram_gb - 2 : 1};
+    char why[256] = "";
+    g_build_frac = 0;
+    bool ok = gamebuild_run(g_root.c_str(), &o, why, sizeof why);
+    if (!ok) {
+        fprintf(stderr, "[launcher] game code: %s\n", why);
+        set_failure(FAIL_BUILD);
     }
-    // If skygame.dll is in extracted/ but not yet in g_root:
-    if (file_exists("extracted/skygame.dll") && !file_exists(g_root + "/skygame.dll")) {
-        FILE *in = fopen("extracted/skygame.dll", "rb");
-        FILE *out = fopen((g_root + "/skygame.dll").c_str(), "wb");
-        if (in && out) {
-            char buf[1024 * 1024];
-            size_t n;
-            while ((n = fread(buf, 1, sizeof buf, in)) > 0) fwrite(buf, 1, n, out);
-        }
-        if (in) fclose(in);
-        if (out) fclose(out);
-        return true;
-    }
-    set_job("Game library (skygame.dll) is missing from extracted folder.", true, "Please ensure skygame.dll is present.");
-    return false;
+    return ok;
 }
 
 static void *extract_thread(void *) {

@@ -69,6 +69,10 @@ def compile_unit(src, obj):
     return True, src, None, dt
 
 def main():
+    # skygame.dll linked against the .exe's import library: Windows only. Linux loads skygame.so, macOS skygame.dylib.
+    if sys.platform != "win32":
+        sys.exit("build_game.py builds the Windows skygame.dll only. On Linux and macOS the start screen builds the "
+                 "game code (Set up game files); from a source checkout: make gen && make")
     print("==================================================")
     print("  Skyward Sword HD PC Recompilation Builder")
     print("==================================================")
