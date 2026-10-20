@@ -19,8 +19,10 @@ permissions:
   contents: write
 
 jobs:
+  # The AppImage is built in an Ubuntu 22.04 container (tools/linux/appimage.sh, podman) against SDL3, an LGPL FFmpeg
+  # and shaderc built from pinned sources and bundled inside, so it runs on glibc 2.35+ whatever FFmpeg the system has.
   build-linux:
-    name: Build Linux Release
+    name: Build Linux AppImage
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -28,93 +30,16 @@ jobs:
         with:
           ref: ${{ env.RELEASE_TAG }}
 
-      - name: Enable Universe Repository & Install Dependencies
+      - name: Build AppImage
         run: |
-          sudo add-apt-repository -y universe
-          sudo apt-get update
-          sudo apt-get install -y \
-            clang \
-            lld \
-            make \
-            cmake \
-            ninja-build \
-            pkg-config \
-            patchelf \
-            zip \
-            libvulkan-dev \
-            libasound2-dev \
-            libpulse-dev \
-            libpipewire-0.3-dev \
-            libwayland-dev \
-            libx11-dev \
-            libxrandr-dev \
-            libxcursor-dev \
-            libxi-dev \
-            libxss-dev \
-            libxfixes-dev \
-            libxtst-dev \
-            libxkbcommon-dev \
-            libavcodec-dev \
-            libavformat-dev \
-            libavutil-dev \
-            libswscale-dev \
-            libvulkan-memory-allocator-dev \
-            libshaderc-dev || true
-
-      - name: Build & Install SDL3
-        run: |
-          git clone --depth 1 --branch release-3.4.18 https://github.com/libsdl-org/SDL.git
-          cmake -S SDL -B SDL/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DSDL_X11_XSCRNSAVER=OFF -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF
-          sudo cmake --build SDL/build --target install
-          sudo ldconfig
-
-      - name: Compile Sky Recomp
-        run: |
-          sed -i.bak "s/^#define LARECOMP_VERSION .*/#define LARECOMP_VERSION \"$RELEASE_TAG\"/" runtime/ui/launcher.mm
-          if [ -f /usr/lib/x86_64-linux-gnu/libshaderc_shared.so ]; then
-            SHADERC_FLAG="SHADERC=-lshaderc_shared"
-          elif [ -f /usr/lib/x86_64-linux-gnu/libshaderc.so ]; then
-            SHADERC_FLAG="SHADERC=-lshaderc"
-          else
-            SHADERC_FLAG="SHADERC=-lshaderc_shared"
-          fi
-          echo "Using $SHADERC_FLAG"
-          make -j$(nproc) build/skyrecomp "$SHADERC_FLAG"
-
-      - name: Build game setup tools
-        run: |
-          python3 -m venv build/setup-venv
-          build/setup-venv/bin/pip install pyinstaller==6.22.3 capstone==5.0.9 unicorn==2.1.4 lz4==4.4.5
-          build/setup-venv/bin/python -m PyInstaller --noconfirm --clean --log-level WARN --distpath build/helper --workpath build/pyinstaller tools/lasgen.spec
-          bash tools/fetch_zig.sh
-
-      - name: Package Linux Release Archive
-        run: |
-          DIST_DIR="SkyRecomp-${RELEASE_TAG}-Linux"
-          mkdir -p "$DIST_DIR/extracted" "$DIST_DIR/mods"
-          cp build/skyrecomp "$DIST_DIR/"
-          cp -R build/helper/lasgen build/zig "$DIST_DIR/"
-          mkdir -p "$DIST_DIR/gamelib-src"
-          cp runtime/cpu.h runtime/simd.h runtime/simd_fp.h runtime/gamelib.h tools/gamelib_entry.c runtime/hle/hle_symbols.txt "$DIST_DIR/gamelib-src/"
-          cp -P /usr/lib/x86_64-linux-gnu/libshaderc_shared.so* "$DIST_DIR/" 2>/dev/null || true
-          cp -P /usr/lib/libSDL3.so* "$DIST_DIR/" 2>/dev/null || cp -P /usr/local/lib/libSDL3.so* "$DIST_DIR/" 2>/dev/null || true
-          patchelf --set-rpath '$ORIGIN' "$DIST_DIR/skyrecomp" || true
-          cp docs/icon/icon_1024.png "$DIST_DIR/icon.png"
-          cp README.md LICENSE CHANGELOG.md "$DIST_DIR/"
-          [ -f LICENSE-LASRecomp ] && cp LICENSE-LASRecomp "$DIST_DIR/" || true
-          [ -f Baloo2-SemiBold.ttf ] && cp Baloo2-SemiBold.ttf "$DIST_DIR/"
-          [ -f Baloo2-OFL.txt ] && cp Baloo2-OFL.txt "$DIST_DIR/"
-          cp tools/linux/skyrecomp.desktop "$DIST_DIR/"
-          echo "Place your vanilla game files (romfs.bin or romfs/ and exefs/) here." > "$DIST_DIR/extracted/INSTRUCTIONS.txt"
-          touch "$DIST_DIR/mods/.gitkeep"
-          tar -czvf SkyRecomp-${RELEASE_TAG}-Linux.tar.gz "$DIST_DIR"
-          zip -r SkyRecomp-${RELEASE_TAG}-Linux.zip "$DIST_DIR"
+          sed -i "s/^#define LARECOMP_VERSION .*/#define LARECOMP_VERSION \"$RELEASE_TAG\"/" runtime/ui/launcher.mm
+          tools/linux/appimage.sh x86_64
 
       - name: Upload to GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload ${RELEASE_TAG} SkyRecomp-${RELEASE_TAG}-Linux.tar.gz SkyRecomp-${RELEASE_TAG}-Linux.zip --clobber
+          gh release upload ${RELEASE_TAG} build/dist/*.AppImage --clobber
 
   build-macos:
     name: Build macOS Release
