@@ -799,6 +799,7 @@ static void st_defaults(void) {
         st.depth_range[i][1] = 1.0f;
     }
     st.channel_mask = 0xFFFFFFFF;
+    st.color_state[1] = VK_LOGIC_OP_COPY;
     st.color_state[2] = 8;  // alpha test ALWAYS
     st.stencil_mask[0] = st.stencil_mask[1] = 0xFF;
     st.stencil_vmask[0] = st.stencil_vmask[1] = 0xFF;
@@ -1458,7 +1459,7 @@ typedef struct {
     uint32_t attr_mask;
     uint32_t stride[17], divisor[17], used_streams;
     uint8_t blend[8][8];
-    uint8_t blend_on, a2c, topo_class, poly_fill, depth_clamp;
+    uint8_t blend_on, a2c, topo_class, poly_fill, depth_clamp, logic_op;
     uint32_t write_mask[8];
 } PipeKey;
 
@@ -1532,6 +1533,8 @@ static void build_pipeline(void *arg) {
         }
     }
     VkPipelineColorBlendStateCreateInfo cb = {.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+                                              .logicOpEnable = k->logic_op != VK_LOGIC_OP_COPY,
+                                              .logicOp = (VkLogicOp)k->logic_op,
                                               .attachmentCount = k->ncolor, .pAttachments = cba};
     VkPipelineDynamicStateCreateInfo dy = {.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
                                            .dynamicStateCount = NDYN, .pDynamicStates = DYN};
@@ -2707,6 +2710,8 @@ static void draw_(CmdRec *r, bool indexed) {
         }
     }
     k.a2c = st.ms[0xC] != 0;
+    // NVN and Vulkan use the same logic-op values; OR preserves overlapping shadow-mask channels.
+    k.logic_op = g_vk.logic_op ? st.color_state[1] & 15 : VK_LOGIC_OP_COPY;
     k.topo_class = cls;
     k.poly_fill = st.poly[2] != 1;
     k.depth_clamp = st.depth_clamp;

@@ -20,5 +20,5 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-This license covers Sky Recomp's own code. It does not cover The Legend of Zelda: Skyward Sword or any other
+This license covers Sky Recomp's original code. Portions derived from LAS Recomp remain under the LAS Recomp copyright and license in LICENSE-LASRecomp. It does not cover The Legend of Zelda: Skyward Sword or any other
 Nintendo property, nor the third-party components in third_party/, which keep their own licenses.

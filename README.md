@@ -131,7 +131,7 @@ Sky Recomp was made possible thanks to the groundbreaking work of the **[LAS Rec
 
 Sky Recomp is an unofficial, community-driven fan project. It is not affiliated with, endorsed by, or sponsored by Nintendo. *The Legend of Zelda* and *Skyward Sword* are registered trademarks of Nintendo. **No copyrighted game files, binaries, textures, models, music, or fonts are included** in this repository or in release archives. Users must supply their own legally obtained game files.
 
-Sky Recomp's original code is licensed under the **[MIT License](LICENSE)**. Bundled and linked third-party components maintain their respective original licenses.
+Sky Recomp's original code is licensed under the **[MIT License](LICENSE)**. Portions derived from [LAS Recomp](https://github.com/peiikai/LASRecomp) remain under the LAS Recomp copyright and license in **[LICENSE-LASRecomp](LICENSE-LASRecomp)**. Bundled and linked third-party components maintain their respective original licenses.
 
 ---
 

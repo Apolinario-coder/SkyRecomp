@@ -120,22 +120,21 @@ static void fail(const char *what, const char *a, const char *b) {
     if (n_fail++ < 10) fprintf(stderr, "FAIL %s\n---\n%s\n---\n%s\n", what, a ? a : "", b ? b : "");
 }
 
-static void test_graphics(bool dual_source) {
+static void test_graphics(bool dual_source, bool logic_op) {
     static uint8_t vp[0x80 + 64 * 32 + 128], fp[0x80 + 64 * 32 + 128];
     size_t vl = gen_program(vp, sizeof vp, STAGE_VERTEX), fl = gen_program(fp, sizeof fp, STAGE_FRAGMENT);
     ShaderKey vk_, fk;
     gen_key(&vk_, STAGE_VERTEX);
     gen_key(&fk, STAGE_FRAGMENT);
-    if (dual_source) {
-        // Regression: the second output must be source 1 of attachment 0,
-        // rather than an unbound MRT at location 1 (Skyward Sword HD eyes).
+    if (dual_source || logic_op) {
+        // Fixed programs for the dual-source eye and OR shadow-mask regressions.
         memset(vp, 0, sizeof vp); memset(fp, 0, sizeof fp);
         vl = fl = 0xa0;
-        *(uint32_t *)(fp + 0x78) = 0xff;
+        *(uint32_t *)(fp + 0x78) = dual_source ? 0xff : 0xf;
         *(uint64_t *)(vp + 0x88) = *(uint64_t *)(fp + 0x88) = 0xe30000000007000full;
         *(uint64_t *)(vp + 0x90) = *(uint64_t *)(fp + 0x90) = 0xe2400fffff87000full;
         memset(&vk_, 0, sizeof vk_); memset(&fk, 0, sizeof fk);
-        fk.dual_source = true;
+        fk.dual_source = dual_source;
     }
     vk_.glsl = fk.glsl = 1;
     ShaderInfo *vi = maxwell_translate(vp, vl, STAGE_VERTEX, &vk_);
@@ -196,6 +195,11 @@ static void test_graphics(bool dual_source) {
                                                    .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT};
         VkPipelineDepthStencilStateCreateInfo ds = {.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO};
         VkPipelineColorBlendStateCreateInfo cb = {.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO, .attachmentCount = nc, .pAttachments = cba};
+        if (logic_op) {
+            // Shadow masks must accumulate channels instead of replacing the previous actor's mask.
+            cb.logicOpEnable = VK_TRUE;
+            cb.logicOp = VK_LOGIC_OP_OR;
+        }
         VkPipelineDynamicStateCreateInfo dy = {.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
                                                .dynamicStateCount = sizeof DYN / sizeof DYN[0], .pDynamicStates = DYN};
         VkPipelineRenderingCreateInfo ri = {.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO, .colorAttachmentCount = nc,
@@ -264,9 +268,14 @@ int main(int argc, char **argv) {
     maxwell_gmem_size = 0xD0000000ull;
     init_device();
     vk_shaders_init();
-    test_graphics(true);
+    test_graphics(true, false);
+    VkPhysicalDeviceFeatures features;
+    vkGetPhysicalDeviceFeatures(g_vk.phys, &features);
+    uint64_t saved_rng = rng_state;
+    if (features.logicOp) test_graphics(false, true);
+    rng_state = saved_rng;
     for (long i = 0; i < count; i++) {
-        if (rnd(4) == 0) test_compute(); else test_graphics(false);
+        if (rnd(4) == 0) test_compute(); else test_graphics(false, false);
         if ((i + 1) % 500 == 0) fprintf(stderr, "%ld: %ld pairs, %ld compute, %ld skipped (translation failed), %ld failures\n",
                                         i + 1, n_pairs, n_cs, n_skip, n_fail);
     }
