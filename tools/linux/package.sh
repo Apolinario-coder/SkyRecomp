@@ -39,11 +39,9 @@ rm -rf "$APPDIR" && mkdir -p "$APPDIR/usr/bin" "$APPDIR/usr/lib"
 cp "$B/skyrecomp" "$APPDIR/usr/bin/"
 llvm-strip --strip-debug "$APPDIR/usr/bin/skyrecomp"  # (symbols stay: crash backtraces name functions)
 cp docs/icon/icon_1024.png "$APPDIR/usr/bin/icon.png"
-cp third_party/fonts/Baloo2/Baloo2-SemiBold.ttf "$APPDIR/usr/bin/"  # (start screen font, OFL)
-cp third_party/fonts/Baloo2/OFL.txt "$APPDIR/usr/bin/Baloo2-OFL.txt"
-cp README.md LICENSE "$APPDIR/usr/bin/"  # (licenses and source links of the bundled components: README "License")
-[ -d "$L/helper/rando-gen" ] || { echo "no seed generator helper: tools/linux/rando_helper.sh $ARCH first"; exit 1; }
-cp -R "$L/helper/rando-gen" "$APPDIR/usr/bin/"
+cp Baloo2-SemiBold.ttf Baloo2-OFL.txt "$APPDIR/usr/bin/"  # (start screen font, OFL)
+cp README.md LICENSE LICENSE-LASRecomp "$APPDIR/usr/bin/"  # (licenses and source links of the bundled components)
+[ ! -d "$L/helper/rando-gen" ] || cp -R "$L/helper/rando-gen" "$APPDIR/usr/bin/"  # (only with LAS-Randomizer)
 [ -d "$L/helper/lasgen" ] || { echo "no game code generator helper: tools/linux/rando_helper.sh $ARCH first"; exit 1; }
 cp -R "$L/helper/lasgen" build/zig "$APPDIR/usr/bin/"
 mkdir "$APPDIR/usr/bin/gamelib-src"
