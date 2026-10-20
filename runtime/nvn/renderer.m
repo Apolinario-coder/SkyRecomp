@@ -1904,7 +1904,9 @@ static void draw(CmdRec *r, bool indexed) {
     extern bool pets_hide_item_cursor(void);  // (the cursor is on the companion card: runtime/hle/pets.c)
     if (draw_item_cursor && pets_hide_item_cursor()) { stat_skipped++; return; }
     vp_sx = pass_sx; vp_sy = pass_sy; vp_ox = 0; vp_oy = 0;
-    if (fabsf(pass_sx - pass_sy) > 0.01f * pass_sy && st.rt.ncolor && renderer_texture_presented(st.rt.color[0])) {
+    // Sky draws depth-tested scene geometry on the presented target; it must not be boxed like UI.
+    if ((g_is_las || !st.ds[0]) && fabsf(pass_sx - pass_sy) > 0.01f * pass_sy &&
+        st.rt.ncolor && renderer_texture_presented(st.rt.color[0])) {
         // Draws into the swapchain image: draws that sample the full-size reshaped scene (the final
         // composite, blurred menu backgrounds) and untextured full-screen fades fill the window; everything
         // else (HUD, text, menus, movie frames) goes into a centred 16:9 box.

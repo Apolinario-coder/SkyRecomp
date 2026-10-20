@@ -50,6 +50,7 @@ static uint8_t *read_file(const char *path, size_t *len) {
 }
 
 bool g_is_las;
+bool g_is_skyward;
 
 static void load_nso(Module *m, const char *path, uint64_t base) {
     size_t len;
@@ -57,6 +58,7 @@ static void load_nso(Module *m, const char *path, uint64_t base) {
     if (!raw || memcmp(raw, "NSO0", 4)) FATAL("cannot load %s\n", path);
     if (!strcmp(m->name, "main")) {
         g_is_las = !memcmp(raw + 0x40, "\xae\x16\xf7\x1e\x00\x2a\xf8\xcb", 8);
+        g_is_skyward = !memcmp(raw + 0x40, "\xd8\x24\xd4\xb1\xbb\xd4\x5d\x03\x66\x83\x80\xd6\xd0\x41\xba\x4c\xa0\x0a\x64\xff", 20);
     }
     uint32_t flags = *(uint32_t *)(raw + 0xC);
     uint32_t seg[3][3];  // file_off, mem_off, size

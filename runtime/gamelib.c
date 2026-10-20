@@ -21,11 +21,11 @@ static bool id_matches(const char *lib) {
     char path[1100], id[128] = {0};
     snprintf(path, sizeof path, "%s.id", lib);
     FILE *f = fopen(path, "rb");
-    if (!f) return true;  // if .id is missing but dll exists, accept it
+    if (!f) return false;
     size_t n = fread(id, 1, sizeof id - 1, f);
     fclose(f);
     while (n && (id[n - 1] == '\n' || id[n - 1] == '\r')) id[--n] = 0;
-    return !strcmp(id, GAMELIB_ID) || !strcmp(id, "ccafcd6fe7bda438");
+    return !strcmp(id, GAMELIB_ID);
 }
 
 static bool exists(const char *p) {
@@ -51,7 +51,7 @@ bool gamelib_present(const char *game_dir) {
     char c[3][1100];
     int n = candidates(game_dir, c);
     for (int i = 0; i < n; i++)
-        if (exists(c[i])) return true;
+        if (exists(c[i]) && id_matches(c[i])) return true;
     return false;
 }
 
@@ -67,7 +67,7 @@ static const GameLibTables *open_lib(const char *path) {
 #endif
     if (!entry) { snprintf(g_error, sizeof g_error, "%s: not game code", path); return NULL; }
     const GameLibTables *t = entry();
-    if (!t || t->abi != GAMELIB_ABI || !t->id || (strcmp(t->id, GAMELIB_ID) && strcmp(t->id, "ccafcd6fe7bda438"))) {
+    if (!t || t->abi != GAMELIB_ABI || !t->id || strcmp(t->id, GAMELIB_ID)) {
         snprintf(g_error, sizeof g_error, "%s was built for another version", path);
         return NULL;  // (left loaded: nothing of it runs)
     }

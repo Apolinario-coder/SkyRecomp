@@ -4,6 +4,7 @@
 
 #include "../hle.h"
 #include "../kernel.h"
+#include "../frame_rate.h"
 
 static uint32_t vsync_r, vsync_w;
 static KEvent *vsync_event;
@@ -13,10 +14,16 @@ uint64_t g_native_window;
 
 static void *vsync_thread(void *arg) {
     (void)arg;
-    const uint64_t period = 16666667;
+    uint64_t period = rt_frame_period_ns();
     plat_thread_realtime(period);
     uint64_t next = plat_now_ns();
     for (;;) {
+        uint64_t wanted = rt_frame_period_ns();
+        if (wanted != period) {
+            period = wanted;
+            plat_thread_realtime(period);
+            next = plat_now_ns();
+        }
         next += period;
         plat_sleep_until_ns(next);
         uint64_t now = plat_now_ns();

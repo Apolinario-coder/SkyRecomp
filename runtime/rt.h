@@ -21,6 +21,7 @@
 #define SUBSDK1_BASE 0x7034000000ull
 #define HLE_BASE     0x7080000000ull   // fake addresses for host-implemented functions
 extern bool g_is_las;
+extern bool g_is_skyward;
 #define HLE_SIZE     0x0000100000ull
 #define TLS_BASE     0x7090000000ull
 #define TLS_SIZE     0x0000100000ull

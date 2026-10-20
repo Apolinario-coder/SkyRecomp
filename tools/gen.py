@@ -51,6 +51,7 @@ class Module:
         self.stats = Counter()
         self.mu = None
         self.is_las = self.nso.build_id.lower().startswith('ae16f71e')
+        self.is_skyward = name == 'main' and self.nso.build_id.lower() == 'd824d4b1bbd45d03668380d6d041ba4ca00a64ff'
 
     def in_text(self, a):
         return self.lo <= a < self.hi and a % 4 == 0
@@ -283,11 +284,15 @@ class Module:
         """True if the br register comes from address arithmetic (a table) rather than a load."""
         rn = bits(self.word(br_pc), 5, 5)
         a = br_pc - 4
-        while a >= entry and br_pc - a <= 4 * 16:
+        while a >= entry:
             w = self.word(a)
-            if self.lift(a).kind not in ('op', 'asm'):
+            ins = self.lift(a)
+            if ins.kind not in ('op', 'asm'):
                 return False
-            if (w & 31) == rn:
+            # Vector register numbers share encoding bits with GPRs, but do not overwrite them.
+            writes_rn = (bool(re.search(rf'c->x\[{rn}\]\s*=(?!=)', ins.code)) if ins.kind == 'op'
+                         else (0, rn) in ins.asm.gprs)
+            if writes_rn:
                 if (w & 0x1F000000) == 0x0B000000:  # ADD/SUB (shifted or extended register)
                     return True
                 if (w & 0x9F000000) == 0x10000000:  # ADR
@@ -295,6 +300,14 @@ class Module:
                 return False
             a -= 4
         return False
+
+    def jump_table_base(self, adr_pc, target):
+        """A table's relative branch base is a local label, not a function entry."""
+        br_pc = target - 4
+        return (adr_pc < br_pc and self.in_text(br_pc) and
+                (self.word(br_pc) & 0xFFFFFC1F) == 0xD61F0000 and
+                bits(self.word(br_pc), 5, 5) == (self.word(adr_pc) & 31) and
+                self.computed_target(br_pc, adr_pc))
 
     def scan(self, entry, end):
         """Collect labels and external entries referenced by a function."""
@@ -411,6 +424,16 @@ class Module:
                 out.append('    ' + PATCHES[a](self, a))
                 last = 'op'
                 continue
+            if self.is_skyward and a in SKY_TIMING_STORES:
+                flush()
+                reg, offset, word = SKY_TIMING_STORES[a]
+                assert self.word(a) == word, (hex(a), hex(self.word(a)))
+                # Scale the register too: the following accumulator derives the original 30 Hz integer ticks from it.
+                hook = 'rt_sky_frame_step' if reg == 0 else 'rt_sky_frame_ms'
+                out.append(f'    {{ extern float {hook}(float); VSF32({reg}) = {hook}(VSF32({reg})); '
+                           f'ST32(c->x[8] + {hex(offset)}ull, VS32({reg})); }}')
+                last = 'op'
+                continue
             k = ins.kind
             if k == 'asm':
                 if len(batch) >= 24:
@@ -468,6 +491,12 @@ class Module:
 
 
 from patches import PATCHES
+
+# Skyward Sword HD 1.0.0: shared step in original 30 Hz units, and the matching duration in milliseconds.
+SKY_TIMING_STORES = {
+    0x700104a1ac: (0, 0xd38, 0xbd0d3900),
+    0x700104a1d0: (1, 0xd3c, 0xbd0d3d01),
+}
 
 import json as _json
 import os as _os
@@ -529,14 +558,16 @@ def main():
     for i, w in enumerate(m.words):
         pc = m.lo + i * 4
         if (w & 0x9F000000) == 0x10000000:  # ADR
-            # Skip ADRs that serve as jump table bases (followed shortly by a BR instruction)
-            is_jt_base = any((m.words[i + k] & 0xFFFFFC1F) == 0xD61F0000 for k in range(1, 8) if i + k < len(m.words))
+            imm = ((w >> 5) & 0x7FFFF) << 2 | ((w >> 29) & 3)
+            if imm & (1 << 20):
+                imm -= 1 << 21
+            target = pc + imm
+            # Scheduling can place many instructions between the ADR and its table branch.
+            is_jt_base = m.jump_table_base(pc, target) or any(
+                (m.words[i + k] & 0xFFFFFC1F) == 0xD61F0000 for k in range(1, 8) if i + k < len(m.words))
             if not is_jt_base:
-                imm = ((w >> 5) & 0x7FFFF) << 2 | ((w >> 29) & 3)
-                if imm & (1 << 20):
-                    imm -= 1 << 21
-                if m.in_text(pc + imm):
-                    start_set.add(pc + imm)
+                if m.in_text(target):
+                    start_set.add(target)
         elif (w & 0x9F000000) == 0x90000000:  # ADRP
             imm = ((w >> 5) & 0x7FFFF) << 2 | ((w >> 29) & 3)
             if imm & (1 << 20):

@@ -458,6 +458,13 @@ static void tab_display(void) {
         g_want_fullscreen_apply.store(true);
     }
     opt_toggle("Show FPS", &g_settings.show_fps, false, "Shows the frame rate in the top right corner.");
+    if (g_is_skyward) {
+        const char *rates[] = {"60 FPS", "120 FPS (Experimental)"};
+        int rate = g_settings.frame_rate == 120;
+        if (opt_choice("Frame rate", &rate, rates, 2, 0,
+                       "Sets the rendering target while preserving game speed. 120 FPS requires faster hardware and a high refresh rate display."))
+            g_settings.frame_rate = rate ? 120 : 60;
+    }
 
     opt_section("Rendering");
     // display order -> RES_* (the ini / enum order predates the menu order)

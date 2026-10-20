@@ -13,6 +13,7 @@
 
 #include "../hle.h"
 #include "../settings.h"
+#include "../frame_rate.h"
 #include "output_scale.h"
 
 #define MAX_TEX 16384.0
@@ -37,15 +38,16 @@ static void dyn_update(double now, double gpu_ms) {
     g_dyn_n = g_dyn_gpu_n = 0;
     if (now < g_dyn_cool_until) return;
     double prev = g_dyn;
-    bool slow = avg_dt > 17.4 || (avg_gpu >= 0 && avg_gpu > 14.5);
+    double frame_scale = rt_frame_scale();
+    bool slow = avg_dt > 17.4 * frame_scale || (avg_gpu >= 0 && avg_gpu > 14.5 * frame_scale);
     if (slow) {
-        g_dyn = fmax(0.5, g_dyn - (avg_dt > 22 ? 0.1 : 0.05));
+        g_dyn = fmax(0.5, g_dyn - (avg_dt > 22 * frame_scale ? 0.1 : 0.05));
         g_dyn_good = 0;
         if (now - g_dyn_last_raise < 3.0) g_dyn_probe_wait = fmin(g_dyn_probe_wait * 2, 60.0);  // raised too eagerly
     } else if (g_dyn < 1.0) {
         g_dyn_good++;
         // with GPU timing: raise when there is clear headroom; without (Vulkan): probe upwards now and then
-        bool room = avg_gpu >= 0 ? avg_gpu < 10.5 && g_dyn_good >= 4 : now >= g_dyn_probe_at && g_dyn_good >= 2 * (int)g_dyn_probe_wait;
+        bool room = avg_gpu >= 0 ? avg_gpu < 10.5 * frame_scale && g_dyn_good >= 4 : now >= g_dyn_probe_at && g_dyn_good >= 2 * (int)g_dyn_probe_wait;
         if (room) { g_dyn = fmin(1.0, g_dyn + 0.05); g_dyn_good = 0; g_dyn_last_raise = now; g_dyn_probe_at = now + g_dyn_probe_wait; }
     }
     g_dyn = round(g_dyn * 20) / 20;

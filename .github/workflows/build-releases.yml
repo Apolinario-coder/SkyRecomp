@@ -6,7 +6,7 @@ on:
       release_tag:
         description: Existing release tag to build and upload
         required: true
-        default: v1.0.4
+        default: v1.0.5
         type: string
   push:
     tags:
@@ -81,16 +81,26 @@ jobs:
           echo "Using $SHADERC_FLAG"
           make -j$(nproc) build/skyrecomp "$SHADERC_FLAG"
 
+      - name: Build game setup tools
+        run: |
+          python3 -m venv build/setup-venv
+          build/setup-venv/bin/pip install pyinstaller==6.22.3 capstone==5.0.9 unicorn==2.1.4 lz4==4.4.5
+          build/setup-venv/bin/python -m PyInstaller --noconfirm --clean --log-level WARN --distpath build/helper --workpath build/pyinstaller tools/lasgen.spec
+          tools/fetch_zig.sh
+
       - name: Package Linux Release Archive
         run: |
           DIST_DIR="SkyRecomp-${RELEASE_TAG}-Linux"
           mkdir -p "$DIST_DIR/extracted" "$DIST_DIR/mods"
           cp build/skyrecomp "$DIST_DIR/"
+          cp -R build/helper/lasgen build/zig "$DIST_DIR/"
+          mkdir -p "$DIST_DIR/gamelib-src"
+          cp runtime/cpu.h runtime/simd.h runtime/simd_fp.h runtime/gamelib.h tools/gamelib_entry.c runtime/hle/hle_symbols.txt "$DIST_DIR/gamelib-src/"
           cp -P /usr/lib/x86_64-linux-gnu/libshaderc_shared.so* "$DIST_DIR/" 2>/dev/null || true
           cp -P /usr/lib/libSDL3.so* "$DIST_DIR/" 2>/dev/null || cp -P /usr/local/lib/libSDL3.so* "$DIST_DIR/" 2>/dev/null || true
           patchelf --set-rpath '$ORIGIN' "$DIST_DIR/skyrecomp" || true
           cp docs/icon/icon_1024.png "$DIST_DIR/icon.png"
-          cp README.md LICENSE "$DIST_DIR/"
+          cp README.md LICENSE CHANGELOG.md "$DIST_DIR/"
           [ -f Baloo2-SemiBold.ttf ] && cp Baloo2-SemiBold.ttf "$DIST_DIR/"
           [ -f Baloo2-OFL.txt ] && cp Baloo2-OFL.txt "$DIST_DIR/"
           cp tools/linux/skyrecomp.desktop "$DIST_DIR/"
@@ -123,6 +133,13 @@ jobs:
           sed -i.bak "s/^#define LARECOMP_VERSION .*/#define LARECOMP_VERSION \"$RELEASE_TAG\"/" runtime/ui/launcher.mm
           make -j$(sysctl -n hw.ncpu) build/skyrecomp
 
+      - name: Build game setup tools
+        run: |
+          python3 -m venv build/setup-venv
+          build/setup-venv/bin/pip install pyinstaller==6.22.3 capstone==5.0.9 unicorn==2.1.4 lz4==4.4.5
+          build/setup-venv/bin/python -m PyInstaller --noconfirm --clean --log-level WARN --distpath build/helper --workpath build/pyinstaller tools/lasgen.spec
+          tools/fetch_zig.sh
+
       - name: Create macOS App Bundle & DMG
         run: |
           APP="Sky Recomp.app"
@@ -133,7 +150,10 @@ jobs:
           cp docs/icon/icon_1024.png "$APP/Contents/Resources/icon.png"
           [ -f Baloo2-SemiBold.ttf ] && cp Baloo2-SemiBold.ttf "$APP/Contents/Resources/"
           [ -f Baloo2-OFL.txt ] && cp Baloo2-OFL.txt "$APP/Contents/Resources/"
-          cp README.md LICENSE "$APP/Contents/Resources/"
+          cp README.md LICENSE CHANGELOG.md "$APP/Contents/Resources/"
+          cp -R build/helper/lasgen build/zig "$APP/Contents/Resources/"
+          mkdir -p "$APP/Contents/Resources/gamelib-src"
+          cp runtime/cpu.h runtime/simd.h runtime/simd_fp.h runtime/gamelib.h tools/gamelib_entry.c runtime/hle/hle_symbols.txt "$APP/Contents/Resources/gamelib-src/"
 
           cat > "$APP/Contents/Info.plist" <<EOF
           <?xml version="1.0" encoding="UTF-8"?>

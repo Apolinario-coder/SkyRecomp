@@ -15,6 +15,8 @@
 #include "../nvn/renderer.h"
 #include "../settings.h"
 #include "../input_bind.h"
+#include "stick.h"
+#include "../frame_rate.h"
 
 extern bool menu_input_captured(void);  // runtime/ui/menu.mm: overlay menu or name entry up
 
@@ -77,10 +79,14 @@ static void recompute_pad(void) {
         if (g_bind_pad[i] >= 0 && g_bind_pad[i] < PADB_HOST_COUNT && (host >> g_bind_pad[i] & 1)) b |= 1ull << i;
     pad_buttons = b;
     if (!pad || host_test) { pad_lx = test_lx, pad_ly = test_ly, pad_rx = pad_ry = 0; return; }
-    pad_lx = SDL_GetGamepadAxis(pad, SDL_GAMEPAD_AXIS_LEFTX);
-    pad_ly = -SDL_GetGamepadAxis(pad, SDL_GAMEPAD_AXIS_LEFTY);
-    pad_rx = SDL_GetGamepadAxis(pad, SDL_GAMEPAD_AXIS_RIGHTX);
-    pad_ry = -SDL_GetGamepadAxis(pad, SDL_GAMEPAD_AXIS_RIGHTY);
+    int32_t lx = SDL_GetGamepadAxis(pad, SDL_GAMEPAD_AXIS_LEFTX);
+    int32_t ly = -(int32_t)SDL_GetGamepadAxis(pad, SDL_GAMEPAD_AXIS_LEFTY);
+    int32_t rx = SDL_GetGamepadAxis(pad, SDL_GAMEPAD_AXIS_RIGHTX);
+    int32_t ry = -(int32_t)SDL_GetGamepadAxis(pad, SDL_GAMEPAD_AXIS_RIGHTY);
+    // Resting-pad drift must not become movement or sword input.
+    input_stick_deadzone(&lx, &ly);
+    input_stick_deadzone(&rx, &ry);
+    pad_lx = lx; pad_ly = ly; pad_rx = rx; pad_ry = ry;
 }
 
 // Forget held keys (the menu took focus); the gamepad is re-read on its next event.
@@ -554,7 +560,7 @@ HLE_FUNC("_ZN2nn3hid21GetSixAxisSensorStateEPNS0_18SixAxisSensorStateERKNS0_19Si
     uint8_t *s = (uint8_t *)(uintptr_t)c->x[0];
     static int64_t sixaxis_samp;
     memset(s, 0, 0x60);
-    *(int64_t *)(s + 0x00) = 16666666;       // deltaTimeNanoSeconds
+    *(int64_t *)(s + 0x00) = (int64_t)rt_frame_period_ns();  // deltaTimeNanoSeconds
     *(int64_t *)(s + 0x08) = ++sixaxis_samp; // samplingNumber
     *(float *)(s + 0x14) = -1.0f;            // acceleration.y = -1g
     *(float *)(s + 0x34) = 1.0f;             // direction[0][0]

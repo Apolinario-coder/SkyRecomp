@@ -30,9 +30,15 @@ OUT_DLL = os.path.abspath("extracted/skygame.dll")
 IMPLIB = os.path.abspath("skyrecomp.dll.a")
 
 # Matching GAMELIB_ID for skyrecomp.exe
-GAMELIB_ID = "ccafcd6fe7bda438"
+GAMELIB_ID = "5e5bafbb450f894b"
 
 os.makedirs(OBJ_DIR, exist_ok=True)
+CACHE_ID = os.path.join(OBJ_DIR, 'build.id')
+try:
+    with open(CACHE_ID) as f:
+        CACHE_VALID = f.read().strip() == GAMELIB_ID
+except FileNotFoundError:
+    CACHE_VALID = False
 
 BASE_CFLAGS = [
     "-fno-strict-aliasing",
@@ -46,7 +52,7 @@ BASE_CFLAGS = [
 ]
 
 def compile_unit(src, obj):
-    if os.path.exists(obj) and os.path.getmtime(obj) >= os.path.getmtime(src):
+    if CACHE_VALID and os.path.exists(obj) and os.path.getmtime(obj) >= os.path.getmtime(src):
         return True, src, None, 0.0
     
     t0 = time.time()
@@ -82,7 +88,13 @@ def main():
     missing_mods = []
     for m in modules:
         m_dir = os.path.join("ssh_generated", m)
-        if not os.path.exists(m_dir) or not any(f.endswith(".c") for f in os.listdir(m_dir)):
+        stamp = os.path.join(m_dir, 'build.id')
+        try:
+            with open(stamp) as f:
+                current = f.read().strip() == GAMELIB_ID
+        except FileNotFoundError:
+            current = False
+        if not current or not os.path.exists(m_dir) or not any(f.endswith(".c") for f in os.listdir(m_dir)):
             missing_mods.append(m)
 
     if missing_mods:
@@ -117,6 +129,8 @@ def main():
             if res.returncode != 0:
                 print(f"[ERROR] gen.py failed for {mod}:\n{res.stderr}")
                 return False, mod, res.stderr
+            with open(os.path.join(out_mod_dir, 'build.id'), 'w') as f:
+                f.write(GAMELIB_ID + '\n')
             print(f"[OK] Module '{mod}' generated successfully in {time.time() - t_m0:.1f}s")
             return True, mod, None
 
@@ -146,7 +160,7 @@ def main():
     print(f"Total C source translation units: {total}")
     
     # Check how many need compilation
-    to_compile = [s for s, o in sources if not os.path.exists(o) or os.path.getmtime(o) < os.path.getmtime(s)]
+    to_compile = [s for s, o in sources if not CACHE_VALID or not os.path.exists(o) or os.path.getmtime(o) < os.path.getmtime(s)]
     print(f"Units needing compilation: {len(to_compile)} (cached: {total - len(to_compile)})")
     
     # Sort largest files first so they start immediately on all worker cores
@@ -203,6 +217,8 @@ def main():
     # Write matching ID file
     with open(OUT_DLL + ".id", "w") as f:
         f.write(f"{GAMELIB_ID}\n")
+    with open(CACHE_ID, 'w') as f:
+        f.write(GAMELIB_ID + '\n')
         
     print(f"Linked {OUT_DLL} successfully in {time.time() - t_link:.1f}s!")
     print(f"Native Game Library size: {os.path.getsize(OUT_DLL) / (1024*1024):.2f} MB")

@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.0.5] - 2026-10-20
+
+### Added
+
+- **120 FPS (Experimental)**: Enjoy smoother gameplay with the new option in **Video > Frame rate**. Game speed and audio timing adjust independently of the higher frame rate. 60 FPS remains the default; performance depends on your hardware and settings.
+
+- Included the tools needed to prepare game files on a new installation.
+
+### Fixed
+
+- Fixed Link's shadow disappearing and reappearing when moving through certain spots.
+- Fixed objects appearing to slide when rotating the camera with **Aspect Unlocked** on ultrawide displays.
+- Prevented small controller stick drift from sending unwanted movement or sword commands.
+- Fixed the causes identified in crash reports involving the door-repairing NPC after rescuing the pet and entering the cave.
+- Improved game setup so older prepared game files are rebuilt when needed for the latest fixes.
+- Error reports now display the correct **SkyRecomp** application name.
+
+### Notes
+
+- The 120 FPS option is experimental. A turning animation followed a different path during testing; combat, flight and all cutscenes have not yet been fully checked. Switch back to 60 FPS if you encounter problems.
+- The reported NPC and cave crashes could not be replayed with the original player's save. Other random crashes and objects disappearing outside the usual screen width may still occur.
+- Includes the previous fixes for oversized eyes, newly entered names appearing as squares, slow item sounds and the short distorted sound in the left audio channel.
+
 ## [1.0.4] - 2026-10-19
 
 ### Fixed

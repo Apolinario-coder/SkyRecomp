@@ -1,4 +1,4 @@
-# Sourced by the test scripts before they start ./build/lasrecomp: a new test copy of the game starts only while the
+# Sourced by the test scripts before they start ./build/skyrecomp: a new test copy of the game starts only while the
 # Mac has at least 10 GB free (each copy takes ~2 GB; too many at once ran it out of memory). Launches are taken one
 # at a time and the next waits ~20 s, so the copy just started has grown before memory is measured again.
 # LARECOMP_MIN_FREE_GB (default 10), LARECOMP_SLOT_DIR.

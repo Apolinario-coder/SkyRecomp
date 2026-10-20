@@ -15,6 +15,7 @@
 #include "vk.h"
 #include "../renderer.h"
 #include "../../settings.h"
+#include "../../frame_rate.h"
 
 static uint64_t stat_draws, stat_skipped, stat_passes, stat_dispatches, stat_wait_ns, stat_flushes, stat_feedback_copies;
 static uint64_t stat_upload_bytes;
@@ -144,7 +145,7 @@ void vk_pace_frame(void) {
     static int cap_fps = -1;
     if (cap_fps < 0) { const char *e = getenv("LARECOMP_UNLOCK_FPS"); cap_fps = !e || atoi(e) == 0; }
     if (cap_fps) {
-        const uint64_t period_ns = 16666667ull;
+        const uint64_t period_ns = rt_frame_period_ns();
         static uint64_t next_present_ns;
         uint64_t t0 = plat_now_ns();
         if (!next_present_ns) next_present_ns = t0;
@@ -2850,7 +2851,9 @@ static void draw_(CmdRec *r, bool indexed) {
         tex_sc[1][i][0] = sc[0]; tex_sc[1][i][1] = sc[1]; tex_wh[1][i][0] = wh[0]; tex_wh[1][i][1] = wh[1];
     }
     if (prof) prof_tex += SDL_GetTicksNS() - prof_tx_;
-    if (fabsf(pass_sx - pass_sy) > 0.01f * pass_sy && st.rt.ncolor && renderer_texture_presented(st.rt.color[0])) {
+    // Sky draws depth-tested scene geometry on the presented target; it must not be boxed like UI.
+    if ((g_is_las || !st.ds[0]) && fabsf(pass_sx - pass_sy) > 0.01f * pass_sy &&
+        st.rt.ncolor && renderer_texture_presented(st.rt.color[0])) {
         // Draws into the swapchain image (see renderer.m): composites fill the window, UI goes in a centred 16:9 box.
         bool reads_scene = false;
         for (int i = 0; i < pr->fi->ntex && i < 64; i++)

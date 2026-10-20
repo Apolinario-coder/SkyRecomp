@@ -1,6 +1,6 @@
 // Builds the game code library (runtime/gamelib.h) on the player's machine, from their own game files: the generator
-// (tools/gen.py; shipped frozen as lasgen/) turns exefs/main and exefs/sdk into C, the bundled compiler (zig/) builds
-// that into <game_dir>/lasgame.*. The C and the objects are deleted afterwards.
+// (tools/gen.py; shipped frozen as lasgen/) turns the four exefs modules into C, the bundled compiler (zig/) builds
+// that into <game_dir>/skygame.*. The C and the objects are deleted afterwards.
 #pragma once
 #include <stdbool.h>
 #include <stddef.h>

@@ -48,7 +48,7 @@ def run():
         end = FIRST + len(chunk) * STEP + 60
         crashed_at = None
         with open(log, 'w') as f:
-            p = subprocess.Popen([os.path.join(ROOT, 'build', 'lasrecomp'), 'extracted'], cwd=ROOT, env=env,
+            p = subprocess.Popen([os.path.join(ROOT, 'build', 'skyrecomp'), 'extracted'], cwd=ROOT, env=env,
                                  stdout=f, stderr=subprocess.STDOUT)
             t0 = time.time()
             while p.poll() is None and time.time() - t0 < end / 60 * 1.6 + 120:
