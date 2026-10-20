@@ -116,6 +116,28 @@ jobs:
         run: |
           gh release upload ${RELEASE_TAG} SkyRecomp-${RELEASE_TAG}-Linux.tar.gz SkyRecomp-${RELEASE_TAG}-Linux.zip --clobber
 
+  # A self-contained AppImage (tools/linux/appimage.sh): built in an Ubuntu 22.04 container (podman) with SDL3, an LGPL
+  # FFmpeg and shaderc from pinned sources bundled inside, so it runs on glibc 2.35+ whatever FFmpeg the system has.
+  build-linux-appimage:
+    name: Build Linux AppImage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+
+      - name: Build AppImage
+        run: |
+          sed -i "s/^#define LARECOMP_VERSION .*/#define LARECOMP_VERSION \"$RELEASE_TAG\"/" runtime/ui/launcher.mm
+          tools/linux/appimage.sh x86_64
+
+      - name: Upload to GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${RELEASE_TAG} build/dist/*.AppImage --clobber
+
   build-macos:
     name: Build macOS Release
     runs-on: macos-14
