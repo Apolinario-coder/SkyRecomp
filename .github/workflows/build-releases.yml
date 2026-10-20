@@ -86,7 +86,7 @@ jobs:
           python3 -m venv build/setup-venv
           build/setup-venv/bin/pip install pyinstaller==6.22.3 capstone==5.0.9 unicorn==2.1.4 lz4==4.4.5
           build/setup-venv/bin/python -m PyInstaller --noconfirm --clean --log-level WARN --distpath build/helper --workpath build/pyinstaller tools/lasgen.spec
-          tools/fetch_zig.sh
+          bash tools/fetch_zig.sh
 
       - name: Package Linux Release Archive
         run: |
@@ -101,6 +101,7 @@ jobs:
           patchelf --set-rpath '$ORIGIN' "$DIST_DIR/skyrecomp" || true
           cp docs/icon/icon_1024.png "$DIST_DIR/icon.png"
           cp README.md LICENSE CHANGELOG.md "$DIST_DIR/"
+          [ -f LICENSE-LASRecomp ] && cp LICENSE-LASRecomp "$DIST_DIR/" || true
           [ -f Baloo2-SemiBold.ttf ] && cp Baloo2-SemiBold.ttf "$DIST_DIR/"
           [ -f Baloo2-OFL.txt ] && cp Baloo2-OFL.txt "$DIST_DIR/"
           cp tools/linux/skyrecomp.desktop "$DIST_DIR/"
@@ -138,7 +139,7 @@ jobs:
           python3 -m venv build/setup-venv
           build/setup-venv/bin/pip install pyinstaller==6.22.3 capstone==5.0.9 unicorn==2.1.4 lz4==4.4.5
           build/setup-venv/bin/python -m PyInstaller --noconfirm --clean --log-level WARN --distpath build/helper --workpath build/pyinstaller tools/lasgen.spec
-          tools/fetch_zig.sh
+          bash tools/fetch_zig.sh
 
       - name: Create macOS App Bundle & DMG
         run: |
@@ -151,6 +152,7 @@ jobs:
           [ -f Baloo2-SemiBold.ttf ] && cp Baloo2-SemiBold.ttf "$APP/Contents/Resources/"
           [ -f Baloo2-OFL.txt ] && cp Baloo2-OFL.txt "$APP/Contents/Resources/"
           cp README.md LICENSE CHANGELOG.md "$APP/Contents/Resources/"
+          [ -f LICENSE-LASRecomp ] && cp LICENSE-LASRecomp "$APP/Contents/Resources/" || true
           cp -R build/helper/lasgen build/zig "$APP/Contents/Resources/"
           mkdir -p "$APP/Contents/Resources/gamelib-src"
           cp runtime/cpu.h runtime/simd.h runtime/simd_fp.h runtime/gamelib.h tools/gamelib_entry.c runtime/hle/hle_symbols.txt "$APP/Contents/Resources/gamelib-src/"
