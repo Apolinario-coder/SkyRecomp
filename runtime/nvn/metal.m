@@ -28,7 +28,7 @@ id<MTLBuffer> g_guest_buffer;  // wraps the guest heap so GPU addresses map to b
 uint64_t g_guest_buffer_base;
 
 // ================================================================== formats
-typedef struct { MTLPixelFormat pf; uint8_t expand_rgb; uint8_t force_alpha_one; } MtlFormat;
+typedef struct { MTLPixelFormat pf; uint8_t expand_rgb; uint8_t force_alpha_one; uint8_t swap_rb; } MtlFormat;
 
 static MtlFormat mtl_format(uint32_t f) {
     switch (f) {
@@ -78,7 +78,7 @@ static MtlFormat mtl_format(uint32_t f) {
     case 0x37: return (MtlFormat){MTLPixelFormatRGBA8Unorm_sRGB, 0, 1};
     case 0x38: return (MtlFormat){MTLPixelFormatRGBA8Unorm_sRGB};
     case 0x39: return (MtlFormat){MTLPixelFormatABGR4Unorm};
-    case 0x3A: return (MtlFormat){MTLPixelFormatB5G6R5Unorm};
+    case 0x3A: return (MtlFormat){MTLPixelFormatA1BGR5Unorm, 0, 1};  // RGB5: RGB5A1's layout, no alpha (not 565)
     case 0x3B: return (MtlFormat){MTLPixelFormatA1BGR5Unorm};
     case 0x3C: return (MtlFormat){MTLPixelFormatB5G6R5Unorm};
     case 0x3D: return (MtlFormat){MTLPixelFormatRGB10A2Unorm};
@@ -132,8 +132,13 @@ static MtlFormat mtl_format(uint32_t f) {
     case 0x92: return (MtlFormat){MTLPixelFormatASTC_10x10_sRGB};
     case 0x93: return (MtlFormat){MTLPixelFormatASTC_12x10_sRGB};
     case 0x94: return (MtlFormat){MTLPixelFormatASTC_12x12_sRGB};
-    case 0x95: case 0x97: return (MtlFormat){MTLPixelFormatA1BGR5Unorm};
-    case 0x96: return (MtlFormat){MTLPixelFormatA1BGR5Unorm};
+    // BGR5 / BGR5A1: RGB5A1's layout with red and blue the other way round; A1BGR5: alpha in the top bit, red in the
+    // low bits (GL's 1_5_5_5_REV) = BGR5A1Unorm's layout with red and blue swapped (devkitPro/deko3d
+    // source/maxwell/format_traits.inc: the same storage, swizzle B,G,R). Swapped in the sampled view (renderer.m
+    // apply_swizzle); sampled as RGB5A1 before: brown wood came out blue.
+    case 0x95: return (MtlFormat){MTLPixelFormatA1BGR5Unorm, 0, 1, 1};
+    case 0x96: return (MtlFormat){MTLPixelFormatA1BGR5Unorm, 0, 0, 1};
+    case 0x97: return (MtlFormat){MTLPixelFormatBGR5A1Unorm, 0, 0, 1};
     case 0x98: return (MtlFormat){MTLPixelFormatBGRA8Unorm, 0, 1};
     case 0x99: return (MtlFormat){MTLPixelFormatBGRA8Unorm};
     case 0x9A: return (MtlFormat){MTLPixelFormatBGRA8Unorm_sRGB, 0, 1};
@@ -147,6 +152,7 @@ bool renderer_format_is_depth(uint32_t f) { return f >= 0x31 && f <= 0x36; }
 bool renderer_format_has_stencil(uint32_t f) { return f == 0x31 || f == 0x35 || f == 0x36; }
 MTLPixelFormat renderer_pixel_format(uint32_t f) { return mtl_format(f).pf; }
 bool renderer_format_alpha_one(uint32_t f) { return mtl_format(f).force_alpha_one; }
+bool renderer_format_swap_rb(uint32_t f) { return mtl_format(f).swap_rb; }
 
 // ================================================================== textures
 typedef struct {

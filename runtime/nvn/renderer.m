@@ -1037,9 +1037,16 @@ static id<MTLTexture> apply_swizzle(id<MTLTexture> tex, NvnTexture *t, const Nvn
     const uint8_t *sw = (has_view && (v->setmask & 8)) ? v->swizzle : t->swizzle;
     uint8_t c[4];
     for (int i = 0; i < 4; i++) c[i] = sw[i] <= 5 ? sw[i] : (uint8_t)(2 + i);
-    if (!c[0] && !c[1] && !c[2] && !c[3]) return tex;  // never set: identity
+    bool swap = renderer_format_swap_rb(t->format);  // (the BGR5 formats: the texture has RGB's layout, metal.m)
+    if (!c[0] && !c[1] && !c[2] && !c[3]) {  // never set: identity
+        if (!swap) return tex;
+        c[0] = 2, c[1] = 3, c[2] = 4, c[3] = 5;
+    }
     if (renderer_format_alpha_one(t->format))
         for (int i = 0; i < 4; i++) if (c[i] == MTLTextureSwizzleAlpha) c[i] = MTLTextureSwizzleOne;
+    if (swap)
+        for (int i = 0; i < 4; i++)
+            if (c[i] == MTLTextureSwizzleRed || c[i] == MTLTextureSwizzleBlue) c[i] = (uint8_t)(6 - c[i]);
     if (c[0] == 2 && c[1] == 3 && c[2] == 4 && c[3] == (renderer_format_alpha_one(t->format) ? 1 : 5)) return tex;
     if (tex.sampleCount > 1 || renderer_format_is_depth(t->format)) return tex;
     uint32_t swz = c[0] | c[1] << 8 | c[2] << 16 | (uint32_t)c[3] << 24;
