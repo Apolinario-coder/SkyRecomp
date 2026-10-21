@@ -1603,6 +1603,12 @@ static uint64_t pipeline_state_hash(Prog *pr) {
 
 static void draw(CmdRec *r, bool indexed) {
     if (!st.program) { stat_skipped++; return; }
+    // NVN's front-and-back cull (Face 3) drops every polygon while points and lines still draw; Metal has no such cull
+    // mode, so a polygon draw goes here. (How the game hides a material: the Remlit's night face and claws by day,
+    // zeldaret/ss d_a_e_remly.cpp applyScaryMat - drawn before, as cull none. Modes: 0-3 points / lines, 10-11 lines
+    // with adjacency.)
+    uint32_t pmode = (uint32_t)r->x[0];
+    if (st.poly[0] == 3 && pmode >= 4 && pmode != 10 && pmode != 11) return;
     static bool logged_modes;
     if (!logged_modes) {
         logged_modes = true;

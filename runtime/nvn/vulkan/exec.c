@@ -2775,7 +2775,10 @@ static void draw_(CmdRec *r, bool indexed) {
     // ---- rasterizer
     uint8_t cull = st.poly[0];
     if (vkey.flip_x) cull = 0;  // (mirror mode's composite: one full-screen quad, either winding)
-    VkCullModeFlags cm = cull == 1 ? VK_CULL_MODE_FRONT_BIT : cull == 2 ? VK_CULL_MODE_BACK_BIT : VK_CULL_MODE_NONE;
+    // (NVN Face: 1 front, 2 back, 3 front and back. 3 is how the game hides a material's polygons - the Remlit's night
+    // face and claws by day (zeldaret/ss d_a_e_remly.cpp applyScaryMat) - and was drawn as none)
+    VkCullModeFlags cm = cull == 1 ? VK_CULL_MODE_FRONT_BIT : cull == 2 ? VK_CULL_MODE_BACK_BIT
+                       : cull == 3 ? VK_CULL_MODE_FRONT_AND_BACK : VK_CULL_MODE_NONE;
     if (ss_need(SS_CULL, ss.cull == cm)) { ss.cull = cm; vkCmdSetCullMode(cb, cm); }
     bool ccw = st.poly[1] == 1;
     static int flipw = -1;  // LARECOMP_VK_FLIP_WINDING: invert the front-face mapping (A/B against Metal)
