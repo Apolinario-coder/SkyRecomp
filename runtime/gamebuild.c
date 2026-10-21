@@ -211,7 +211,7 @@ static void log_tail(const char *path, char *out, size_t n) {  // the last line 
 
 // ------------------------------------------------------------------ compiling
 typedef struct {
-    char src[1100], obj[1100], log[1100];
+    char src[1100], obj[1100], log[1100], stamp[1100];  // stamp: what obj was compiled from (resuming, below)
     unsigned long long bytes;
 } Unit;
 
@@ -229,6 +229,7 @@ static void add_unit(Units *us, const char *src, const char *work, const char *s
     snprintf(u->src, sizeof u->src, "%s", src);
     snprintf(u->obj, sizeof u->obj, "%s" SEP "%s.o", work, stem);
     snprintf(u->log, sizeof u->log, "%s" SEP "%s.log", work, stem);
+    snprintf(u->stamp, sizeof u->stamp, "%s" SEP "%s.stamp", work, stem);
     struct stat st;
     u->bytes = stat(src, &st) == 0 ? (unsigned long long)st.st_size : 0;
 }
@@ -250,7 +251,50 @@ static void add_cflags(Args *a, const Tools *t) {
     }
 }
 
+// ------------------------------------------------------------------ resuming
+// A stopped or failed build keeps its work folder. Each object gets a stamp: FNV-1a of the compiler, its flags, the
+// headers' folder, GAMELIB_ID and the C it was compiled from. The generator writes the same C again on the next run,
+// so a unit whose stamp still matches (and whose object is there) isn't compiled again.
+static uint64_t fnv(uint64_t h, const void *p, size_t n) {
+    for (const unsigned char *b = (const unsigned char *)p; n--; b++) h = (h ^ *b) * 0x100000001b3ull;
+    return h;
+}
+
+static bool unit_stamp(const Tools *t, const Unit *u, char *out, size_t n) {
+    uint64_t h = 0xcbf29ce484222325ull;
+    const char *seed[] = {t->cc, GAMELIB_CFLAGS, t->inc, GAMELIB_ID};
+    for (size_t i = 0; i < sizeof seed / sizeof *seed; i++) h = fnv(h, seed[i], strlen(seed[i]) + 1);
+    FILE *f = fopen(u->src, "rb");
+    if (!f) return false;
+    static char buf[1 << 20];  // (the build loop is one thread)
+    size_t k;
+    while ((k = fread(buf, 1, sizeof buf, f)) > 0) h = fnv(h, buf, k);
+    fclose(f);
+    snprintf(out, n, "%016llx", (unsigned long long)h);
+    return true;
+}
+
+static bool unit_done(const Tools *t, const Unit *u) {
+    struct stat st;
+    char want[32], have[32] = "";
+    if (stat(u->obj, &st) != 0 || st.st_size == 0 || !unit_stamp(t, u, want, sizeof want)) return false;
+    FILE *f = fopen(u->stamp, "rb");
+    if (!f) return false;
+    size_t k = fread(have, 1, sizeof have - 1, f);
+    fclose(f);
+    have[k] = 0;
+    return !strcmp(want, have);
+}
+
+static void unit_mark(const Tools *t, const Unit *u) {
+    char s[32];
+    if (!unit_stamp(t, u, s, sizeof s)) return;
+    FILE *f = fopen(u->stamp, "wb");
+    if (f) fputs(s, f), fclose(f);
+}
+
 static PlatProc start_compile(const Tools *t, const Unit *u) {
+    remove(u->stamp);  // (until it compiles: a stopped compile can leave part of an object)
     Args a = {0};
     compiler(&a, t);
     add_cflags(&a, t);
@@ -281,7 +325,7 @@ bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size
     snprintf(work, sizeof work, "%s" SEP ".gamebuild", game_dir);
     snprintf(lib, sizeof lib, "%s" SEP "%s", game_dir, GAMELIB_NAME);
     snprintf(tmp, sizeof tmp, "%s" SEP "%s.tmp", work, GAMELIB_NAME);
-    rt_remove_game_file(game_dir, ".gamebuild");
+    // (.gamebuild stays: a stopped or failed build's objects are reused where their stamps match - resuming, above)
     rt_remove_game_file(game_dir, GAMELIB_NAME);
     rt_remove_game_file(game_dir, GAMELIB_NAME ".id");
     mkdir(work, 0755);
@@ -331,6 +375,7 @@ bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size
     struct { PlatProc p; int unit; } run[64];
     int nrun = 0;
     unsigned long long done_bytes = 0;
+    int resumed = 0;  // units an earlier run compiled already
     double shown = 0;
     {
         add_unit(&units, t.entry, work, "gamelib_entry");
@@ -378,6 +423,12 @@ bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size
 
         // compiles
         while (nrun < jobs && next < units.n) {
+            if (unit_done(&t, &units.u[next])) {  // (compiled by an earlier, stopped run)
+                Unit *u = &units.u[next++];
+                done_bytes += u->bytes, resumed++;
+                if (next - 1 > 0) remove(u->src);
+                continue;
+            }
             PlatProc p = start_compile(&t, &units.u[next]);
             if (!p) { snprintf(why, why_size, "the compiler didn't start"); ok = false; break; }
             run[nrun].p = p, run[nrun].unit = next++;
@@ -393,6 +444,8 @@ bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size
                 LOG("[gamebuild] compiling %s failed: %s\n", u->src, last);
                 snprintf(why, why_size, "the game code didn't compile");
                 ok = false;
+            } else {
+                unit_mark(&t, u);
             }
             done_bytes += u->bytes;
             if (run[k].unit > 0) remove(u->src);  // (generated C, done with: not kept. Unit 0 is the shipped entry file)
@@ -483,8 +536,9 @@ bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size
         if (f) fclose(f);
     }
     free(units.u);
-    rt_remove_game_file(game_dir, ".gamebuild");  // the C, the objects, the logs
-    LOG("[gamebuild] %s in %.0fs\n", ok ? "done" : "failed", (double)(plat_now_ns() - t0) / 1e9);
+    if (ok) rt_remove_game_file(game_dir, ".gamebuild");  // the C, the objects, the logs (kept to resume a failure)
+    LOG("[gamebuild] %s in %.0fs (%d units reused from an earlier run)\n", ok ? "done" : "failed",
+        (double)(plat_now_ns() - t0) / 1e9, resumed);
     if (ok && o->progress) o->progress(1, "Finishing...");
     return ok;
 }
