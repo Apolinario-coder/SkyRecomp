@@ -34,6 +34,7 @@ typedef struct {
     int frame_rate;       // 60 or 120; the Skyward Sword simulation step follows this target
     bool dpad_move;      // the d-pad (and arrow keys) move Link like the stick
     bool free_cam;       // the right stick looks around without holding L: runtime/hle/input.c
+    float free_cam_sens; // free camera stick speed (1 = the game's own camera speed)
     bool move_360;       // analog movement in any direction (the game snaps the stick to 8): runtime/hle/qol.c
     bool blur_removal;   // no tilt-shift blur at the top / bottom of the screen
     bool hide_hero_icon; // no Hero Mode icon on the HUD

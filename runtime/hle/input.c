@@ -429,6 +429,17 @@ uint64_t input_buttons_now(void) { return (menu_input_captured() ? 0 : key_butto
 
 static int32_t clamp_axis(int32_t v) { return v > 32767 ? 32767 : v < -32767 ? -32767 : v; }
 
+// Free camera look, session toggle: a short L press switches it off/on without touching the setting
+// (the setting itself is g_settings.free_cam). Holding L longer than FREE_CAM_TAP_MS does nothing, so a
+// held L keeps its game function. free_cam_l_down / free_cam_l_ms are the press edge and its time.
+enum { FREE_CAM_TAP_MS = 300 };
+static bool free_cam_on = true;
+static bool free_cam_l_down;
+static uint64_t free_cam_l_ms;
+
+// For the on-screen indicator (runtime/ui/menu.mm).
+bool input_free_cam_active(void) { return free_cam_on; }
+
 // NpadFullKeyState / NpadHandheldState / NpadJoy*State share this layout (0x28 bytes):
 // {int64 sampling, u64 buttons, AnalogStick L {x,y}, AnalogStick R {x,y}, u32 attributes}
 static void fill_state(Cpu *c) {
@@ -517,7 +528,44 @@ static void fill_state(Cpu *c) {
     }
     // Free camera look: moving the right stick acts as if L were held too, so the camera turns without
     // needing to hold L first. rx/ry already have the deadzone applied above.
-    if (g_settings.free_cam && (rx || ry)) b |= 1ull << BTN_L;
+    //  - A short L press is a session toggle (off/on, the setting stays as it is).
+    //  - Holding L while it is on turns the free camera off for the hold and withholds L itself, so the right
+    //    stick swings the sword; releasing L brings the free camera back (the setting is not changed).
+    //  - With the weapon drawn (ZR), while aiming (ZL) or holding the item wheel (R) it is off anyway: the
+    //    stick keeps its game action there.
+    //  - free_cam_sens scales the stick for the camera only (1.00x = the game's own speed).
+    if (g_settings.free_cam) {
+        const bool l_now = (b & (1ull << BTN_L)) != 0;
+        if (l_now && !free_cam_l_down) {   // press: remember when it started
+            free_cam_l_down = true;
+            free_cam_l_ms = SDL_GetTicks();
+        } else if (!l_now && free_cam_l_down) {   // release: a short tap toggles, a hold does not
+            free_cam_l_down = false;
+            if (SDL_GetTicks() - free_cam_l_ms <= FREE_CAM_TAP_MS) {
+                free_cam_on = !free_cam_on;
+                LOG("[freecam] free camera %s (short L press)\n", free_cam_on ? "on" : "off");
+            }
+        }
+        const bool hold_off = l_now && free_cam_on;   // L held while the eye is on: the stick fights
+        if (hold_off) b &= ~(1ull << BTN_L);          // ...without the game seeing L+stick (its camera)
+        const bool r_held = (b & (1ull << BTN_R)) != 0;
+        const bool zl_held = (b & (1ull << BTN_ZL)) != 0, zr_held = (b & (1ull << BTN_ZR)) != 0;
+        if (!free_cam_on || hold_off || r_held || zl_held || zr_held) {
+            // no free camera: the stick keeps its own game action (sword, aim, item wheel)
+        } else if (rx || ry) {
+            const float sens = g_settings.free_cam_sens;
+            if (sens > 0.0f && sens != 1.0f) {
+                rx = clamp_axis((int32_t)((float)rx * sens));
+                ry = clamp_axis((int32_t)((float)ry * sens));
+            }
+            b |= 1ull << BTN_L;
+        }
+    } else {
+        free_cam_on = true;   // switching the setting back on starts with the free camera active
+        const bool l_now = (b & (1ull << BTN_L)) != 0;
+        if (l_now && !free_cam_l_down) free_cam_l_ms = SDL_GetTicks();
+        free_cam_l_down = l_now;
+    }
     *(uint64_t *)(s + 8) = b;
     static uint64_t last_b;
     if (b != last_b && getenv("LARECOMP_INPUT")) LOG("[input] id %#x buttons %#llx (sampling %lld, lr %llx)\n", id, (unsigned long long)b, (long long)sampling, c->x[30]);

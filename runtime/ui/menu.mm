@@ -26,6 +26,7 @@ extern "C" {
 #include "../hle.h"
 #include "../settings.h"
 #include "menu.h"
+extern "C" bool input_free_cam_active(void);  // runtime/hle/input.c: free camera session toggle
 void input_reset(void);
 void save_editor_draw(float scale);  // save_editor.mm
 extern "C" int game_in_play(void);  // hle/warp.c
@@ -596,7 +597,14 @@ static void tab_about(void) {
     toggle("360-degree movement", &g_settings.move_360);
     hint("Link walks in the exact direction of the stick instead of snapping to 8 directions.");
     toggle("Free camera look", &g_settings.free_cam);
-    hint("Moving the right stick looks around without having to hold L first.");
+    hint("Moving the right stick looks around without having to hold L first. A short L press switches it off/on "
+         "for this session; holding L while the eye is on turns the free camera off for the hold, so the right "
+         "stick swings the sword. The eye at the bottom right shows the state. With the weapon drawn (ZR), aiming "
+         "(ZL) or holding R it is off anyway.");
+    if (g_settings.free_cam) {
+        slider("Free camera sensitivity", &g_settings.free_cam_sens, 0.25f, 2.0f, "%.2fx");
+        hint("How fast the right stick turns the camera while free camera look is active (1.00x = the game's speed).");
+    }
     ImGui::Spacing();
     header("Button prompts");
     {
@@ -831,7 +839,7 @@ void menu_render(void *cmd, uint32_t target_w, uint32_t target_h) {
     bool trk = !open && tracker_overlay_wanted();
     bool chaos = !open && chaos_overlay_wanted();
     bool kbd = g_kbd.load() == 1;
-    if (!open && !kbd && !g_settings.show_fps && !inv && !trk && !chaos) {
+    if (!open && !kbd && !g_settings.show_fps && !inv && !trk && !chaos && !g_settings.free_cam) {
         if (g_inited) { pthread_mutex_lock(&q_lock); q_events.clear(); pthread_mutex_unlock(&q_lock); }
         return;
     }
@@ -878,11 +886,30 @@ void menu_render(void *cmd, uint32_t target_w, uint32_t target_h) {
 
     if (g_settings.show_fps) {
         ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x - 16 * scale, 16 * scale), 0, ImVec2(1, 0));
-        ImGui::SetNextWindowBgAlpha(0.5f);
+        ImGui::SetNextWindowBgAlpha(0.45f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(6 * scale, 2 * scale));
         ImGui::Begin("##fps", NULL, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize |
                                         ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoFocusOnAppearing);
-        ImGui::Text("%.0f fps", io.Framerate);
+        ImGui::SetWindowFontScale(0.65f);   // small: just the number
+        ImGui::Text("%.0f", io.Framerate);
         ImGui::End();
+        ImGui::PopStyleVar();
+    }
+
+    if (g_settings.free_cam) {
+        // Free camera mode, bottom right, no text: an eye while it is on, a crossed-out eye while L toggled it off.
+        ImDrawList *dl = ImGui::GetForegroundDrawList();
+        const float s = scale;
+        const ImVec2 c(io.DisplaySize.x - 30 * s, io.DisplaySize.y - 28 * s);
+        const float rx = 14 * s, ry = 8 * s;
+        const bool on = input_free_cam_active();
+        const ImU32 line = on ? IM_COL32(240, 235, 220, 80) : IM_COL32(240, 235, 220, 38);
+        dl->AddBezierQuadratic(ImVec2(c.x - rx, c.y), ImVec2(c.x, c.y - ry * 1.6f), ImVec2(c.x + rx, c.y), line, 1.5f * s);
+        dl->AddBezierQuadratic(ImVec2(c.x - rx, c.y), ImVec2(c.x, c.y + ry * 1.6f), ImVec2(c.x + rx, c.y), line, 1.5f * s);
+        dl->AddCircleFilled(c, 3.2f * s, on ? IM_COL32(240, 235, 220, 120) : IM_COL32(240, 235, 220, 55));
+        if (!on)
+            dl->AddLine(ImVec2(c.x - rx * 0.9f, c.y + ry * 1.2f), ImVec2(c.x + rx * 0.9f, c.y - ry * 1.2f),
+                        IM_COL32(240, 235, 220, 90), 1.5f * s);
     }
 
     if (trk) tracker_overlay_draw(io.DisplaySize, g_font_big ? g_font_big : ImGui::GetFont());
