@@ -280,27 +280,19 @@ static float extract_progress(void) {
     return f < 0 ? 0 : f > 0.99f ? 0.99f : f;
 }
 
-// Verifies the precompiled game code exists (skygame.dll); false = missing
+// Builds the game code library from the copied exefs (runtime/gamebuild.c), unless a matching one is there already
 static bool build_game_code(void) {
-    if (file_exists(g_root + "/skygame.dll") || gamelib_present(g_root.c_str()) ||
-        file_exists("extracted/skygame.dll") || file_exists("skygame.dll")) {
-        return true;
+    if (gamelib_present(g_root.c_str())) return true;
+    int cores = SDL_GetNumLogicalCPUCores(), ram_gb = SDL_GetSystemRAM() / 1024;
+    GameBuildOpts o = {build_progress, cores < ram_gb - 2 ? cores : ram_gb - 2 > 1 ? ram_gb - 2 : 1};
+    char why[256] = "";
+    g_build_frac = 0;
+    bool ok = gamebuild_run(g_root.c_str(), &o, why, sizeof why);
+    if (!ok) {
+        fprintf(stderr, "[launcher] game code: %s\n", why);
+        set_failure(FAIL_BUILD);
     }
-    // If skygame.dll is in extracted/ but not yet in g_root:
-    if (file_exists("extracted/skygame.dll") && !file_exists(g_root + "/skygame.dll")) {
-        FILE *in = fopen("extracted/skygame.dll", "rb");
-        FILE *out = fopen((g_root + "/skygame.dll").c_str(), "wb");
-        if (in && out) {
-            char buf[1024 * 1024];
-            size_t n;
-            while ((n = fread(buf, 1, sizeof buf, in)) > 0) fwrite(buf, 1, n, out);
-        }
-        if (in) fclose(in);
-        if (out) fclose(out);
-        return true;
-    }
-    set_job("Game library (skygame.dll) is missing from extracted folder.", true, "Please ensure skygame.dll is present.");
-    return false;
+    return ok;
 }
 
 static void *extract_thread(void *) {
@@ -366,7 +358,7 @@ static void *extract_thread(void *) {
                 FILE *in = fopen(romfs.c_str(), "rb");
                 FILE *out = fopen((g_root + "/romfs.bin").c_str(), "wb");
                 if (in && out) {
-                    char buf[1024 * 1024];
+                    static char buf[1024 * 1024];  // (not on the stack: macOS gives this thread 512 KB)
                     size_t n;
                     while ((n = fread(buf, 1, sizeof buf, in)) > 0) fwrite(buf, 1, n, out);
                 }
@@ -377,7 +369,7 @@ static void *extract_thread(void *) {
                 FILE *in = fopen((romfs + "/romfs.bin").c_str(), "rb");
                 FILE *out = fopen((g_root + "/romfs.bin").c_str(), "wb");
                 if (in && out) {
-                    char buf[1024 * 1024];
+                    static char buf[1024 * 1024];  // (not on the stack: macOS gives this thread 512 KB)
                     size_t n;
                     while ((n = fread(buf, 1, sizeof buf, in)) > 0) fwrite(buf, 1, n, out);
                 }
@@ -423,6 +415,17 @@ done:
     g_busy = false;
     pthread_mutex_unlock(&g_lock);
     return NULL;
+}
+
+// Set up in the background, on a stack like the main thread's (macOS gives other threads 512 KB by default)
+static void start_extract(void) {
+    pthread_attr_t a;
+    pthread_attr_init(&a);
+    pthread_attr_setstacksize(&a, 8 << 20);
+    pthread_attr_setdetachstate(&a, PTHREAD_CREATE_DETACHED);
+    pthread_t t;
+    pthread_create(&t, &a, extract_thread, NULL);
+    pthread_attr_destroy(&a);
 }
 
 // ------------------------------------------------------------------ folder dialog (SDL calls back on any thread)
@@ -1014,9 +1017,7 @@ extern "C" void launcher_run(const char *root) {
         g_src = t;
         g_busy = true;
         page = SETUP;
-        pthread_t th;
-        pthread_create(&th, NULL, extract_thread, NULL);
-        pthread_detach(th);
+        start_extract();
     }
     if (getenv("LARECOMP_LAUNCHER_DELETE")) {  // (test) what DELETE GAME FILES does, logged; then the start screen
         double gb = rt_game_files_size(g_root.c_str()) / 1e9;
@@ -1398,9 +1399,7 @@ extern "C" void launcher_run(const char *root) {
                         pthread_mutex_lock(&g_lock);
                         g_busy = true;
                         pthread_mutex_unlock(&g_lock);
-                        pthread_t t;
-                        pthread_create(&t, NULL, extract_thread, NULL);
-                        pthread_detach(t);
+                        start_extract();
                     }
                     files_gb = -1;  // (re-measured after a setup)
                 } else {

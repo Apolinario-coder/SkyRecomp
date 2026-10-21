@@ -430,8 +430,11 @@ class Module:
                 assert self.word(a) == word, (hex(a), hex(self.word(a)))
                 # Scale the register too: the following accumulator derives the original 30 Hz integer ticks from it.
                 hook = 'rt_sky_frame_step' if reg == 0 else 'rt_sky_frame_ms'
-                out.append(f'    {{ extern float {hook}(float); VSF32({reg}) = {hook}(VSF32({reg})); '
-                           f'ST32(c->x[8] + {hex(offset)}ull, VS32({reg})); }}')
+                # (lane 0 through may_alias pointers, as simd.h's VSF32/VS32: simd.h is only included with --simd c)
+                out.append(f'    {{ extern float {hook}(float); typedef float __attribute__((may_alias)) f32a; '
+                           f'typedef uint32_t __attribute__((may_alias)) u32a; '
+                           f'*(f32a *)&c->v[{reg}] = {hook}(*(f32a *)&c->v[{reg}]); '
+                           f'ST32(c->x[8] + {hex(offset)}ull, *(u32a *)&c->v[{reg}]); }}')
                 last = 'op'
                 continue
             k = ins.kind
