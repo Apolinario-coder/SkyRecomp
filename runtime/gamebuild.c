@@ -246,6 +246,9 @@ static void add_cflags(Args *a, const Tools *t) {
             add(a, cpu);
         } else {
             add(a, f);
+            // zig cc reads -O1 as ReleaseFast, which compiles C at clang -O2 (+ vectorizers): far slower on the
+            // generated code than the -O1 `make` uses. A bare -O, which zig passes through to clang, is -O1.
+            if (t->zig && !strcmp(f, "-O1")) add(a, "-O");
         }
     }
 }
@@ -328,7 +331,7 @@ bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size
     int queued[NMODULES] = {0};  // chunk files of each module put in units so far
     bool tables[NMODULES] = {false};
     int next = 0, jobs = o->jobs < 1 ? 1 : o->jobs > 64 ? 64 : o->jobs;
-    struct { PlatProc p; int unit; } run[64];
+    struct { PlatProc p; int unit; uint64_t t; } run[64];
     int nrun = 0;
     unsigned long long done_bytes = 0;
     double shown = 0;
@@ -348,9 +351,11 @@ bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size
                 if (r >= 0) {
                     g->exit = r;
                     read_gen_log(g);
-                    if (r != 0) {
-                        char last[300];
-                        log_tail(g->log, last, sizeof last);
+                    char last[300];
+                    log_tail(g->log, last, sizeof last);
+                    if (r == 0) {  // ("main: wrote N chunks, Ns total": ending late = the build waits on the generator)
+                        LOG("[gamebuild] %s, at %.0fs\n", last, (double)(plat_now_ns() - t0) / 1e9);
+                    } else {
                         LOG("[gamebuild] generator (%s) failed: %s\n", g->name, last);
                         snprintf(why, why_size, "the game code couldn't be prepared");
                         ok = false;
@@ -380,7 +385,7 @@ bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size
         while (nrun < jobs && next < units.n) {
             PlatProc p = start_compile(&t, &units.u[next]);
             if (!p) { snprintf(why, why_size, "the compiler didn't start"); ok = false; break; }
-            run[nrun].p = p, run[nrun].unit = next++;
+            run[nrun].p = p, run[nrun].unit = next++, run[nrun].t = plat_now_ns();
             nrun++;
         }
         for (int k = 0; k < nrun; k++) {
@@ -393,6 +398,11 @@ bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size
                 LOG("[gamebuild] compiling %s failed: %s\n", u->src, last);
                 snprintf(why, why_size, "the game code didn't compile");
                 ok = false;
+            }
+            double secs = (double)(plat_now_ns() - run[k].t) / 1e9;
+            if (secs >= 30) {  // (the slow ones: what the build's wall time waits on)
+                const char *name = strrchr(u->src, SEP[0]);
+                LOG("[gamebuild] %s: %llu KB, %.0fs\n", name ? name + 1 : u->src, u->bytes >> 10, secs);
             }
             done_bytes += u->bytes;
             if (run[k].unit > 0) remove(u->src);  // (generated C, done with: not kept. Unit 0 is the shipped entry file)
