@@ -603,7 +603,10 @@ static void tab_about(void) {
         snprintf(autol, sizeof autol, "Auto (%s)", fam[input_pad_family() % 3]);
         const char *names[] = {autol, "Nintendo", "Xbox", "PlayStation", "Keyboard"};
         choice("Button icons", &g_settings.prompts, names, 5);
+        static const char *const looks[] = {"Light (the game's own)", "Dark"};
+        choice("Button look", &g_settings.prompt_look, looks, 2);
     }
+    hint("Xbox, PlayStation and keyboard icons: light buttons like the game's own, or dark ones.");
     ImGui::Spacing();
     header("System language");
     {

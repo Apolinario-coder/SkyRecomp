@@ -1,7 +1,8 @@
 // Button prompt icons (prompt_icons.h): shapes as signed distances, antialiased over one pixel and painted at the
-// texture's own resolution. Controller buttons: a dark face inside a light rim, labelled in the button's own colours
-// (Xbox letters, PlayStation symbols) or white; keyboard keys: a light keycap with a dark label. mono: light buttons
-// with dark ink. Every shape gets a soft shadow under it, so the icons read on the game's light and dark panels.
+// texture's own resolution, in one of two looks: light (a white face in a thin dark rim, like the game's own buttons)
+// or dark (a DualShock's / an Xbox pad's). Labels: Xbox letters and PlayStation symbols in their colours, the rest in
+// the look's ink; keyboard keys are keycaps in the same look. mono: no colours. Every shape gets a soft shadow under
+// it, so the icons read on the game's light and dark panels.
 #include "prompt_icons.h"
 
 #include <ctype.h>
@@ -135,15 +136,17 @@ static int text_segs(const char *t, float cx, float cy, float cap, float max_w, 
 
 // ------------------------------------------------------------------ shapes
 typedef struct { float *px; int w, h; } Img;
-enum { SH_CIRCLE, SH_BOX, SH_CROSS, SH_SEGS, SH_TRI };
+enum { SH_CIRCLE, SH_BOX, SH_CROSS, SH_SEGS, SH_POLY };
 typedef struct Shape {
     int type;
     float cx, cy, hw, hh;      // centre, half size (circle: radius hw; cross: arms hw long, hh wide)
-    float r[4];                // corner radii: top-left, top-right, bottom-right, bottom-left; strokes: r[0] = radius
+    float r[4];                // corner radii: top-left, top-right, bottom-right, bottom-left; strokes, polygon: r[0]
     float edge;                // > 0: only an outline this wide, inside the shape
+    float pad;                 // shrunk by this much all round (inset)
+    float oy;                  // moved down by this much (a shadow)
     const Seg *seg;            // strokes (round-capped)
-    int n;
-    float t[6];                // triangle
+    int n;                     // strokes, or the polygon's corners
+    float t[12];               // a convex polygon's corners (x, y), grown by r[0] with round corners
     const struct Shape *clip;  // painted only inside this one too
 } Shape;
 
@@ -162,6 +165,7 @@ static float box_dist(float px, float py, float hw, float hh, const float *r) { 
 }
 
 static float sdist(const Shape *s, float x, float y) {  // signed distance, in pixels (negative inside)
+    y -= s->oy;
     float px = x - s->cx, py = y - s->cy, d;
     switch (s->type) {
     case SH_CIRCLE: d = hypotf(px, py) - s->hw; break;
@@ -172,35 +176,44 @@ static float sdist(const Shape *s, float x, float y) {  // signed distance, in p
         for (int i = 0; i < s->n; i++) d = fminf(d, seg_dist(x, y, &s->seg[i]));
         d -= s->r[0];
         break;
-    default: {  // triangle: the farthest of its edges' lines (exact enough near the edges, all that's needed)
+    default: {  // convex polygon: the distance to its outline, negative inside
         const float *t = s->t;
-        float o = (t[2] - t[0]) * (t[5] - t[1]) - (t[4] - t[0]) * (t[3] - t[1]) > 0 ? 1 : -1;
-        d = -1e9f;
-        for (int i = 0; i < 3; i++) {
-            float ax = t[2 * i], ay = t[2 * i + 1], ex = t[(2 * i + 2) % 6] - ax, ey = t[(2 * i + 3) % 6] - ay;
-            d = fmaxf(d, -o * (ex * (y - ay) - ey * (x - ax)) / hypotf(ex, ey));
+        float area = 0;
+        for (int i = 0; i < s->n; i++) {
+            int j = (i + 1) % s->n;
+            area += t[2 * i] * t[2 * j + 1] - t[2 * j] * t[2 * i + 1];
         }
+        bool in = true;
+        d = 1e9f;
+        for (int i = 0; i < s->n; i++) {
+            int j = (i + 1) % s->n;
+            Seg e = {t[2 * i], t[2 * i + 1], t[2 * j], t[2 * j + 1]};
+            d = fminf(d, seg_dist(x, y, &e));
+            in &= ((e.bx - e.ax) * (y - e.ay) - (e.by - e.ay) * (x - e.ax)) * area >= 0;
+        }
+        d = (in ? -d : d) - s->r[0];
     }
     }
+    d += s->pad;
     if (s->edge > 0) d = fabsf(d + s->edge / 2) - s->edge / 2;
     return s->clip ? fmaxf(d, sdist(s->clip, x, y)) : d;
 }
 
 static void bounds(const Shape *s, float b[4]) {
-    if (s->type == SH_SEGS || s->type == SH_TRI) {
+    if (s->type == SH_SEGS || s->type == SH_POLY) {
+        bool poly = s->type == SH_POLY;
         b[0] = b[1] = 1e9f, b[2] = b[3] = -1e9f;
-        for (int i = 0; i < (s->type == SH_TRI ? 3 : s->n * 2); i++) {
-            float x = s->type == SH_TRI ? s->t[2 * i] : i & 1 ? s->seg[i / 2].bx : s->seg[i / 2].ax;
-            float y = s->type == SH_TRI ? s->t[2 * i + 1] : i & 1 ? s->seg[i / 2].by : s->seg[i / 2].ay;
+        for (int i = 0; i < (poly ? s->n : s->n * 2); i++) {
+            float x = poly ? s->t[2 * i] : i & 1 ? s->seg[i / 2].bx : s->seg[i / 2].ax;
+            float y = poly ? s->t[2 * i + 1] : i & 1 ? s->seg[i / 2].by : s->seg[i / 2].ay;
             b[0] = fminf(b[0], x), b[1] = fminf(b[1], y), b[2] = fmaxf(b[2], x), b[3] = fmaxf(b[3], y);
         }
-        float m = s->type == SH_SEGS ? s->r[0] : 0;
-        b[0] -= m, b[1] -= m, b[2] += m, b[3] += m;
-        return;
+        b[0] -= s->r[0], b[1] -= s->r[0], b[2] += s->r[0], b[3] += s->r[0];
+    } else {
+        float ex = s->type == SH_CROSS ? fmaxf(s->hw, s->hh) : s->hw, ey = s->type == SH_BOX ? s->hh : ex;
+        b[0] = s->cx - ex, b[1] = s->cy - ey, b[2] = s->cx + ex, b[3] = s->cy + ey;
     }
-    float ex = s->type == SH_CROSS ? fmaxf(s->hw, s->hh) : s->hw, ey = s->type == SH_CIRCLE ? s->hw : ex;
-    if (s->type == SH_BOX) ey = s->hh;
-    b[0] = s->cx - ex, b[1] = s->cy - ey, b[2] = s->cx + ex, b[3] = s->cy + ey;
+    b[1] += s->oy, b[3] += s->oy;
 }
 
 // Paints s over the image in a gradient from top to bot down its height, with opacity a; soft: the edge's width
@@ -228,33 +241,42 @@ static Shape box(float cx, float cy, float hw, float hh, float rt, float rb) {
     return (Shape){.type = SH_BOX, .cx = cx, .cy = cy, .hw = hw, .hh = hh, .r = {rt, rt, rb, rb}};
 }
 static Shape tri(float x0, float y0, float x1, float y1, float x2, float y2) {
-    return (Shape){.type = SH_TRI, .t = {x0, y0, x1, y1, x2, y2}};
+    return (Shape){.type = SH_POLY, .n = 3, .t = {x0, y0, x1, y1, x2, y2}};
 }
-static Shape inset(Shape s, float t) {
-    s.hw -= t, s.hh -= t;
-    for (int k = 0; k < 4; k++) s.r[k] = fmaxf(s.r[k] - t, 0);
-    return s;
+static Shape inset(Shape s, float t) { s.pad += t; return s; }
+
+// An arrowhead at x, y pointing along ux, uy (a unit axis), q long
+static Shape arrowhead(float x, float y, float ux, float uy, float q) {
+    float bx = x - ux * q * 0.45f, by = y - uy * q * 0.45f, nx = -uy * q * 0.62f, ny = ux * q * 0.62f;
+    return tri(x + ux * q * 0.55f, y + uy * q * 0.55f, bx + nx, by + ny, bx - nx, by - ny);
 }
 
 // ------------------------------------------------------------------ looks
 #define C(r, g, b) {(r) / 255.0f, (g) / 255.0f, (b) / 255.0f}
-typedef struct { float rim[3], top[3], bot[3], ink[3], dim[3], accent[3]; } Pal;
-static const Pal k_dark = {C(228, 229, 234), C(74, 77, 87), C(30, 31, 36), C(246, 246, 248), C(122, 126, 136), C(232, 72, 64)};
-static const Pal k_mono = {C(62, 62, 68), C(252, 252, 252), C(208, 209, 214), C(30, 30, 34), C(140, 140, 146), C(30, 30, 34)};
+typedef struct {
+    float rim[3], top[3], bot[3], ink[3], dim[3], accent[3];
+    float face[2][4][3];  // face labels by Switch position (east, south, north, west): Xbox B A Y X, PS circle cross triangle square
+    float key_edge[3], key_side[3], key_side2[3], key_top[3], key_top2[3], key_ink[3];  // keycaps
+} Pal;
+// light: the game's own buttons (a white face, a thin dark rim, dark letters); dark: a DualShock's / an Xbox pad's
+static const Pal k_light = {
+    C(84, 86, 94), C(255, 255, 255), C(204, 206, 212), C(58, 60, 68), C(150, 152, 160), C(214, 52, 46),
+    {{C(214, 44, 40), C(52, 152, 44), C(222, 156, 0), C(34, 112, 214)},
+     {C(222, 62, 74), C(60, 112, 212), C(18, 158, 112), C(204, 82, 172)}},
+    C(52, 54, 60), C(178, 180, 188), C(136, 138, 146), C(255, 255, 255), C(222, 223, 228), C(46, 48, 54)};
+static const Pal k_dark = {
+    C(228, 229, 234), C(74, 77, 87), C(30, 31, 36), C(246, 246, 248), C(122, 126, 136), C(232, 72, 64),
+    {{C(240, 76, 66), C(104, 200, 64), C(250, 200, 40), C(64, 150, 240)},
+     {C(240, 100, 108), C(124, 170, 240), C(64, 214, 160), C(232, 128, 208)}},
+    C(10, 11, 14), C(64, 66, 74), C(34, 35, 40), C(96, 99, 110), C(62, 64, 72), C(242, 242, 246)};
 static const float k_black[3] = {0};
-// keycaps (light in both): outline, sides, top face, label
-static const float k_key_edge[3] = C(38, 39, 44), k_key_side[3] = C(160, 162, 170), k_key_side2[3] = C(112, 114, 122),
-                   k_key_top[3] = C(252, 252, 253), k_key_top2[3] = C(220, 221, 226), k_key_ink[3] = C(36, 37, 42);
-// by Switch position (east, south, north, west): Xbox B A Y X, PlayStation circle cross triangle square
-static const float k_xbox[4][3] = {C(240, 76, 66), C(104, 200, 64), C(250, 200, 40), C(64, 150, 240)};
-static const float k_ps[4][3] = {C(240, 100, 108), C(124, 170, 240), C(64, 214, 160), C(232, 128, 208)};
 
 static void shadow(Img *im, Shape s, float size) {
-    s.cy += size * 0.04f;
+    s.oy += size * 0.04f;
     paint(im, &s, k_black, k_black, 0.4f, fmaxf(1, size * 0.07f));
 }
 
-// A controller button: its shadow, the light rim, the dark face inside it (rim t wide)
+// A controller button: its shadow, the rim, the face inside it (rim t wide)
 static void button(Img *im, Shape s, float size, float t, const Pal *p) {
     shadow(im, s, size);
     paint(im, &s, p->rim, p->rim, 1, 1);
@@ -285,9 +307,9 @@ static void fit(float bw, float bh, float aspect, float *w, float *h) {  // (roo
 
 static void face(Img *im, float cx, float cy, float d, int label, int style, const Pal *p, bool mono) {
     float r = d * 0.45f;
-    button(im, circle(cx, cy, r), d, r * 0.1f, p);
+    button(im, circle(cx, cy, r), d, r * 0.09f, p);
     int i = label - R_A;
-    const float *col = mono || style == STYLE_NINTENDO ? p->ink : style == STYLE_XBOX ? k_xbox[i] : k_ps[i];
+    const float *col = mono || style == STYLE_NINTENDO ? p->ink : p->face[style == STYLE_PS][i];
     if (style == STYLE_PS) {
         static const Seg cross[2] = {{-.42f, -.42f, .42f, .42f}, {.42f, -.42f, -.42f, .42f}};
         static const Seg triangle[3] = {{0, -.54f, .52f, .32f}, {.52f, .32f, -.52f, .32f}, {-.52f, .32f, 0, -.54f}};
@@ -347,9 +369,10 @@ static void system_button(Img *im, float cx, float cy, float bw, float bh, int l
     }
 }
 
-static void stick_click(Img *im, float cx, float cy, float d, int label, int style, const Pal *p) {
+// A stick, or its click: the cap with a ring inside its rim, named as the controller names it (L3 / R3, LS / RS)
+static void stick(Img *im, float cx, float cy, float d, int label, int style, const Pal *p) {
     float r = d * 0.45f;
-    button(im, circle(cx, cy, r), d, r * 0.1f, p);
+    button(im, circle(cx, cy, r), d, r * 0.09f, p);
     Shape ring = circle(cx, cy, r * 0.74f);
     ring.edge = r * 0.07f;
     paint(im, &ring, p->dim, p->dim, 1, 1);
@@ -358,14 +381,15 @@ static void stick_click(Img *im, float cx, float cy, float d, int label, int sty
          r * 0.6f, r * 0.95f, p->ink);
 }
 
+static const float k_dirs[4][2] = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};  // up, down, left, right
+
 // The d-pad: a cross, the pressed arm lit (label L_DUP..L_DRIGHT; L_DPAD: none, all four arrows lit)
 static void dpad(Img *im, float cx, float cy, float d, int label, const Pal *p) {
     float L = d * 0.46f, a = d * 0.17f, rr = a * 0.5f, t = d * 0.035f;
     button(im, (Shape){.type = SH_CROSS, .cx = cx, .cy = cy, .hw = L, .hh = a, .r = {rr, rr, rr, rr}}, d, t, p);
-    static const float dir[4][2] = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};  // L_DUP, L_DDOWN, L_DLEFT, L_DRIGHT
     int lit = label - L_DUP < 4 ? label - L_DUP : -1;
     for (int i = 0; i < 4; i++) {
-        float ux = dir[i][0], uy = dir[i][1], m = (L + a) / 2 - t / 2, ex = cx + ux * m, ey = cy + uy * m;
+        float ux = k_dirs[i][0], uy = k_dirs[i][1], m = (L + a) / 2 - t / 2, ex = cx + ux * m, ey = cy + uy * m;
         if (i == lit) {
             float hl = (L - a) / 2 - t / 2, o = rr - t;
             Shape arm = box(ex, ey, ux ? hl : a - t, ux ? a - t : hl, 0, 0);
@@ -373,11 +397,35 @@ static void dpad(Img *im, float cx, float cy, float d, int label, const Pal *p) 
             arm.r[2] = uy > 0 || ux > 0 ? o : 0, arm.r[3] = uy > 0 || ux < 0 ? o : 0;
             paint(im, &arm, p->ink, p->ink, 1, 1);
         }
-        float q = a * 0.9f, bx = ex - ux * q * 0.45f, by = ey - uy * q * 0.45f, nx = -uy * q * 0.62f, ny = ux * q * 0.62f;
-        Shape arrow = tri(ex + ux * q * 0.55f, ey + uy * q * 0.55f, bx + nx, by + ny, bx - nx, by - ny);
+        Shape arrow = arrowhead(ex, ey, ux, uy, a * 0.9f);
         const float *c = i == lit ? p->bot : lit < 0 ? p->ink : p->dim;
         paint(im, &arrow, c, c, 1, 1);
     }
+}
+
+// One d-pad button by itself, pointing away from the d-pad's centre with an arrow on it: the HUD's four panes make
+// the d-pad. On PlayStation its inner end is a point, as each of a DualShock's four direction buttons is.
+static void arm(Img *im, float cx, float cy, float d, int dir, int style, const Pal *p) {
+    float ux = k_dirs[dir][0], uy = k_dirs[dir][1], nx = -uy, ny = ux;
+    float L = d * 0.86f, hv = d * 0.28f, rr = hv * 0.32f, a = L / 2 - rr, v = hv - rr, q = rr * 1.4142f;
+    // its outline, along the arm (u: outward) and across it (v), shrunk by the corners' radius rr
+    float uv[5][2] = {{a, -v}, {a, v}, {-a, v}, {-a, -v}};
+    int n = 4;
+    if (style == STYLE_PS) {  // (the point's sides at 45 degrees)
+        uv[2][0] = uv[3][0] = hv - L / 2 - rr + q;
+        uv[4][0] = -L / 2 + q, uv[4][1] = 0;
+        n = 5;
+    }
+    static const int order[5] = {0, 1, 2, 4, 3};  // (round the outline: the point between the inner corners)
+    Shape b = {.type = SH_POLY, .n = n, .r = {rr}};
+    for (int i = 0; i < n; i++) {
+        const float *c = uv[n == 5 ? order[i] : i];
+        b.t[2 * i] = cx + ux * c[0] + nx * c[1], b.t[2 * i + 1] = cy + uy * c[0] + ny * c[1];
+    }
+    button(im, b, d, d * 0.04f, p);
+    float uc = style == STYLE_PS ? hv / 2 : 0, m = uc + L * 0.05f;
+    Shape arrow = arrowhead(cx + ux * m, cy + uy * m, ux, uy, hv * 0.85f);
+    paint(im, &arrow, p->ink, p->ink, 1, 1);
 }
 
 // ------------------------------------------------------------------ keyboard
@@ -411,75 +459,77 @@ static const char *key_label(int sc, char *buf, size_t n) {  // a key's text in 
     return i ? buf : "?";
 }
 
-static void keycap(Img *im, float cx, float cy, float kw, float kh, const char *label, float cap) {  // (cap: of kh)
-    Shape o = box(cx, cy, kw / 2, kh / 2, kh * 0.2f, kh * 0.2f);
+static void keycap(Img *im, float cx, float cy, float kw, float kh, const char *label, float cap, const Pal *p) {
+    Shape o = box(cx, cy, kw / 2, kh / 2, kh * 0.2f, kh * 0.2f);  // (cap: of kh)
     shadow(im, o, kh);
-    paint(im, &o, k_key_edge, k_key_edge, 1, 1);
+    paint(im, &o, p->key_edge, p->key_edge, 1, 1);
     Shape side = inset(o, kh * 0.05f);
-    paint(im, &side, k_key_side, k_key_side2, 1, 1);
+    paint(im, &side, p->key_side, p->key_side2, 1, 1);
     float tt = kh * 0.08f, tb = kh * 0.2f;  // the top face: inset more at the bottom (the key's front)
     Shape top = box(cx, cy + (tt - tb) / 2, kw / 2 - kh * 0.11f, kh / 2 - (tt + tb) / 2, kh * 0.13f, kh * 0.13f);
-    paint(im, &top, k_key_top, k_key_top2, 1, 1);
-    text(im, label, top.cx, top.cy, kh * cap, top.hw * 1.64f, k_key_ink);
+    paint(im, &top, p->key_top, p->key_top2, 1, 1);
+    text(im, label, top.cx, top.cy, kh * cap, top.hw * 1.64f, p->key_ink);
 }
 
-static void mouse(Img *im, float cx, float cy, float d, int button, const Pal *p) {
+static void mouse(Img *im, float cx, float cy, float d, int button, const Pal *p, bool mono) {
     float hw = d * 0.27f, hh = d * 0.42f, t = d * 0.04f, split = cy - hh * 0.12f;
+    const float *accent = mono ? p->key_ink : p->accent;
     Shape m = box(cx, cy, hw, hh, hw, hw * 0.8f);
     shadow(im, m, d);
-    paint(im, &m, k_key_edge, k_key_edge, 1, 1);
+    paint(im, &m, p->key_edge, p->key_edge, 1, 1);
     Shape in = inset(m, t);
-    paint(im, &in, k_key_top, k_key_top2, 1, 1);
+    paint(im, &in, p->key_top, p->key_top2, 1, 1);
     if (button == SDL_BUTTON_LEFT || button == SDL_BUTTON_RIGHT) {  // the clicked half of the top, lit
         float l = button == SDL_BUTTON_LEFT ? -1 : 1;
         Shape half = box(cx + l * hw / 2, (cy - hh + split) / 2, hw / 2, (split - cy + hh) / 2, 0, 0);
         half.clip = &in;
-        paint(im, &half, p->accent, p->accent, 1, 1);
+        paint(im, &half, accent, accent, 1, 1);
     }
     Seg s[2] = {{cx, cy - hh, cx, split}, {cx - hw, split, cx + hw, split}};
     Shape sh = {.type = SH_SEGS, .seg = s, .n = 2, .r = {t * 0.55f}};
-    paint(im, &sh, k_key_edge, k_key_edge, 1, 1);
+    paint(im, &sh, p->key_edge, p->key_edge, 1, 1);
     Shape wheel = box(cx, (cy - hh + split) / 2 + t, t * 1.2f, hh * 0.17f, t * 1.2f, t * 1.2f);
-    const float *wc = button == SDL_BUTTON_MIDDLE ? p->accent : k_key_edge;
+    const float *wc = button == SDL_BUTTON_MIDDLE ? accent : p->key_edge;
     paint(im, &wheel, wc, wc, 1, 1);
 }
 
-static void key(Img *im, float cx, float cy, float bw, float bh, int sc, const Pal *p) {
-    if (sc > 512 && sc <= 512 + SDL_BUTTON_RIGHT) { mouse(im, cx, cy, fminf(bw, bh), sc - 512, p); return; }
+static void key(Img *im, float cx, float cy, float bw, float bh, int sc, const Pal *p, bool mono) {
+    if (sc > 512 && sc <= 512 + SDL_BUTTON_RIGHT) { mouse(im, cx, cy, fminf(bw, bh), sc - 512, p, mono); return; }
     char buf[24];
     const char *t = key_label(sc, buf, sizeof buf);
     size_t n = strlen(t);
     float w, h;
     fit(bw, bh, n <= 1 ? 1 : n == 2 ? 1.25f : n == 3 ? 1.5f : n == 4 ? 1.8f : 1.95f, &w, &h);
-    keycap(im, cx, cy, w, h, t, n > 1 ? 0.3f : 0.4f);
+    keycap(im, cx, cy, w, h, t, n > 1 ? 0.3f : 0.4f, p);
 }
 
-static void cluster(Img *im, float cx, float cy, float bw, float bh, const int keys[4]) {  // up, left, down, right
+static void cluster(Img *im, float cx, float cy, float bw, float bh, const int keys[4], const Pal *p) {  // up, left, down, right
     float k = fminf(bw * 0.92f / 3.1f, bh * 0.9f / 2.05f), g = k * 0.05f;
     static const float at[4][2] = {{0, -1}, {-1, 1}, {0, 1}, {1, 1}};
     for (int i = 0; i < 4; i++) {
         char buf[24];
         const char *t = key_label(keys[i], buf, sizeof buf);
-        keycap(im, cx + at[i][0] * (k + g), cy + at[i][1] * (k + g) / 2, k, k, t, strlen(t) > 1 ? 0.36f : 0.52f);
+        keycap(im, cx + at[i][0] * (k + g), cy + at[i][1] * (k + g) / 2, k, k, t, strlen(t) > 1 ? 0.36f : 0.52f, p);
     }
 }
 
 void prompt_icon(float *px, int w, int h, float x, float y, float bw, float bh, int style, int label, const int keys[4],
-                 bool mono) {
+                 bool mono, bool dark) {
     Img im = {px, w, h};
-    const Pal *p = mono ? &k_mono : &k_dark;
+    const Pal *p = dark ? &k_dark : &k_light;
     float cx = x + bw / 2, cy = y + bh / 2, d = fminf(bw, bh);
     if (style == STYLE_KEYBOARD) {
-        if (label == L_LS || label == L_RS || label == L_DPAD) cluster(&im, cx, cy, bw, bh, keys);
-        else key(&im, cx, cy, bw, bh, keys[0], p);
+        if (label == L_LS || label == L_RS || label == L_DPAD) cluster(&im, cx, cy, bw, bh, keys, p);
+        else key(&im, cx, cy, bw, bh, keys[0], p, mono);
     } else if (label >= R_A && label <= R_Y) face(&im, cx, cy, d, label, style, p, mono);
     else if (label >= R_L && label <= R_ZR) shoulder(&im, cx, cy, bw, bh, label, style, p);
     else if (label == R_PLUS || label == R_MINUS) system_button(&im, cx, cy, bw, bh, label, style, p);
-    else if (label == L_LS || label == L_RS) stick_click(&im, cx, cy, d, label, style, p);
+    else if (label == L_LS || label == L_RS) stick(&im, cx, cy, d, label, style, p);
     else if ((label >= L_DUP && label <= L_DRIGHT) || label == L_DPAD) dpad(&im, cx, cy, d, label, p);
+    else if (label >= L_ARM_UP && label <= L_ARM_RIGHT) arm(&im, cx, cy, d, label - L_ARM_UP, style, p);
     else {  // another button (a paddle): a dot
         float r = d * 0.45f;
-        button(&im, circle(cx, cy, r), d, r * 0.1f, p);
+        button(&im, circle(cx, cy, r), d, r * 0.09f, p);
         Shape dot = circle(cx, cy, r * 0.24f);
         paint(&im, &dot, p->ink, p->ink, 1, 1);
     }

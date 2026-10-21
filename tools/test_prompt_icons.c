@@ -1,6 +1,6 @@
-// Every button prompt icon (runtime/nvn/prompt_icons.c) on one sheet, build/prompt_icons.png: each style on a dark
-// and a light tile, the intensity-only (mono) look, 44 px versions, and the keyboard font. Fails if an icon draws
-// nothing or runs off its texture.
+// Every button prompt icon (runtime/nvn/prompt_icons.c), one sheet per look (build/prompt_icons_light.png, _dark.png):
+// each style on the game's parchment and on its dark boxes, the intensity-only (mono) look, the HUD's d-pad as its
+// four panes, 44 px versions and the keyboard font. Fails if an icon draws nothing or runs off its texture.
 // clang -O1 -Iruntime tools/test_prompt_icons.c -lSDL3 -lm -o build/test_prompt_icons && build/test_prompt_icons
 #include <assert.h>
 #include <stdint.h>
@@ -8,16 +8,23 @@
 
 #include "../runtime/nvn/prompt_icons.c"
 
-#define COLS 18
+#define COLS 22
 #define TILE 96
 
 static uint8_t *g_sheet;
 static int g_w, g_h;
+static const uint8_t k_bg[2][3] = {{40, 44, 56}, {226, 214, 186}};  // the game's dark boxes, its parchment
 
-// One icon, drawn the way texpatch.c does (its own w x h canvas, the glyph filling it), onto tile col, row
-static void cell(int col, int row, int size, int style, int label, const int keys[4], bool mono, bool light) {
+static void tile(int col, int row, bool light) {
+    for (int y = 0; y < TILE; y++)
+        for (int x = 0; x < TILE; x++) memcpy(g_sheet + ((size_t)(row * TILE + y) * g_w + col * TILE + x) * 3, k_bg[light], 3);
+}
+
+// One icon, drawn the way texpatch.c does (its own size x size canvas, the glyph filling it), over tile col, row with
+// its centre at cx, cy. Fails if it draws nothing or runs off its canvas.
+static void icon(int col, int row, int cx, int cy, int size, int style, int label, const int keys[4], bool mono, bool dark) {
     float *px = calloc((size_t)size * size * 4, sizeof(float));
-    prompt_icon(px, size, size, 0, 0, (float)size, (float)size, style, label, keys, mono);
+    prompt_icon(px, size, size, 0, 0, (float)size, (float)size, style, label, keys, mono, dark);
     float most = 0, edge = 0;
     for (int y = 0; y < size; y++)
         for (int x = 0; x < size; x++) {
@@ -29,20 +36,20 @@ static void cell(int col, int row, int size, int style, int label, const int key
         fprintf(stderr, "style %d label %d size %d: coverage %.2f, at the edge %.2f\n", style, label, size, most, edge);
         assert(0);
     }
-    const uint8_t bg[2][3] = {{40, 44, 56}, {226, 214, 186}};
-    int ox = col * TILE + (TILE - size) / 2, oy = row * TILE + (TILE - size) / 2;
-    for (int y = 0; y < TILE; y++)
-        for (int x = 0; x < TILE; x++) {
-            uint8_t *d = g_sheet + ((size_t)(row * TILE + y) * g_w + col * TILE + x) * 3;
-            int ix = col * TILE + x - ox, iy = row * TILE + y - oy;
-            const float *s = ix >= 0 && iy >= 0 && ix < size && iy < size ? px + (iy * size + ix) * 4 : NULL;
-            for (int k = 0; k < 3; k++) {
-                float b = bg[light][k] / 255.0f, v = s ? s[k] + b * (1 - s[3]) : b;
-                if (mono && s) v = (s[0] * 0.299f + s[1] * 0.587f + s[2] * 0.114f) + b * (1 - s[3]);
-                d[k] = (uint8_t)lroundf(sat(v) * 255);
-            }
+    for (int y = 0; y < size; y++)
+        for (int x = 0; x < size; x++) {
+            int X = col * TILE + cx - size / 2 + x, Y = row * TILE + cy - size / 2 + y;
+            uint8_t *d = g_sheet + ((size_t)Y * g_w + X) * 3;
+            const float *s = px + (y * size + x) * 4;
+            float lum = s[0] * 0.299f + s[1] * 0.587f + s[2] * 0.114f;
+            for (int k = 0; k < 3; k++) d[k] = (uint8_t)lroundf(sat((mono ? lum : s[k]) + d[k] / 255.0f * (1 - s[3])) * 255);
         }
     free(px);
+}
+
+static void cell(int col, int row, int size, int style, int label, const int keys[4], bool mono, bool dark, bool light) {
+    tile(col, row, light);
+    icon(col, row, TILE / 2, TILE / 2, size, style, label, keys, mono, dark);
 }
 
 // ------------------------------------------------------------------ PNG (stored deflate: no zlib needed)
@@ -98,9 +105,10 @@ static void write_png(const char *path, const uint8_t *rgb, int w, int h) {
     free(z);
 }
 
-int main(void) {
-    static const int labels[COLS] = {R_A, R_B, R_X, R_Y, R_L, R_R, R_ZL, R_ZR, R_PLUS, R_MINUS,
-                                     L_LS, L_RS, L_DUP, L_DDOWN, L_DLEFT, L_DRIGHT, L_DPAD, L_OTHER};
+static void sheet(bool dark, const char *path) {
+    static const int labels[COLS] = {R_A, R_B, R_X, R_Y, R_L, R_R, R_ZL, R_ZR, R_PLUS, R_MINUS, L_LS, L_RS,
+                                     L_DUP, L_DDOWN, L_DLEFT, L_DRIGHT, L_DPAD, L_OTHER,
+                                     L_ARM_UP, L_ARM_DOWN, L_ARM_LEFT, L_ARM_RIGHT};
     // the default keyboard bindings (runtime/hle/bindings.c), in label order; L_OTHER: Space
     static const int keys[COLS][4] = {
         {SDL_SCANCODE_K}, {SDL_SCANCODE_J}, {SDL_SCANCODE_I}, {SDL_SCANCODE_L}, {SDL_SCANCODE_Q}, {SDL_SCANCODE_E},
@@ -108,33 +116,52 @@ int main(void) {
         {SDL_SCANCODE_W, SDL_SCANCODE_A, SDL_SCANCODE_S, SDL_SCANCODE_D},
         {SDL_SCANCODE_KP_8, SDL_SCANCODE_KP_4, SDL_SCANCODE_KP_5, SDL_SCANCODE_KP_6},
         {SDL_SCANCODE_UP}, {SDL_SCANCODE_DOWN}, {SDL_SCANCODE_LEFT}, {SDL_SCANCODE_RIGHT},
-        {SDL_SCANCODE_UP, SDL_SCANCODE_LEFT, SDL_SCANCODE_DOWN, SDL_SCANCODE_RIGHT}, {SDL_SCANCODE_SPACE}};
+        {SDL_SCANCODE_UP, SDL_SCANCODE_LEFT, SDL_SCANCODE_DOWN, SDL_SCANCODE_RIGHT}, {SDL_SCANCODE_SPACE},
+        {SDL_SCANCODE_UP}, {SDL_SCANCODE_DOWN}, {SDL_SCANCODE_LEFT}, {SDL_SCANCODE_RIGHT}};
     static const int extra[COLS] = {SDL_SCANCODE_LSHIFT, SDL_SCANCODE_LCTRL, SDL_SCANCODE_LALT, SDL_SCANCODE_TAB,
                                     SDL_SCANCODE_ESCAPE, SDL_SCANCODE_CAPSLOCK, SDL_SCANCODE_F1, SDL_SCANCODE_F12,
                                     SDL_SCANCODE_PAGEUP, SDL_SCANCODE_DELETE, SDL_SCANCODE_SEMICOLON,
                                     SDL_SCANCODE_SLASH, SDL_SCANCODE_LEFTBRACKET, SDL_SCANCODE_EQUALS,
                                     512 + SDL_BUTTON_LEFT, 512 + SDL_BUTTON_RIGHT, 512 + SDL_BUTTON_MIDDLE,
-                                    512 + SDL_BUTTON_X1};
+                                    512 + SDL_BUTTON_X1, SDL_SCANCODE_SPACE, SDL_SCANCODE_KP_0, SDL_SCANCODE_F,
+                                    SDL_SCANCODE_RETURN};
     int rows = 15;
     g_w = COLS * TILE, g_h = rows * TILE;
     g_sheet = calloc((size_t)g_w * g_h, 3);
     int row = 0;
-    for (int light = 0; light < 2; light++)
+    for (int light = 1; light >= 0; light--)
         for (int s = STYLE_XBOX; s <= STYLE_KEYBOARD; s++, row++)
-            for (int c = 0; c < COLS; c++) cell(c, row, 88, s, labels[c], keys[c], false, light);
-    for (int c = 0; c < COLS; c++) cell(c, row, 88, STYLE_NINTENDO, labels[c], keys[c], false, false);
+            for (int c = 0; c < COLS; c++) cell(c, row, 88, s, labels[c], keys[c], false, dark, light);
+    for (int c = 0; c < COLS; c++) cell(c, row, 88, STYLE_NINTENDO, labels[c], keys[c], false, dark, true);
     row++;
-    for (int s = STYLE_XBOX; s <= STYLE_PS; s++, row++)
-        for (int c = 0; c < COLS; c++) cell(c, row, 88, s, labels[c], keys[c], true, false);
-    for (int s = STYLE_XBOX; s <= STYLE_KEYBOARD; s++, row++)
-        for (int c = 0; c < COLS; c++) cell(c, row, 44, s, labels[c], keys[c], false, false);
-    for (int c = 0; c < COLS; c++) cell(c, row, 88, STYLE_KEYBOARD, R_A, (int[4]){extra[c]}, false, false);
+    for (int c = 0; c < COLS; c++) cell(c, row, 88, STYLE_PS, labels[c], keys[c], true, dark, true);  // (mono)
     row++;
-    for (int i = 0; i < 36 && row + i / COLS < rows; i++) {
-        int k = i < 26 ? SDL_SCANCODE_A + i : i == 26 ? SDL_SCANCODE_0 : SDL_SCANCODE_1 + i - 27;
-        cell(i % COLS, row + i / COLS, 88, STYLE_KEYBOARD, R_A, (int[4]){k}, false, true);
+    // the HUD's d-pad: four panes, one arm each, around a centre
+    for (int c = 0; c < COLS; c++) tile(c, row, c >= 6 || c % 2);
+    for (int c = 0; c < 6; c++) {
+        static const int at[4][2] = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
+        int style = c / 2 == 0 ? STYLE_PS : c / 2 == 1 ? STYLE_XBOX : STYLE_KEYBOARD;
+        for (int a = 0; a < 4; a++)
+            icon(c, row, TILE / 2 + at[a][0] * 27, TILE / 2 + at[a][1] * 27, 36, style,
+                 style == STYLE_KEYBOARD ? L_DUP + a : L_ARM_UP + a, keys[12 + a], false, dark);
     }
-    write_png("build/prompt_icons.png", g_sheet, g_w, g_h);
-    printf("build/prompt_icons.png: %d icons, all drawn inside their textures\n", rows * COLS);
+    row++;
+    for (int s = STYLE_XBOX; s <= STYLE_KEYBOARD; s++, row++)
+        for (int c = 0; c < COLS; c++) cell(c, row, 44, s, labels[c], keys[c], false, dark, s != STYLE_PS);
+    for (int c = 0; c < COLS; c++) cell(c, row, 88, STYLE_KEYBOARD, R_A, (int[4]){extra[c]}, false, dark, false);
+    row++;
+    for (int i = 0; i < 36; i++) {
+        int k = i < 26 ? SDL_SCANCODE_A + i : i == 26 ? SDL_SCANCODE_0 : SDL_SCANCODE_1 + i - 27;
+        cell(i % COLS, row + i / COLS, 88, STYLE_KEYBOARD, R_A, (int[4]){k}, false, dark, true);
+    }
+    for (int i = 36; i < 2 * COLS; i++) tile(i % COLS, row + i / COLS, true);
+    write_png(path, g_sheet, g_w, g_h);
+    free(g_sheet);
+    printf("%s: every icon drawn inside its texture\n", path);
+}
+
+int main(void) {
+    sheet(false, "build/prompt_icons_light.png");
+    sheet(true, "build/prompt_icons_dark.png");
     return 0;
 }
