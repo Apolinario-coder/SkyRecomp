@@ -213,6 +213,7 @@ static void log_tail(const char *path, char *out, size_t n) {  // the last line 
 typedef struct {
     char src[1100], obj[1100], log[1100];
     unsigned long long bytes;
+    bool o0;  // compiled again at -O0: it outlasted the -O1 budget (gamebuild_run)
 } Unit;
 
 typedef struct {
@@ -231,11 +232,17 @@ static void add_unit(Units *us, const char *src, const char *work, const char *s
     snprintf(u->log, sizeof u->log, "%s" SEP "%s.log", work, stem);
     struct stat st;
     u->bytes = stat(src, &st) == 0 ? (unsigned long long)st.st_size : 0;
+    u->o0 = false;
+}
+
+static const char *file_name(const char *path) {  // (for the log)
+    const char *s = strrchr(path, SEP[0]);
+    return s ? s + 1 : path;
 }
 
 // The flags the game code was built with (GAMELIB_CFLAGS, part of its id). zig cc reads -march=<cpu> with its own CPU
 // names (x86_64_v3) and takes "-<feature>" off the end, so x86-64-v3 would be CPU "x86": the same CPU as -mcpu there.
-static void add_cflags(Args *a, const Tools *t) {
+static void add_cflags(Args *a, const Tools *t, bool o0) {
     char buf[1024];
     snprintf(buf, sizeof buf, "%s", GAMELIB_CFLAGS);
     for (char *f = strtok(buf, " "); f; f = strtok(NULL, " ")) {
@@ -244,6 +251,9 @@ static void add_cflags(Args *a, const Tools *t) {
             snprintf(cpu, sizeof cpu, "-mcpu=%s", f + 7);
             for (char *c = cpu + 6; *c; c++) if (*c == '-') *c = '_';
             add(a, cpu);
+        } else if (o0 && !strcmp(f, "-O1")) {  // (zig cc's -O0 is its Debug mode, which turns UBSan on: off again)
+            add(a, "-O0");
+            add(a, "-fno-sanitize=undefined");
         } else {
             add(a, f);
             // zig cc reads -O1 as ReleaseFast, which compiles C at clang -O2 (+ vectorizers): far slower on the
@@ -267,7 +277,7 @@ static void add_cflags(Args *a, const Tools *t) {
 static PlatProc start_compile(const Tools *t, const Unit *u) {
     Args a = {0};
     compiler(&a, t);
-    add_cflags(&a, t);
+    add_cflags(&a, t, u->o0);
     char inc[1200];
     snprintf(inc, sizeof inc, "-I%s", t->inc);
     add(&a, inc);
@@ -344,6 +354,18 @@ bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size
     int next = 0, jobs = o->jobs < 1 ? 1 : o->jobs > 64 ? 64 : o->jobs;
     struct { PlatProc p; int unit; uint64_t t; } run[64];
     int nrun = 0;
+    // A file still compiling at -O1 after this long starts again at -O0, done in seconds: a few giant functions spend
+    // most of an hour in LLVM's loop passes (main_515.c, 3.8 MB: 37 min alone - LICM even without promotion, and
+    // LoopLoadElimination, which no option caps) and the build waited on them. Those functions run unoptimized.
+    // ponytail: a fixed budget, so a slower machine sends more files to -O0; LARECOMP_GAMEBUILD_BUDGET=<s>, 0 = never.
+    // Off on Windows: killing zig cc there leaves its compiler running (runtime/platform/windows.c ends a job's
+    // processes only with the app), and its release ships the library built.
+    const char *be = getenv("LARECOMP_GAMEBUILD_BUDGET");
+#ifdef _WIN32
+    double budget = be ? atof(be) : 0;
+#else
+    double budget = be ? atof(be) : 300;
+#endif
     unsigned long long done_bytes = 0;
     double shown = 0;
     {
@@ -401,8 +423,18 @@ bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size
         }
         for (int k = 0; k < nrun; k++) {
             int r = finished(run[k].p);
-            if (r < 0) continue;
             Unit *u = &units.u[run[k].unit];
+            if (r < 0) {
+                if (budget > 0 && !u->o0 && (double)(plat_now_ns() - run[k].t) / 1e9 > budget) {
+                    stop(run[k].p);
+                    u->o0 = true;
+                    LOG("[gamebuild] %s: over %.0fs at -O1, compiling it at -O0\n", file_name(u->src), budget);
+                    PlatProc p = start_compile(&t, u);
+                    if (!p) { snprintf(why, why_size, "the compiler didn't start"); ok = false; break; }
+                    run[k].p = p, run[k].t = plat_now_ns();
+                }
+                continue;
+            }
             if (r != 0) {
                 char last[300];
                 log_tail(u->log, last, sizeof last);
@@ -411,10 +443,8 @@ bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size
                 ok = false;
             }
             double secs = (double)(plat_now_ns() - run[k].t) / 1e9;
-            if (secs >= 30) {  // (the slow ones: what the build's wall time waits on)
-                const char *name = strrchr(u->src, SEP[0]);
-                LOG("[gamebuild] %s: %llu KB, %.0fs\n", name ? name + 1 : u->src, u->bytes >> 10, secs);
-            }
+            if (secs >= 30)  // (the slow ones: what the build's wall time waits on)
+                LOG("[gamebuild] %s: %llu KB, %.0fs%s\n", file_name(u->src), u->bytes >> 10, secs, u->o0 ? " at -O0" : "");
             done_bytes += u->bytes;
             if (run[k].unit > 0) remove(u->src);  // (generated C, done with: not kept. Unit 0 is the shipped entry file)
             run[k--] = run[--nrun];
