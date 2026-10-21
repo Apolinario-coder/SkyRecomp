@@ -911,6 +911,24 @@ static void prelaunch_tab(float sc) {
             ImGui::CloseCurrentPopup();
         ImGui::EndPopup();
     }
+    if (build_choice_shown()) {  // (the choice applies to the next build: Rebuild makes one now)
+        ImGui::Spacing();
+        ImGui::Spacing();
+        heading("Game code");
+        ImGui::SetNextItemWidth(260 * sc);
+        if (ImGui::Combo("##gamebuild", &g_settings.game_build, BUILD_NAMES, 2)) settings_save();
+        ImGui::SameLine();
+        if (ImGui::Button("Rebuild game code")) {  // (deleted first: the start screen then builds it, as Set up does)
+            rt_remove_game_file(g_root.c_str(), GAMELIB_NAME);
+            rt_remove_game_file(g_root.c_str(), GAMELIB_NAME ".id");
+            g_files_deleted = true;
+            start_setup();
+        }
+        ImGui::PushTextWrapPos(0);
+        ImGui::TextDisabled("%s", BUILD_DESC);
+        ImGui::TextDisabled("Rebuild compiles it again from the copied game files, the way chosen here.");
+        ImGui::PopTextWrapPos();
+    }
     ImGui::Spacing();
     ImGui::Spacing();
     heading("Game font");
@@ -1434,17 +1452,6 @@ extern "C" void launcher_run(const char *root) {
                     char gb[32];
                     snprintf(gb, sizeof gb, "%.1f GB", files_gb);
                     opt_section("Manage Game Files");
-                    if (!g_confirm_delete && build_choice_shown()) {  // (the choice applies to the next build: Rebuild now)
-                        if (opt_choice("Game code", &g_settings.game_build, BUILD_NAMES, 2, GAME_BUILD_FAST, BUILD_DESC))
-                            settings_save();
-                        if (opt_action("Rebuild game code", "", "Compiles the game code again from the copied game files, "
-                                       "the way chosen above. It takes as long as the first build did.", true)) {
-                            rt_remove_game_file(g_root.c_str(), GAMELIB_NAME);
-                            rt_remove_game_file(g_root.c_str(), GAMELIB_NAME ".id");
-                            status = check_game_files(g_root);
-                            start_setup();
-                        }
-                    }
                     if (!g_confirm_delete) {
                         if (opt_action("Delete game files", gb, "Frees the space Sky Recomp's copy of the game files takes. "
                                        "Saves, seeds and settings are kept, and your own game files aren't touched: you can "
