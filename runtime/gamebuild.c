@@ -242,7 +242,7 @@ static const char *file_name(const char *path) {  // (for the log)
 
 // The flags the game code was built with (GAMELIB_CFLAGS, part of its id). zig cc reads -march=<cpu> with its own CPU
 // names (x86_64_v3) and takes "-<feature>" off the end, so x86-64-v3 would be CPU "x86": the same CPU as -mcpu there.
-static void add_cflags(Args *a, const Tools *t, bool o0) {
+static void add_cflags(Args *a, const Tools *t, bool o0, bool caps) {
     char buf[1024];
     snprintf(buf, sizeof buf, "%s", GAMELIB_CFLAGS);
     for (char *f = strtok(buf, " "); f; f = strtok(NULL, " ")) {
@@ -263,21 +263,22 @@ static void add_cflags(Args *a, const Tools *t, bool o0) {
                 // A function over 100 KB of C (a file of its own: tools/gen.py --big-fn) spent minutes in three LLVM
                 // passes - sdk_070.c (364 KB): LICM's promotion 53%, the register coalescer 25%, CodeGenPrepare 10%,
                 // 280 s; with these caps 37 s (zig 0.17's clang 22, -ftime-report). Only zig: its clang is pinned, so
-                // these hidden options exist. ponytail: promotion is off in every function, not only the giant ones;
-                // apply it to those files alone if it costs frame time.
-                static const char *const caps[] = {"-disable-licm-promotion", "-licm-mssa-optimization-cap=10",
-                                                   "-large-interval-size-threshold=20", "-large-interval-freq-threshold=20",
-                                                   "-cgpp-huge-func=1000"};
-                for (size_t i = 0; i < sizeof caps / sizeof *caps; i++) add(a, "-mllvm"), add(a, caps[i]);
+                // these hidden options exist. The fast build only (GameBuildOpts.optimized: every file at full -O1).
+                // ponytail: promotion is off in every function, not only the giant ones; apply it to those files
+                // alone if it costs frame time.
+                static const char *const cap[] = {"-disable-licm-promotion", "-licm-mssa-optimization-cap=10",
+                                                  "-large-interval-size-threshold=20", "-large-interval-freq-threshold=20",
+                                                  "-cgpp-huge-func=1000"};
+                for (size_t i = 0; caps && i < sizeof cap / sizeof *cap; i++) add(a, "-mllvm"), add(a, cap[i]);
             }
         }
     }
 }
 
-static PlatProc start_compile(const Tools *t, const Unit *u) {
+static PlatProc start_compile(const Tools *t, const Unit *u, bool caps) {
     Args a = {0};
     compiler(&a, t);
-    add_cflags(&a, t, u->o0);
+    add_cflags(&a, t, u->o0, caps);
     char inc[1200];
     snprintf(inc, sizeof inc, "-I%s", t->inc);
     add(&a, inc);
@@ -320,8 +321,8 @@ bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size
         setenv("ZIG_LOCAL_CACHE_DIR", zc, 1);
 #endif
     }
-    LOG("[gamebuild] generator %s%s%s, compiler %s%s, %d jobs\n", t.gen, t.gen_script[0] ? " " : "", t.gen_script,
-        t.cc, t.zig ? " cc" : "", o->jobs);
+    LOG("[gamebuild] generator %s%s%s, compiler %s%s, %d jobs, %s\n", t.gen, t.gen_script[0] ? " " : "", t.gen_script,
+        t.cc, t.zig ? " cc" : "", o->jobs, o->optimized ? "faster game" : "faster build");
 
     // 1. Generate all four Skyward Sword modules, compiling finished files as they arrive.
     enum { NMODULES = 4 };
@@ -358,14 +359,15 @@ bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size
     // most of an hour in LLVM's loop passes (main_515.c, 3.8 MB: 37 min alone - LICM even without promotion, and
     // LoopLoadElimination, which no option caps) and the build waited on them. Those functions run unoptimized.
     // ponytail: a fixed budget, so a slower machine sends more files to -O0; LARECOMP_GAMEBUILD_BUDGET=<s>, 0 = never.
-    // Off on Windows: killing zig cc there leaves its compiler running (runtime/platform/windows.c ends a job's
-    // processes only with the app), and its release ships the library built.
+    // The fast build only (o->optimized: none). Off on Windows: killing zig cc there leaves its compiler running
+    // (runtime/platform/windows.c ends a job's processes only with the app), and its release ships the library built.
     const char *be = getenv("LARECOMP_GAMEBUILD_BUDGET");
 #ifdef _WIN32
     double budget = be ? atof(be) : 0;
 #else
-    double budget = be ? atof(be) : 300;
+    double budget = be ? atof(be) : o->optimized ? 0 : 300;
 #endif
+    bool caps = !o->optimized;
     unsigned long long done_bytes = 0;
     double shown = 0;
     {
@@ -416,7 +418,7 @@ bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size
 
         // compiles
         while (nrun < jobs && next < units.n) {
-            PlatProc p = start_compile(&t, &units.u[next]);
+            PlatProc p = start_compile(&t, &units.u[next], caps);
             if (!p) { snprintf(why, why_size, "the compiler didn't start"); ok = false; break; }
             run[nrun].p = p, run[nrun].unit = next++, run[nrun].t = plat_now_ns();
             nrun++;
@@ -429,7 +431,7 @@ bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size
                     stop(run[k].p);
                     u->o0 = true;
                     LOG("[gamebuild] %s: over %.0fs at -O1, compiling it at -O0\n", file_name(u->src), budget);
-                    PlatProc p = start_compile(&t, u);
+                    PlatProc p = start_compile(&t, u, caps);
                     if (!p) { snprintf(why, why_size, "the compiler didn't start"); ok = false; break; }
                     run[k].p = p, run[k].t = plat_now_ns();
                 }

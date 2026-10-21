@@ -14,6 +14,7 @@ enum { UPSCALE_BILINEAR = 0, UPSCALE_METALFX = 1 /* macOS */, UPSCALE_FSR1 = 2 /
 enum { AA_OFF = 0, AA_SMAA = 1 };
 enum { PROMPTS_AUTO = 0, PROMPTS_NINTENDO = 1, PROMPTS_XBOX = 2, PROMPTS_PLAYSTATION = 3, PROMPTS_KEYBOARD = 4 };
 enum { CHAOS_LETTERS_OFF = 0, CHAOS_LETTERS_EXPLORED = 1, CHAOS_LETTERS_MAP = 2 /* explored, all with the Map */ };
+enum { GAME_BUILD_FAST = 0, GAME_BUILD_OPTIMIZED = 1 };  // the start screen's game code build: runtime/gamebuild.h
 // System language served to the game (runtime/services/am.c GetDesiredLanguage, services/hid_set.c GetLanguageCode):
 // the game picks its text language from it, as it would from the Switch's own system setting. LANG_AUTO follows the
 // host locale ($LC_ALL / $LC_MESSAGES / $LANG); the rest are the codes of the languages the game has text for.
@@ -44,6 +45,7 @@ typedef struct {
     int chaos_letters;   // CHAOS_LETTERS_*: room-shuffle doorway letters on the dungeon map
     bool aspect_asked;   // the start screen's one-time "authentic 16:9 or unlocked?" question was answered
     bool menu_tip_seen;  // the start screen's one-time "how to open the menu" note was shown (first PLAY ever)
+    int game_build;      // GAME_BUILD_*: a faster build of the game code, or faster game code (start screen, Set up)
     // cheats (runtime/ui/cheats.mm), applied every frame while a save is loaded
     bool cheat_hearts;   // health kept full
     bool cheat_ammo;     // bombs / arrows / magic powder kept full (for the bags Link owns)
