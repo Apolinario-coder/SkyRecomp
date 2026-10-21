@@ -595,6 +595,8 @@ static void tab_about(void) {
     toggle("D-pad moves Link", &g_settings.dpad_move);
     toggle("360-degree movement", &g_settings.move_360);
     hint("Link walks in the exact direction of the stick instead of snapping to 8 directions.");
+    toggle("Free camera look", &g_settings.free_cam);
+    hint("Moving the right stick looks around without having to hold L first.");
     ImGui::Spacing();
     header("Button prompts");
     {

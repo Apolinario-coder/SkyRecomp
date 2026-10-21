@@ -1615,6 +1615,14 @@ static void draw(CmdRec *r, bool indexed) {
     vkey.depth_minus_one = nvn_depth_mode() == 0;
     for (int i = 0; i < st.nattrib; i++) vkey.attr_kind[i] = (uint8_t)attr_kind(st.attrib[i] & 0xFF);
     for (int i = 0; i < st.rt.ncolor; i++) if (st.rt.color[i]) fkey.rt_kind[i] = (uint8_t)rt_kind(st.rt.color[i]->format);
+    // Dual-source blending (SSHD eyes): colour outputs 0/1 are the two sources of attachment 0. Mirrors the
+    // Vulkan backend's handling (runtime/nvn/vulkan/exec.c) - without this the fragment shader never declares
+    // the second source output and the blend's secondary input is undefined.
+    if ((st.color_state[0] & 1) && st.rt.ncolor == 1) {
+        const uint8_t *b = st.blend[0];
+        for (int i = 1; i <= 4; i++) if (b[i] >= 0x10 && b[i] <= 0x13) fkey.dual_source = true;
+        if (fkey.dual_source) fkey.rt_kind[1] = fkey.rt_kind[0];
+    }
     Prog *pr = get_program(st.program, &vkey, &fkey);
     if (!pr || !pr->ready) { stat_skipped++; return; }
     {   // mirror mode (runtime/hle/mirror.c): the scene's composite into the window image is drawn mirrored - the

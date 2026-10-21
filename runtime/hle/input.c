@@ -515,6 +515,9 @@ static void fill_state(Cpu *c) {
         b = pets_menu_input(b, st);
         lx = st[0], ly = st[1], rx = st[2], ry = st[3];
     }
+    // Free camera look: moving the right stick acts as if L were held too, so the camera turns without
+    // needing to hold L first. rx/ry already have the deadzone applied above.
+    if (g_settings.free_cam && (rx || ry)) b |= 1ull << BTN_L;
     *(uint64_t *)(s + 8) = b;
     static uint64_t last_b;
     if (b != last_b && getenv("LARECOMP_INPUT")) LOG("[input] id %#x buttons %#llx (sampling %lld, lr %llx)\n", id, (unsigned long long)b, (long long)sampling, c->x[30]);

@@ -633,7 +633,10 @@ def main():
             if n > args.big_fn:
                 break
         path = os.path.join(args.outdir, f'{args.name}_{nchunks:03d}.c')
-        text = ['#include "cpu.h"\n' + ('#include "simd.h"\n' if m.lifter.sc else '')]
+        # simd.h is always pulled in (not just for --simd=c): the Skyward frame-pacing patch below emits
+        # VSF32/VS32 unconditionally, regardless of lifting mode, and simd.h is static-inline-only so this
+        # is free in files that don't otherwise need it.
+        text = ['#include "cpu.h"\n#include "simd.h"\n']
         text += [f'void {fname(r)}(Cpu *c);\n' for r in sorted(refs)]
         text += [f'void {sanitize(hle[a])}(Cpu *c);\n' for a in sorted(set(hle) & set(fns))]
         text += ['\n'.join(body), '\n']

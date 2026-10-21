@@ -299,6 +299,16 @@ static bool build_game_code(void) {
         if (out) fclose(out);
         return true;
     }
+    // No precompiled library shipped (source checkout): build it on-device from the user's own exefs.
+    if (gamebuild_available()) {
+        GameBuildOpts opts = {0};
+        opts.progress = build_progress;
+        opts.jobs = 4;
+        char why[512] = {0};
+        if (gamebuild_run(g_root.c_str(), &opts, why, sizeof why)) return true;
+        set_job(why[0] ? why : "Building the game code failed.", true, why);
+        return false;
+    }
     set_job("Game library (skygame.dll) is missing from extracted folder.", true, "Please ensure skygame.dll is present.");
     return false;
 }
