@@ -248,7 +248,18 @@ static void add_cflags(Args *a, const Tools *t) {
             add(a, f);
             // zig cc reads -O1 as ReleaseFast, which compiles C at clang -O2 (+ vectorizers): far slower on the
             // generated code than the -O1 `make` uses. A bare -O, which zig passes through to clang, is -O1.
-            if (t->zig && !strcmp(f, "-O1")) add(a, "-O");
+            if (t->zig && !strcmp(f, "-O1")) {
+                add(a, "-O");
+                // A function over 100 KB of C (a file of its own: tools/gen.py --big-fn) spent minutes in three LLVM
+                // passes - sdk_070.c (364 KB): LICM's promotion 53%, the register coalescer 25%, CodeGenPrepare 10%,
+                // 280 s; with these caps 37 s (zig 0.17's clang 22, -ftime-report). Only zig: its clang is pinned, so
+                // these hidden options exist. ponytail: promotion is off in every function, not only the giant ones;
+                // apply it to those files alone if it costs frame time.
+                static const char *const caps[] = {"-disable-licm-promotion", "-licm-mssa-optimization-cap=10",
+                                                   "-large-interval-size-threshold=20", "-large-interval-freq-threshold=20",
+                                                   "-cgpp-huge-func=1000"};
+                for (size_t i = 0; i < sizeof caps / sizeof *caps; i++) add(a, "-mllvm"), add(a, caps[i]);
+            }
         }
     }
 }
