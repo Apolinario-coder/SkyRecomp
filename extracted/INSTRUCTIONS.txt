@@ -1,4 +1,0 @@
-This directory contains local game files and assets prepared during setup:
-- skygame.dll (native recompiled game library)
-
-These files are prepared during first-launch setup and are not distributed in this repository.

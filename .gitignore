@@ -1,12 +1,25 @@
 # Gitignore for Sky Recomp (Native PC Port)
 
 # Proprietary game files and keys (NEVER commit to GitHub)
+*.keys
+*.nsp
+*.xci
+*.nca
+*.tik
 Rom Game/*.nsp
 Rom Game/*.xci
 Rom Game/*.keys
 Rom Game/*.bin
-!Rom Game/INSTRUCTIONS.txt
-!Rom Game/.gitkeep
+/Rom Game/
+/extracted/
+/gamelib-src/
+/icon.png
+/Baloo2-SemiBold.ttf
+/Baloo2-OFL.txt
+# Imported console fonts stay local; only the open interface font is distributed.
+/fonts/*
+!/fonts/Baloo2-SemiBold.ttf
+!/fonts/Baloo2-OFL.txt
 
 extracted/romfs.bin
 extracted/romfs/
@@ -14,13 +27,15 @@ extracted/exefs/
 extracted/skygame.dll
 extracted/*.o
 extracted/*.id
-!extracted/INSTRUCTIONS.txt
-!extracted/.gitkeep
 
 # Locally generated recompiled source code
 ssh_generated/
 
 # Build artifacts, caches, and local saves
+/skyrecomp.exe
+/skyrecomp.dll.a
+/*.dll
+/tools/*.exe
 build/
 cache/
 save/
@@ -28,7 +43,6 @@ scratch/
 
 # User installed mods
 mods/*
-!mods/.gitkeep
 
 # Local user configuration
 skyrecomp.ini
@@ -52,3 +66,10 @@ Thumbs.db
 
 # Downloaded compilers
 zig/
+
+# Optional locally installed ReShade runtime, presets and effects
+/reshade/
+/reshade-shaders/
+/ReShade*.ini
+/ReShade*.log*
+/HenrikoMagnifico_*.ini

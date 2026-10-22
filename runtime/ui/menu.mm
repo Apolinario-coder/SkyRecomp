@@ -26,7 +26,9 @@ extern "C" {
 #include "../hle.h"
 #include "../settings.h"
 #include "menu.h"
+extern "C" bool input_free_cam_active(void);  // runtime/hle/input.c: free camera session toggle
 void input_reset(void);
+void input_mouse_update(void *window, bool playing);
 void save_editor_draw(float scale);  // save_editor.mm
 extern "C" int game_in_play(void);  // hle/warp.c
 void save_editor_on_open(void);
@@ -257,6 +259,7 @@ void menu_apply_window_requests(void *win) {
     g_pixel_density = SDL_GetWindowPixelDensity(w);
     static bool text_input;
     bool want_text = capturing();
+    input_mouse_update(w, true);
     if (want_text != text_input) {
         if (want_text) SDL_StartTextInput(w);
         else SDL_StopTextInput(w);
@@ -345,7 +348,7 @@ static void init(void) {
     // FPS counter, overlays and on-screen keyboard keep the fonts above
     char baloo[1024];
     if (const char *f = getenv("LARECOMP_MENU_FONT")) strlcpy(baloo, f, sizeof baloo);  // (test) another weight / face
-    if (getenv("LARECOMP_MENU_FONT") || rt_resource("Baloo2-SemiBold.ttf", "third_party/fonts/Baloo2/Baloo2-SemiBold.ttf", baloo, sizeof baloo)) {
+    if (getenv("LARECOMP_MENU_FONT") || rt_resource("Baloo2-SemiBold.ttf", "fonts/Baloo2-SemiBold.ttf", baloo, sizeof baloo)) {
         g_menu_font = io.Fonts->AddFontFromFileTTF(baloo, 39, &cfg);
         g_menu_font_big = io.Fonts->AddFontFromFileTTF(baloo, 72, &cfg);
     }
@@ -467,6 +470,15 @@ static void tab_display(void) {
     }
 
     opt_section("Rendering");
+#ifndef __APPLE__
+    opt_toggle("4K Textures", &g_settings.hd_textures, true,
+               "Uses the included high-resolution textures throughout the game. Turn off to use the original textures. Changes apply while playing.");
+#endif
+#ifdef _WIN32
+    if (opt_toggle("ReShade", &g_settings.reshade, true,
+               "Enables the included lighting and colour effects. Off disables the effects while playing and prevents loading ReShade on the next launch. If started with ReShade off, close and reopen the application to enable it."))
+        settings_save();
+#endif
     // display order -> RES_* (the ini / enum order predates the menu order)
     // (up to 4x: 7680 x 4320, 8K - more only ran out of GPU memory, and sat next to 75% in the list)
     // (Match display in the middle: left from it 75% / 50% / 25%, right Dynamic then 1x-4x; user 2026-10-11)
@@ -595,6 +607,24 @@ static void tab_about(void) {
     toggle("D-pad moves Link", &g_settings.dpad_move);
     toggle("360-degree movement", &g_settings.move_360);
     hint("Link walks in the exact direction of the stick instead of snapping to 8 directions.");
+    toggle("Free camera look", &g_settings.free_cam);
+    hint("Moving the right stick looks around without having to hold L first. A short L press switches it off/on "
+         "for this session; holding L while the eye is on turns the free camera off for the hold, so the right "
+         "stick swings the sword. The eye at the bottom right shows the state. Targeting (ZL), items (ZR) and "
+         "the pouch (R) keep their normal right-stick behavior.");
+    if (g_settings.free_cam) {
+        slider("Free camera sensitivity", &g_settings.free_cam_sens, 0.25f, 2.0f, "%.2fx");
+        hint("How fast the right stick turns the camera while free camera look is active (1.00x = the game's speed).");
+        toggle("Mouse camera and combat", &g_settings.mouse_controls);
+        if (g_settings.mouse_controls) {
+            slider("Mouse sensitivity", &g_settings.mouse_sens, 0.25f, 4.0f, "%.2fx");
+            hint("Move the mouse to look around. Left click: sword slash (move before clicking to choose direction). "
+                 "Right click: target / shield bash. Middle click: sword thrust. Hold Left Alt or Mouse 4 for item aim: "
+                 "left click readies / uses the selected item; hold and release to fire the bow. "
+                 "Hold 3: item wheel. Mouse 5 or E: pouch. "
+                 "K still interacts. Esc releases the mouse. Explicit mouse button bindings take priority.");
+        }
+    }
     ImGui::Spacing();
     header("Button prompts");
     {
@@ -615,8 +645,26 @@ static void tab_about(void) {
         for (int i = 1; i < N_LANGUAGES; i++) names[i] = g_language_names[i];
         if (choice("Language", &g_settings.language, names, N_LANGUAGES)) settings_save();
     }
-    hint("The game's text language, as its own system setting. Applies when the game restarts: Quit -> Title "
-         "screen, then Play.");
+    if (settings_language_pending()) {
+        hint("Language change pending. The game must restart to reload its text. Save your progress first.");
+        if (ImGui::Button("Apply language and restart...")) ImGui::OpenPopup("Restart for language");
+    } else {
+        hint("The game's text language. Changes made before Play apply when the game starts.");
+    }
+    if (ImGui::BeginPopupModal("Restart for language", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape, false) || ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight, false))
+            ImGui::CloseCurrentPopup();
+        ImGui::TextUnformatted("Restart the game to apply the selected language?\nProgress since your last save will be lost.");
+        if (ImGui::Button("Restart game")) {
+            settings_save();
+            rt_request_reboot(RT_REBOOT_GAME);
+            ImGui::CloseCurrentPopup();
+            set_open(false);
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel")) ImGui::CloseCurrentPopup();
+        ImGui::EndPopup();
+    }
     ImGui::Spacing();
     header("Controls");
     controls_bindings_draw(ImGui::GetFontSize() / 34);
@@ -829,7 +877,7 @@ void menu_render(void *cmd, uint32_t target_w, uint32_t target_h) {
     bool trk = !open && tracker_overlay_wanted();
     bool chaos = !open && chaos_overlay_wanted();
     bool kbd = g_kbd.load() == 1;
-    if (!open && !kbd && !g_settings.show_fps && !inv && !trk && !chaos) {
+    if (!open && !kbd && !g_settings.show_fps && !inv && !trk && !chaos && !g_settings.free_cam) {
         if (g_inited) { pthread_mutex_lock(&q_lock); q_events.clear(); pthread_mutex_unlock(&q_lock); }
         return;
     }
@@ -876,11 +924,30 @@ void menu_render(void *cmd, uint32_t target_w, uint32_t target_h) {
 
     if (g_settings.show_fps) {
         ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x - 16 * scale, 16 * scale), 0, ImVec2(1, 0));
-        ImGui::SetNextWindowBgAlpha(0.5f);
+        ImGui::SetNextWindowBgAlpha(0.45f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(6 * scale, 2 * scale));
         ImGui::Begin("##fps", NULL, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize |
                                         ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoFocusOnAppearing);
-        ImGui::Text("%.0f fps", io.Framerate);
+        ImGui::SetWindowFontScale(0.65f);   // small: just the number
+        ImGui::Text("%.0f", io.Framerate);
         ImGui::End();
+        ImGui::PopStyleVar();
+    }
+
+    if (g_settings.free_cam) {
+        // Free camera mode, bottom right, no text: an eye while it is on, a crossed-out eye while L toggled it off.
+        ImDrawList *dl = ImGui::GetForegroundDrawList();
+        const float s = scale;
+        const ImVec2 c(io.DisplaySize.x - 30 * s, io.DisplaySize.y - 28 * s);
+        const float rx = 14 * s, ry = 8 * s;
+        const bool on = input_free_cam_active();
+        const ImU32 line = on ? IM_COL32(240, 235, 220, 80) : IM_COL32(240, 235, 220, 38);
+        dl->AddBezierQuadratic(ImVec2(c.x - rx, c.y), ImVec2(c.x, c.y - ry * 1.6f), ImVec2(c.x + rx, c.y), line, 1.5f * s);
+        dl->AddBezierQuadratic(ImVec2(c.x - rx, c.y), ImVec2(c.x, c.y + ry * 1.6f), ImVec2(c.x + rx, c.y), line, 1.5f * s);
+        dl->AddCircleFilled(c, 3.2f * s, on ? IM_COL32(240, 235, 220, 120) : IM_COL32(240, 235, 220, 55));
+        if (!on)
+            dl->AddLine(ImVec2(c.x - rx * 0.9f, c.y + ry * 1.2f), ImVec2(c.x + rx * 0.9f, c.y - ry * 1.2f),
+                        IM_COL32(240, 235, 220, 90), 1.5f * s);
     }
 
     if (trk) tracker_overlay_draw(io.DisplaySize, g_font_big ? g_font_big : ImGui::GetFont());

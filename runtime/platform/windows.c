@@ -7,6 +7,7 @@
 #include <shellapi.h>
 #include <timeapi.h>
 #include <io.h>
+#include <wchar.h>
 
 #include "../platform.h"
 
@@ -21,7 +22,10 @@ static uint64_t g_lo, g_hi;
 static bool lazy_commit(uint64_t a) {
     if (a < g_lo || a >= g_hi) return false;
     MEMORY_BASIC_INFORMATION mi;
-    if (!VirtualQuery((void *)(uintptr_t)a, &mi, sizeof mi) || mi.State != MEM_RESERVE) return false;
+    if (!VirtualQuery((void *)(uintptr_t)a, &mi, sizeof mi)) return false;
+    // Another guest thread may have committed this page after Windows raised the fault.
+    if (mi.State == MEM_COMMIT) return mi.Protect == PAGE_READWRITE;
+    if (mi.State != MEM_RESERVE) return false;
     uint64_t base = a & ~(COMMIT_CHUNK - 1);
     return VirtualAlloc((void *)(uintptr_t)base, COMMIT_CHUNK, MEM_COMMIT, PAGE_READWRITE) != NULL;
 }
@@ -32,7 +36,8 @@ static LONG CALLBACK vectored_handler(EXCEPTION_POINTERS *ep) {
     EXCEPTION_RECORD *er = ep->ExceptionRecord;
     if (er->ExceptionCode != EXCEPTION_ACCESS_VIOLATION || er->NumberParameters < 2) return EXCEPTION_CONTINUE_SEARCH;
     uint64_t fa = er->ExceptionInformation[1];
-    if (lazy_commit(fa)) return EXCEPTION_CONTINUE_EXECUTION;
+    if (er->NumberParameters >= 2 && er->ExceptionInformation[0] != 8 && lazy_commit(fa))
+        return EXCEPTION_CONTINUE_EXECUTION;
     if (g_report_crashes && rt_fault_watch(fa, ep->ContextRecord->Rip)) return EXCEPTION_CONTINUE_EXECUTION;
     return EXCEPTION_CONTINUE_SEARCH;
 }
@@ -158,8 +163,41 @@ bool plat_waiter_wait(void *waiter, int64_t timeout_ns) {
 // (the start screen re-executing itself for the game) append to the same log.
 static char g_log_path[MAX_PATH];
 
+static void open_log_console(void) {
+    const char *enabled = getenv("SKYRECOMP_CONSOLE");
+    if ((enabled && !atoi(enabled)) || getenv("SKYRECOMP_CONSOLE_OPEN")) return;
+    char literal[2 * MAX_PATH], params[2 * MAX_PATH + 512];
+    size_t n = 0;
+    for (const char *p = g_log_path; *p; p++) {
+        literal[n++] = *p;
+        if (*p == '\'') literal[n++] = '\'';
+    }
+    literal[n] = 0;
+    snprintf(params, sizeof params,
+             "-NoLogo -NoProfile -NoExit -Command \"$Host.UI.RawUI.WindowTitle='SkyRecomp diagnostics'; "
+             "Write-Host 'Close this window without closing the game. Send skyrecomp.log when reporting a problem.'; "
+             "Get-Content -LiteralPath '%s' -Wait\"", literal);
+    wchar_t wide[2 * MAX_PATH + 512];
+    MultiByteToWideChar(CP_ACP, 0, params, -1, wide, sizeof wide / sizeof *wide);
+    wchar_t program[MAX_PATH], command[3 * MAX_PATH + 512];
+    UINT size = GetSystemDirectoryW(program, MAX_PATH);
+    if (!size || size > MAX_PATH - 45) return;
+    wcscat(program, L"\\WindowsPowerShell\\v1.0\\powershell.exe");
+    swprintf(command, sizeof command / sizeof *command, L"\"%ls\" %ls", program, wide);
+    STARTUPINFOW startup = {.cb = sizeof startup};
+    PROCESS_INFORMATION process;
+    if (CreateProcessW(program, command, NULL, NULL, FALSE, CREATE_NEW_CONSOLE, NULL, NULL, &startup, &process)) {
+        CloseHandle(process.hThread); CloseHandle(process.hProcess);
+        _putenv("SKYRECOMP_CONSOLE_OPEN=1");
+        DWORD processes[2];
+        if (GetConsoleProcessList(processes, 2) == 1) FreeConsole();
+    } else fprintf(stderr, "[diagnostics] console could not start (Windows error %lu); use %s\n", GetLastError(), g_log_path);
+}
+
 static void log_to_file_without_console(void) {
-    if (GetStdHandle(STD_ERROR_HANDLE) && GetStdHandle(STD_ERROR_HANDLE) != INVALID_HANDLE_VALUE) return;  // console / pipe
+    HANDLE err = GetStdHandle(STD_ERROR_HANDLE);
+    DWORD type = err && err != INVALID_HANDLE_VALUE ? GetFileType(err) : FILE_TYPE_UNKNOWN;
+    if (type == FILE_TYPE_PIPE || type == FILE_TYPE_DISK) return;  // caller already captures diagnostics
     char exe[MAX_PATH];
     DWORD n = GetModuleFileNameA(NULL, exe, sizeof exe);
     if (!n || n >= sizeof exe) return;
@@ -171,6 +209,8 @@ static void log_to_file_without_console(void) {
     setvbuf(stderr, NULL, _IONBF, 0);
     _dup2(_fileno(stderr), _fileno(stdout));
     _putenv("SKYRECOMP_LOG_APPEND=1");
+    fprintf(stderr, "[diagnostics] log: %s\n", g_log_path);
+    open_log_console();
 }
 
 // The recompiled game code is built for x86-64-v3 (Makefile GENARCH: AVX2, FMA, BMI2): say so instead of crashing
@@ -316,6 +356,11 @@ void plat_print_backtrace(void) {
 static LONG WINAPI unhandled_filter(EXCEPTION_POINTERS *ep) {
     EXCEPTION_RECORD *er = ep->ExceptionRecord;
     uint64_t fa = er->NumberParameters >= 2 ? er->ExceptionInformation[1] : 0;
+    MEMORY_BASIC_INFORMATION fault_mem;
+    if (fa && VirtualQuery((void *)(uintptr_t)fa, &fault_mem, sizeof fault_mem))
+        fprintf(stderr, "[plat] fault memory state=%lx protect=%lx base=%llx size=%llx\n",
+                fault_mem.State, fault_mem.Protect, (unsigned long long)(uintptr_t)fault_mem.BaseAddress,
+                (unsigned long long)fault_mem.RegionSize);
     char what[48];
     snprintf(what, sizeof what, "exception %08lx", er->ExceptionCode);
     // x64 has no link register: report the return address on top of the stack (valid at function entry).
@@ -338,6 +383,9 @@ void plat_crash_handler_install(void) {
 static ssize_t prw(int fd, void *buf, size_t n, off_t off, bool write) {
     HANDLE h = (HANDLE)_get_osfhandle(fd);
     if (h == INVALID_HANDLE_VALUE) return -1;
+    uint64_t guest = (uintptr_t)buf;
+    // ReadFile/WriteFile cannot fault in reserved guest pages on our behalf.
+    if (guest >= g_lo && guest < g_hi && n <= g_hi - guest) plat_commit(guest, n);
     size_t done = 0;
     while (done < n) {
         OVERLAPPED ov = {0};

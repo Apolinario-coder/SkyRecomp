@@ -192,13 +192,13 @@ NVN(nvnMemoryPoolInitialize) {
 }
 NVN(nvnMemoryPoolFinalize) { free(HOST(NvnPool, A(0))); SET_HOST(A(0), 0); }
 NVN(nvnMemoryPoolSetDebugLabel) { (void)c; }
-NVN(nvnMemoryPoolMap) { RET(HOST(NvnPool, A(0))->storage); }
-NVN(nvnMemoryPoolGetBufferAddress) { RET(HOST(NvnPool, A(0))->storage); }  // GPU address == CPU address
-NVN(nvnMemoryPoolGetSize) { RET(HOST(NvnPool, A(0))->size); }
-NVN(nvnMemoryPoolGetFlags) { RET(HOST(NvnPool, A(0))->flags); }
+NVN(nvnMemoryPoolMap) { NvnPool *p = A(0) ? HOST(NvnPool, A(0)) : NULL; RET(p ? p->storage : 0); }
+NVN(nvnMemoryPoolGetBufferAddress) { NvnPool *p = A(0) ? HOST(NvnPool, A(0)) : NULL; RET(p ? p->storage : 0); }  // GPU address == CPU address
+NVN(nvnMemoryPoolGetSize) { NvnPool *p = A(0) ? HOST(NvnPool, A(0)) : NULL; RET(p ? p->size : 0); }
+NVN(nvnMemoryPoolGetFlags) { NvnPool *p = A(0) ? HOST(NvnPool, A(0)) : NULL; RET(p ? p->flags : 0); }
 NVN(nvnMemoryPoolFlushMappedRange) {
-    NvnPool *p = HOST(NvnPool, A(0));
-    backend_pool_written(p->storage + A(1), A(2));
+    NvnPool *p = A(0) ? HOST(NvnPool, A(0)) : NULL;
+    if (p) backend_pool_written(p->storage + A(1), A(2));
 }
 NVN(nvnMemoryPoolInvalidateMappedRange) { (void)c; }
 NVN(nvnMemoryPoolMapVirtual) { RET(1); }
@@ -607,8 +607,8 @@ static void set_shaders(Cpu *c, int stride) {
         p->stages[stage].stage = stage;
         p->stages[stage].code_addr = code;
         p->stages[stage].control = control;
-        p->stages[stage].const_offset = *(const uint32_t *)(control + 0x700);
-        p->stages[stage].const_size = *(const uint32_t *)(control + 0x6FC);
+        p->stages[stage].const_offset = control ? *(const uint32_t *)(control + 0x700) : 0;
+        p->stages[stage].const_size = control ? *(const uint32_t *)(control + 0x6FC) : 0;
         p->stage_mask |= 1u << stage;
     }
     RET(1);

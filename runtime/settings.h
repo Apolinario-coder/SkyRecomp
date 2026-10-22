@@ -31,8 +31,14 @@ typedef struct {
     bool reverb;         // room reverb effect
     bool movie_audio;
     bool show_fps;
+    bool hd_textures;    // external texture replacements, applied live on Vulkan
+    bool reshade;        // load the bundled Windows ReShade layer on the next launch
     int frame_rate;       // 60 or 120; the Skyward Sword simulation step follows this target
     bool dpad_move;      // the d-pad (and arrow keys) move Link like the stick
+    bool free_cam;       // right stick looks around without holding L
+    float free_cam_sens; // camera-only stick speed, 0.25x to 2x
+    bool mouse_controls; // mouse camera and combat while free camera look is enabled
+    float mouse_sens;    // relative mouse speed, 0.25x to 4x
     bool move_360;       // analog movement in any direction (the game snaps the stick to 8): runtime/hle/qol.c
     bool blur_removal;   // no tilt-shift blur at the top / bottom of the screen
     bool hide_hero_icon; // no Hero Mode icon on the HUD
@@ -72,5 +78,8 @@ void settings_load(void);
 void settings_save(void);
 // The language code to serve the game ("es", "en-US", ...): the setting, or the host locale for LANG_AUTO
 const char *settings_language(void);
+const char *settings_language_code(void);  // SDK code: Skyward Sword uses zh-Hans / zh-Hant.
 // That code's name for the menu ("Spanish")
 const char *settings_language_name(void);
+void settings_game_started(void);
+bool settings_language_pending(void);

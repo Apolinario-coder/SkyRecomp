@@ -127,6 +127,7 @@ $(B)/obj/tools/gamelib_entry.o: tools/gamelib_entry.c $(GAMELIB_SRCS)
 	@mkdir -p $(dir $@)
 	$(CC) $(GENFLAGS) -DGAMELIB_ID='"$(GAMELIB_ID)"' -c $< -o $@
 $(B)/rt/gamelib.o: $(GAMELIB_SRCS)
+$(B)/rt/nvn/custom_tex.o: third_party/xxhash/xxhash.h
 $(B)/rt/gamelib.o: RTFLAGS += -DGAMELIB_ID='"$(GAMELIB_ID)"'
 # the start screen's build of it (runtime/gamebuild.c) uses the same flags
 $(B)/rt/gamebuild.o: $(GAMELIB_SRCS) Makefile
@@ -149,6 +150,8 @@ $(B)/rt/nvn/smaa_data.o: RTFLAGS += -I$(B)/inc -Ithird_party/smaa/Textures
 $(B)/rt/%.o: runtime/%.cpp $(RT_HDRS)
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(OSFLAGS) -c $< -o $@
+
+$(B)/rt/nvn/vulkan/imgui_glue.o: $(wildcard third_party/reshade/include/*.hpp)
 
 $(B)/rt/%.o: runtime/%.m $(RT_HDRS)
 	@mkdir -p $(dir $@)
@@ -229,9 +232,12 @@ dmg: app
 # Needs: Windows 10+ x64, a Vulkan 1.3 driver, an AVX2 CPU (GENARCH x86-64-v3; checked at startup).
 DIST     := build/dist/Sky Recomp
 WIN_B    := build/win-release
+VISUAL_PACK ?= build/visual-pack
+PACK_PY ?= python3
 deps-windows:
 	tools/build_deps_windows.sh
 dist:
+	@[ -d "$(VISUAL_PACK)/reshade-shaders" ] || { echo "Set VISUAL_PACK to the complete 4K pack directory (including reshade-shaders and presets)"; exit 1; }
 	@[ -f build/deps-win/lib/libavcodec.dll.a ] || { echo "make deps-windows first (LGPL FFmpeg)"; exit 1; }
 	@[ -d build/helper/rando-gen ] || { echo "make rando-helper first (the seed generator)"; exit 1; }
 	@[ -d build/helper/lasgen ] || { echo "make gen-helper first (the game code generator)"; exit 1; }
@@ -246,13 +252,17 @@ dist:
 	cp runtime/cpu.h runtime/simd.h runtime/simd_fp.h runtime/gamelib.h tools/gamelib_entry.c runtime/hle/hle_symbols.txt \
 	    "$(DIST)/gamelib-src/"
 	cp docs/icon/icon_1024.png "$(DIST)/icon.png"
-	cp third_party/fonts/Baloo2/Baloo2-SemiBold.ttf "$(DIST)/"  # (start screen font, OFL)
-	cp third_party/fonts/Baloo2/OFL.txt "$(DIST)/Baloo2-OFL.txt"
-	cp README.md LICENSE "$(DIST)/"  # (licenses and source links of the bundled components: README "License")
+	cp fonts/Baloo2-SemiBold.ttf fonts/Baloo2-OFL.txt "$(DIST)/"
+	cp README.md LICENSE LICENSE-LASRecomp "$(DIST)/"
+	cp third_party/imgui/LICENSE.txt "$(DIST)/LICENSE-ImGui.txt"
+	cp third_party/smaa/LICENSE.txt "$(DIST)/LICENSE-SMAA.txt"
+	cp third_party/xxhash/LICENSE "$(DIST)/LICENSE-xxHash"
 	cp -R build/helper/rando-gen "$(DIST)/"
 	PATH="$(CURDIR)/build/deps-win/bin:$$PATH" ldd $(WIN_B)/skyrecomp.exe | awk '(/ucrt64/ || /deps-win/) && !/vulkan-1/ {print $$3}' | sort -u | \
 	    xargs -I{} cp -u {} "$(DIST)/"
 	! ls "$(DIST)" | grep -iE 'x264|x265|xvid|postproc'  # (no GPL codec libraries in the release)
+	$(PACK_PY) tools/fetch_reshade.py --output "$(DIST)/reshade"
+	$(PACK_PY) tools/package_visuals.py --source "$(VISUAL_PACK)" --output "$(DIST)"
 	cd build/dist && if command -v zip >/dev/null; then zip -qr "Sky Recomp-$(VERSION)-windows.zip" "Sky Recomp"; \
 	    else /c/Windows/System32/tar.exe -a -cf "Sky Recomp-$(VERSION)-windows.zip" "Sky Recomp"; fi
 	@echo "build/dist/Sky Recomp-$(VERSION)-windows.zip"
@@ -303,10 +313,10 @@ build/rando-venv/.ok: third_party/LAS-Randomizer/requirements.txt
 # FFmpeg, shaderc and the seed generator helper inside; the Vulkan loader and GPU drivers are the system's.
 # `make appimage` (ARCH: this machine's, or aarch64 cross-compiled), `make appimages` both. See docs/linux.md.
 appimage:
-	tools/linux/appimage.sh $(ARCH)
+	bash tools/linux/appimage.sh $(ARCH)
 appimages:
-	tools/linux/appimage.sh x86_64
-	tools/linux/appimage.sh aarch64
+	bash tools/linux/appimage.sh x86_64
+	bash tools/linux/appimage.sh aarch64
 # release check of the x86-64 AppImage: start screen, into the game, warps to the overworld and every dungeon
 smoketest:
 	tools/linux/smoketest.sh

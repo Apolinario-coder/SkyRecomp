@@ -43,8 +43,11 @@ cp runtime/cpu.h runtime/simd.h runtime/simd_fp.h runtime/gamelib.h tools/gameli
    "$C/Resources/gamelib-src/"
 cp docs/icon/icon.icns "$C/Resources/icon.icns"
 cp docs/icon/icon_1024.png "$C/Resources/icon.png"  # (window / Dock icon at run time)
-cp third_party/fonts/Baloo2/Baloo2-SemiBold.ttf "$C/Resources/Baloo2-SemiBold.ttf"  # (start screen; OFL, README "License")
-cp third_party/fonts/Baloo2/OFL.txt "$C/Resources/Baloo2-OFL.txt"
+cp fonts/Baloo2-SemiBold.ttf fonts/Baloo2-OFL.txt "$C/Resources/"
+cp README.md LICENSE LICENSE-LASRecomp "$C/Resources/"
+cp third_party/imgui/LICENSE.txt "$C/Resources/LICENSE-ImGui.txt"
+cp third_party/smaa/LICENSE.txt "$C/Resources/LICENSE-SMAA.txt"
+cp third_party/xxhash/LICENSE "$C/Resources/LICENSE-xxHash"
 
 # ---- dylibs: copy every non-system dependency, recursively; point all references at @rpath/<name>
 is_system() { case "$1" in /usr/lib/*|/System/*) return 0;; esac; return 1; }

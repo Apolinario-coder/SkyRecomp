@@ -1175,12 +1175,15 @@ int ui_run(void) {
     ui_window_init();
     atomic_store(&ui_ready, true);
     for (;;) {
-        if (rt_reboot_requested()) return rt_reboot_requested();  // (runtime/main.c tears the game down)
+        if (rt_reboot_requested()) { input_mouse_update(window, false); return rt_reboot_requested(); }
         SDL_Event e;
         while (SDL_WaitEventTimeout(&e, 16)) {
+            if (rt_reboot_requested()) break;
             if (e.type == SDL_EVENT_QUIT) { LOG("window closed\n"); exit(0); }
             if (input_user_blocked(&e)) continue;  // scripted test runs: the real keyboard / mouse / pads do nothing
-            if (menu_handle_event(&e)) continue;
+            bool consumed = menu_handle_event(&e);
+            input_mouse_update(window, true);
+            if (consumed) continue;
             input_handle_event(&e);
         }
         menu_apply_window_requests(window);

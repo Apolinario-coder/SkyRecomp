@@ -72,8 +72,9 @@ class JumpTableBoundaryTest(unittest.TestCase):
                     code = '\n'.join(m.emit_function(m.lo, m.hi, set(), {}, {}))
                     self.assertEqual(code.count('extern float rt_sky_frame_'), 2 if sky else 0)
                     if sky:
-                        self.assertIn('VSF32(0) = rt_sky_frame_step(VSF32(0))', code)
-                        self.assertIn('VSF32(1) = rt_sky_frame_ms(VSF32(1))', code)
+                        self.assertIn('*(f32a *)&c->v[0] = rt_sky_frame_step(*(f32a *)&c->v[0])', code)
+                        self.assertIn('*(f32a *)&c->v[1] = rt_sky_frame_ms(*(f32a *)&c->v[1])', code)
+                        self.assertNotIn('VSF32(', code)  # (simd.h isn't included with --simd asm)
 
 
 if __name__ == '__main__':

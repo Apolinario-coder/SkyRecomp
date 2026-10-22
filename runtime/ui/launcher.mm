@@ -85,7 +85,7 @@ static void save_png(id<MTLTexture> tex, const char *path) {
 static const uint8_t BUILD_ID[8] = {0xd8, 0x24, 0xd4, 0xb1, 0xbb, 0xd4, 0x5d, 0x03};  // Skyward Sword HD v1.0.0 main
 // The release tag this build is (also names the release files; Makefile / tools/bundle_macos.sh / make_dmg.sh read
 // it): beta_<n> until 1.0, then v<major>.<minor>.<patch>.
-#define LARECOMP_VERSION "v1.0.5"
+#define LARECOMP_VERSION "v1.0.6"
 
 // ------------------------------------------------------------------ update check
 // The start screen asks GitHub for the project's releases once per launch (a background curl, which macOS and
@@ -184,7 +184,7 @@ static std::string check_copied_files(const std::string &root) {
 // "" = ready to play, else what is wrong
 static std::string check_game_files(const std::string &root) {
     std::string why = check_copied_files(root);
-    if (why.empty() && !gamelib_present(root.c_str()) && !file_exists(root + "/skygame.dll") && !file_exists("extracted/skygame.dll")) return "Game code not built yet";
+    if (why.empty() && !gamelib_present(root.c_str())) return "Game code not built yet";
     return why;
 }
 
@@ -280,27 +280,19 @@ static float extract_progress(void) {
     return f < 0 ? 0 : f > 0.99f ? 0.99f : f;
 }
 
-// Verifies the precompiled game code exists (skygame.dll); false = missing
+// Builds the game code library from the copied exefs (runtime/gamebuild.c), unless a matching one is there already
 static bool build_game_code(void) {
-    if (file_exists(g_root + "/skygame.dll") || gamelib_present(g_root.c_str()) ||
-        file_exists("extracted/skygame.dll") || file_exists("skygame.dll")) {
-        return true;
+    if (gamelib_present(g_root.c_str())) return true;
+    int cores = SDL_GetNumLogicalCPUCores(), ram_gb = SDL_GetSystemRAM() / 1024;
+    GameBuildOpts o = {build_progress, cores < ram_gb - 2 ? cores : ram_gb - 2 > 1 ? ram_gb - 2 : 1};
+    char why[256] = "";
+    g_build_frac = 0;
+    bool ok = gamebuild_run(g_root.c_str(), &o, why, sizeof why);
+    if (!ok) {
+        fprintf(stderr, "[launcher] game code: %s\n", why);
+        set_failure(FAIL_BUILD);
     }
-    // If skygame.dll is in extracted/ but not yet in g_root:
-    if (file_exists("extracted/skygame.dll") && !file_exists(g_root + "/skygame.dll")) {
-        FILE *in = fopen("extracted/skygame.dll", "rb");
-        FILE *out = fopen((g_root + "/skygame.dll").c_str(), "wb");
-        if (in && out) {
-            char buf[1024 * 1024];
-            size_t n;
-            while ((n = fread(buf, 1, sizeof buf, in)) > 0) fwrite(buf, 1, n, out);
-        }
-        if (in) fclose(in);
-        if (out) fclose(out);
-        return true;
-    }
-    set_job("Game library (skygame.dll) is missing from extracted folder.", true, "Please ensure skygame.dll is present.");
-    return false;
+    return ok;
 }
 
 static void *extract_thread(void *) {
@@ -366,7 +358,7 @@ static void *extract_thread(void *) {
                 FILE *in = fopen(romfs.c_str(), "rb");
                 FILE *out = fopen((g_root + "/romfs.bin").c_str(), "wb");
                 if (in && out) {
-                    char buf[1024 * 1024];
+                    static char buf[1024 * 1024];  // (not on the stack: macOS gives this thread 512 KB)
                     size_t n;
                     while ((n = fread(buf, 1, sizeof buf, in)) > 0) fwrite(buf, 1, n, out);
                 }
@@ -377,7 +369,7 @@ static void *extract_thread(void *) {
                 FILE *in = fopen((romfs + "/romfs.bin").c_str(), "rb");
                 FILE *out = fopen((g_root + "/romfs.bin").c_str(), "wb");
                 if (in && out) {
-                    char buf[1024 * 1024];
+                    static char buf[1024 * 1024];  // (not on the stack: macOS gives this thread 512 KB)
                     size_t n;
                     while ((n = fread(buf, 1, sizeof buf, in)) > 0) fwrite(buf, 1, n, out);
                 }
@@ -423,6 +415,23 @@ done:
     g_busy = false;
     pthread_mutex_unlock(&g_lock);
     return NULL;
+}
+
+// Set up in the background, on a stack like the main thread's (macOS gives other threads 512 KB by default)
+static void start_extract(void) {
+    pthread_attr_t a;
+    pthread_attr_init(&a);
+    int error = pthread_attr_setstacksize(&a, 8 << 20);
+    if (!error) error = pthread_attr_setdetachstate(&a, PTHREAD_CREATE_DETACHED);
+    pthread_t t;
+    if (!error) error = pthread_create(&t, &a, extract_thread, NULL);
+    pthread_attr_destroy(&a);
+    if (error) {
+        set_job("Setup could not start.", true, "Please try again after closing other applications.");
+        pthread_mutex_lock(&g_lock);
+        g_busy = false;
+        pthread_mutex_unlock(&g_lock);
+    }
 }
 
 // ------------------------------------------------------------------ folder dialog (SDL calls back on any thread)
@@ -941,9 +950,9 @@ extern "C" void launcher_run(const char *root) {
     // fonts belong to this context: back here via "Title screen" (in-place reboot) the previous run's are gone with
     // its context, so load them again (a stale pointer here aborted in PushFont - user, 0.1 RC)
     g_font_small = g_font_menu = g_font_title = NULL;
-    // Baloo 2 SemiBold (OFL, shipped: third_party/fonts/Baloo2) - rounded, game-like; it runs small, hence the sizes
+    // Baloo 2 SemiBold (OFL, shipped: fonts/) - rounded, game-like; it runs small, hence the sizes
     char baloo[1024];
-    std::string own = rt_resource("Baloo2-SemiBold.ttf", "third_party/fonts/Baloo2/Baloo2-SemiBold.ttf", baloo, sizeof baloo) ? baloo : "";
+    std::string own = rt_resource("Baloo2-SemiBold.ttf", "fonts/Baloo2-SemiBold.ttf", baloo, sizeof baloo) ? baloo : "";
     const char *fonts[] = {getenv("LARECOMP_LAUNCHER_FONT") ? getenv("LARECOMP_LAUNCHER_FONT") : "",  // (test)
                            own.c_str(), "fonts/nintendo_udsgr_std_003.ttf", "/System/Library/Fonts/Avenir Next.ttc",
                            "/System/Library/Fonts/Helvetica.ttc", "C:/Windows/Fonts/segoeui.ttf"};
@@ -1014,9 +1023,7 @@ extern "C" void launcher_run(const char *root) {
         g_src = t;
         g_busy = true;
         page = SETUP;
-        pthread_t th;
-        pthread_create(&th, NULL, extract_thread, NULL);
-        pthread_detach(th);
+        start_extract();
     }
     if (getenv("LARECOMP_LAUNCHER_DELETE")) {  // (test) what DELETE GAME FILES does, logged; then the start screen
         double gb = rt_game_files_size(g_root.c_str()) / 1e9;
@@ -1367,7 +1374,7 @@ extern "C" void launcher_run(const char *root) {
                 };
 
                 std::string src_d = "The folder with your own legally obtained game files of The Legend of Zelda: Skyward Sword HD "
-                                    "version 1.0.0. No copyrighted game files or assets are bundled with Sky Recomp.";
+                                    "version 1.0.0. Original game data is not bundled with Sky Recomp.";
                 if (!src.empty()) src_d += "\n\nChosen: " + src;
 
                 // the step that's running / its result, under the rows and in the Set up row's explanation
@@ -1398,9 +1405,7 @@ extern "C" void launcher_run(const char *root) {
                         pthread_mutex_lock(&g_lock);
                         g_busy = true;
                         pthread_mutex_unlock(&g_lock);
-                        pthread_t t;
-                        pthread_create(&t, NULL, extract_thread, NULL);
-                        pthread_detach(t);
+                        start_extract();
                     }
                     files_gb = -1;  // (re-measured after a setup)
                 } else {

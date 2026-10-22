@@ -9,6 +9,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 #include "../../kernel.h"
 #include "shaders.h"
@@ -487,7 +490,11 @@ static int new_chunk(uint64_t size) {
                                   .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT};
     if (getenv("LARECOMP_VK_RING_SYSMEM")) ai.usage = VMA_MEMORY_USAGE_AUTO_PREFER_HOST;  // (test: a GPU without resizable BAR)
     VmaAllocationInfo info;
-    VK_CHECK(vmaCreateBuffer(g_vk.vma, &bi, &ai, &c->buf, &c->mem, &info));
+    VkResult vr = vmaCreateBuffer(g_vk.vma, &bi, &ai, &c->buf, &c->mem, &info);
+    if (vr != VK_SUCCESS) {
+        ai.usage = VMA_MEMORY_USAGE_AUTO_PREFER_HOST;
+        VK_CHECK(vmaCreateBuffer(g_vk.vma, &bi, &ai, &c->buf, &c->mem, &info));
+    }
     c->ptr = info.pMappedData;
     c->size = size;
     if (!nchunks) {  // where the ring lives: device-local (resizable BAR) or system memory read across PCIe
@@ -1936,6 +1943,7 @@ static VkDeviceMemory gmem_mem;
 static uint64_t gmem_size;
 
 static bool gmem_import(uint64_t size) {
+    plat_commit(HEAP_BASE, size);  // An external host-memory import must cover committed pages.
     PFN_vkGetMemoryHostPointerPropertiesEXT props =
         (PFN_vkGetMemoryHostPointerPropertiesEXT)vkGetDeviceProcAddr(g_vk.dev, "vkGetMemoryHostPointerPropertiesEXT");
     VkMemoryHostPointerPropertiesEXT mp = {.sType = VK_STRUCTURE_TYPE_MEMORY_HOST_POINTER_PROPERTIES_EXT};
@@ -2288,7 +2296,17 @@ void vc_flush(void) {
 // forces copies.
 static bool guest_direct(uint64_t addr, uint64_t size, VkBuffer *buf, VkDeviceSize *off) {
     static int copy = -1;
-    if (copy < 0) copy = getenv("LARECOMP_VK_COPY_VERTICES") != NULL;
+    if (copy < 0) {
+        copy = getenv("LARECOMP_VK_COPY_VERTICES") != NULL;
+#ifdef _WIN32
+        MEMORYSTATUSEX memory = {.dwLength = sizeof memory};
+        // WDDM charges another heap-sized commitment for this optional zero-copy import.
+        if (!copy && GlobalMemoryStatusEx(&memory) && memory.ullAvailPageFile < kernel_heap_size() * 2 + (4ull << 30)) {
+            copy = 1;
+            LOG("[vk] using copied vertices to preserve Windows memory headroom\n");
+        }
+#endif
+    }
     if (copy || addr < HEAP_BASE) return false;
     if (addr + size > HEAP_BASE + gmem_size && kernel_heap_size() != gmem_tried) { gmem_tried = kernel_heap_size(); gmem_info(); }
     if (!gmem_buf || addr + size > HEAP_BASE + gmem_size) return false;

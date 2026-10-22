@@ -290,7 +290,8 @@ NVN(nvnCommandBufferGetCopyRowStride) { RET(copy_row_stride); }
 NVN(nvnCommandBufferGetCopyImageStride) { RET(copy_image_stride); }
 
 // ---- clears
-NVN(nvnCommandBufferClearColor) { record_copy(c, CMD_CLEAR_COLOR, 2, 16); }
+// (x[5] is the clear kind: record() copies x1..x7, and ClearColor has no x6, so it's whatever the game left there)
+NVN(nvnCommandBufferClearColor) { CmdRec *r = record_copy(c, CMD_CLEAR_COLOR, 2, 16); r->x[5] = 0; }
 NVN(nvnCommandBufferClearColori) { CmdRec *r = record_copy(c, CMD_CLEAR_COLOR, 2, 16); r->x[5] = 1; }
 NVN(nvnCommandBufferClearColorui) { CmdRec *r = record_copy(c, CMD_CLEAR_COLOR, 2, 16); r->x[5] = 2; }
 PLAIN(nvnCommandBufferClearDepthStencil, CMD_CLEAR_DEPTH_STENCIL)

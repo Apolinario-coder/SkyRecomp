@@ -537,6 +537,7 @@ static void clear(int index, int kind, const void *color, uint32_t mask, bool de
     id<MTLLibrary> lib = clear_lib(index < 0 ? 0 : index);
     pd.vertexFunction = [lib newFunctionWithName:@"vs"];
     static NSString *const fs[] = {@"fs_f", @"fs_i", @"fs_u"};
+    if (kind < 0 || kind > 2) kind = 0;  // (float: a bad kind would hand Metal a garbage function name, which aborts)
     pd.fragmentFunction = [lib newFunctionWithName:index >= 0 ? fs[kind] : @"fs_none"];
     attachment_formats(pd);
     for (int i = 0; i < 8; i++) pd.colorAttachments[i].writeMask = MTLColorWriteMaskNone;
@@ -884,12 +885,14 @@ static Prog *get_program(NvnProgram *p, ShaderKey *vkey, ShaderKey *fkey) {
     const uint8_t *vb = (const uint8_t *)vkey;
     for (size_t i = 0; i < sizeof *vkey; i++) { h ^= vb[i]; h *= 0x100000001B3ull; }
     for (int i = 0; i < 8; i++) { h ^= fkey->rt_kind[i]; h *= 0x100000001B3ull; }
+    h ^= fkey->dual_source; h *= 0x100000001B3ull;
     if (!h) h = 1;
     uint32_t slot = (uint32_t)(h ^ (h >> 31)) & (PROG_TAB - 1);
     while (prog_tab[slot].key && prog_tab[slot].key != h) slot = (slot + 1) & (PROG_TAB - 1);
     if (prog_tab[slot].key) { Prog *fp = (__bridge Prog *)prog_tab[slot].prog; return fp->failed ? nil : fp; }
-    NSString *key = [NSString stringWithFormat:@"%llx/%llx/%@/%@%s", p->stages[0].code_addr, p->stages[1].code_addr,
+    NSString *key = [NSString stringWithFormat:@"%llx/%llx/%@/%@/%u%s", p->stages[0].code_addr, p->stages[1].code_addr,
                      [NSData dataWithBytes:vkey length:sizeof *vkey], [NSData dataWithBytes:fkey->rt_kind length:8],
+                     (unsigned)fkey->dual_source,
                      vkey->flip_x ? "/mirror" : ""];  // (NSData's description elides the middle of the key's bytes)
     Prog *pr = cache[key];
     if (pr) {
@@ -1615,6 +1618,14 @@ static void draw(CmdRec *r, bool indexed) {
     vkey.depth_minus_one = nvn_depth_mode() == 0;
     for (int i = 0; i < st.nattrib; i++) vkey.attr_kind[i] = (uint8_t)attr_kind(st.attrib[i] & 0xFF);
     for (int i = 0; i < st.rt.ncolor; i++) if (st.rt.color[i]) fkey.rt_kind[i] = (uint8_t)rt_kind(st.rt.color[i]->format);
+    // Dual-source blending (SSHD eyes): colour outputs 0/1 are the two sources of attachment 0. Mirrors the
+    // Vulkan backend's handling (runtime/nvn/vulkan/exec.c) - without this the fragment shader never declares
+    // the second source output and the blend's secondary input is undefined.
+    if ((st.color_state[0] & 1) && st.rt.ncolor == 1) {
+        const uint8_t *b = st.blend[0];
+        for (int i = 1; i <= 4; i++) if (b[i] >= 0x10 && b[i] <= 0x13) fkey.dual_source = true;
+        if (fkey.dual_source) fkey.rt_kind[1] = fkey.rt_kind[0];
+    }
     Prog *pr = get_program(st.program, &vkey, &fkey);
     if (!pr || !pr->ready) { stat_skipped++; return; }
     {   // mirror mode (runtime/hle/mirror.c): the scene's composite into the window image is drawn mirrored - the

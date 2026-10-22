@@ -6,12 +6,18 @@ import unittest
 from unittest.mock import patch
 from types import SimpleNamespace
 
-spec = importlib.util.spec_from_file_location('builder', Path(__file__).resolve().parents[1] / 'build_game.py')
+spec = importlib.util.spec_from_file_location('builder', Path(__file__).resolve().parent / 'build_game.py')
 builder = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(builder)
 
 
 class BuildCacheTest(unittest.TestCase):
+    def test_builder_uses_canonical_headers(self):
+        root = Path(__file__).resolve().parents[1]
+        self.assertEqual(Path(builder.INC), root / 'runtime')
+        self.assertTrue((Path(builder.INC) / 'cpu.h').is_file())
+        self.assertTrue((root / 'tools/gamelib_entry.c').is_file())
+
     def test_generator_identity_invalidates_cached_objects(self):
         with tempfile.TemporaryDirectory() as d:
             src, obj = Path(d) / 'unit.c', Path(d) / 'unit.o'

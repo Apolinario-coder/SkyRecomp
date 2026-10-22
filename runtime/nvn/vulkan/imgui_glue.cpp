@@ -1,10 +1,37 @@
 // Dear ImGui's Vulkan backend on our device (start screen and in-game menu; both draw inside the window image's
 // dynamic rendering begun by vk_frame_begin).
+#ifdef _WIN32
+#include "../../../third_party/reshade/include/reshade.hpp"
+#endif
 #include "imgui.h"
 #include "imgui_impl_vulkan.h"
 
 extern "C" {
 #include "vk.h"
+#include "../../settings.h"
+}
+
+#ifdef _WIN32
+static void reshade_sync(reshade::api::effect_runtime *runtime) {
+    if (runtime->get_effects_state() != g_settings.reshade) {
+        runtime->set_effects_state(g_settings.reshade);
+        LOG("[reshade] effects %s\n", g_settings.reshade ? "on" : "off");
+    }
+}
+#endif
+
+extern "C" void vk_reshade_init(void) {
+#ifdef _WIN32
+    HMODULE module = GetModuleHandleW(L"ReShade64.dll");
+    if (!module) return;
+    if (!reshade::register_addon(GetModuleHandleW(NULL), module)) {
+        LOG("[reshade] effect control unavailable; changes require closing and reopening the application\n");
+        return;
+    }
+    reshade::register_event<reshade::addon_event::init_effect_runtime>(reshade_sync);
+    reshade::register_event<reshade::addon_event::reshade_present>(reshade_sync);
+    LOG("[reshade] menu effect control ready\n");
+#endif
 }
 
 // Per ImGui context (the start screen and the in-game menu each have one, and the start screen comes back after an

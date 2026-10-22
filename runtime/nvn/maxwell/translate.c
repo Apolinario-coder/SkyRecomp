@@ -2057,7 +2057,11 @@ ShaderInfo *maxwell_translate(const uint8_t *blob, size_t max_size, int stage, c
         for (int rt = 0; rt < 8; rt++) {
             if (!((c->omap_target >> (rt * 4)) & 0xF)) continue;
             int kind = key ? key->rt_kind[rt] : 0;
-            sp(&s, "  %s4 c%d [[color(%d)]];\n", kind == 1 ? "int" : kind == 2 ? "uint" : "float", rt, rt);
+            const char *ty = kind == 1 ? "int" : kind == 2 ? "uint" : "float";
+            // Dual-source blending (SSHD eyes): outputs 0/1 are the two sources of attachment 0, same as the
+            // GLSL/Vulkan backend above - without the index attribute Metal only keeps one of the two writes.
+            if (key && key->dual_source && rt < 2) sp(&s, "  %s4 c%d [[color(0), index(%d)]];\n", ty, rt, rt);
+            else sp(&s, "  %s4 c%d [[color(%d)]];\n", ty, rt, rt);
         }
         if (c->omap_depth) { sp(&s, "  float depth [[depth(any)]];\n"); info->writes_depth = true; }
         sp(&s, "};\n");

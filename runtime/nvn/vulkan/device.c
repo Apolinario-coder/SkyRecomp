@@ -7,6 +7,9 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 #include "../../paths.h"
 #include "../../settings.h"
@@ -19,6 +22,22 @@ VkG g_vk;
 static SDL_Window *window;
 static atomic_bool ui_ready;
 static VkDebugUtilsMessengerEXT messenger;
+
+void vk_memory_report(void) {
+#ifdef _WIN32
+    MEMORYSTATUSEX m = {.dwLength = sizeof m};
+    if (GlobalMemoryStatusEx(&m)) LOG("[vk] memory: Windows commit available %llu MB, physical available %llu MB\n",
+        (unsigned long long)(m.ullAvailPageFile >> 20), (unsigned long long)(m.ullAvailPhys >> 20));
+#endif
+    if (!g_vk.vma) return;
+    VkPhysicalDeviceMemoryProperties props;
+    vkGetPhysicalDeviceMemoryProperties(g_vk.phys, &props);
+    VmaBudget budgets[VK_MAX_MEMORY_HEAPS];
+    vmaGetHeapBudgets(g_vk.vma, budgets);
+    for (uint32_t i = 0; i < props.memoryHeapCount; i++) LOG("[vk] heap %u: app allocated %llu MB, usage %llu MB, budget %llu MB\n", i,
+        (unsigned long long)(budgets[i].statistics.allocationBytes >> 20),
+        (unsigned long long)(budgets[i].usage >> 20), (unsigned long long)(budgets[i].budget >> 20));
+}
 
 // ================================================================== instance / device
 static VKAPI_ATTR VkBool32 VKAPI_CALL debug_cb(VkDebugUtilsMessageSeverityFlagBitsEXT sev, VkDebugUtilsMessageTypeFlagsEXT type,
@@ -39,8 +58,8 @@ static void create_instance(void) {
     bool validate = getenv("LARECOMP_VK_VALIDATION") != NULL;
     if (validate) ext[n_ext++] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
     const char *layers[] = {"VK_LAYER_KHRONOS_validation"};
-    VkApplicationInfo app = {.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO, .pApplicationName = "LARecomp",
-                             .pEngineName = "LARecomp", .apiVersion = VK_API_VERSION_1_3};
+    VkApplicationInfo app = {.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO, .pApplicationName = "SkyRecomp",
+                             .pEngineName = "SkyRecomp", .apiVersion = VK_API_VERSION_1_3};
     VkInstanceCreateInfo ci = {.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, .pApplicationInfo = &app,
                                .enabledExtensionCount = n_ext, .ppEnabledExtensionNames = ext,
                                .enabledLayerCount = validate ? 1 : 0, .ppEnabledLayerNames = layers};
@@ -297,9 +316,20 @@ static void create_swapchain(void) {
         .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE, .preTransform = caps.currentTransform,
         .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR, .presentMode = present_mode(), .clipped = VK_TRUE,
         .oldSwapchain = old};
-    VK_CHECK(vkCreateSwapchainKHR(g_vk.dev, &ci, NULL, &g_vk.swapchain));
+    VkSwapchainKHR next = VK_NULL_HANDLE;
+    VkResult result = vkCreateSwapchainKHR(g_vk.dev, &ci, NULL, &next);
+    // A fullscreen transition can invalidate the surface between querying it and creating the swapchain.
+    // Passing oldSwapchain retires it even when creation fails, so retry with a fresh chain next frame.
+    if (result != VK_SUCCESS && result != VK_ERROR_OUT_OF_DATE_KHR && result != VK_ERROR_INITIALIZATION_FAILED)
+        VK_CHECK(result);
     for (uint32_t i = 0; i < g_vk.sc_count; i++) vkDestroyImageView(g_vk.dev, g_vk.sc_views[i], NULL);
     if (old) vkDestroySwapchainKHR(g_vk.dev, old, NULL);
+    g_vk.swapchain = result == VK_SUCCESS ? next : VK_NULL_HANDLE;
+    g_vk.sc_count = 0;
+    if (result != VK_SUCCESS) {
+        LOG("[vk] surface changing (%d); retrying swapchain next frame\n", result);
+        return;
+    }
     g_vk.sc_format = sf.format;
     g_vk.sc_extent = ext;
     g_vk.sc_count = 8;
@@ -364,6 +394,7 @@ bool vk_frame_begin(const float clear[4]) {
     VkResult r = vkAcquireNextImageKHR(g_vk.dev, g_vk.swapchain, UINT64_MAX, acquire_sem[slot], VK_NULL_HANDLE, &cur_frame.image);
     if (r == VK_ERROR_OUT_OF_DATE_KHR) {
         recreate_swapchain();
+        if (!g_vk.swapchain) return false;
         r = vkAcquireNextImageKHR(g_vk.dev, g_vk.swapchain, UINT64_MAX, acquire_sem[slot], VK_NULL_HANDLE, &cur_frame.image);
     }
     if (r != VK_SUCCESS && r != VK_SUBOPTIMAL_KHR) { LOG("[vk] acquire failed: %d\n", r); return false; }
@@ -641,10 +672,45 @@ static void quick_exit_handler(void) {
 
 void ui_window_init(void) {
     if (window) return;
+    LOG("[vk] initializing window\n");
     atexit(quick_exit_handler);
+#ifdef _WIN32
+    char manifest[1100], module[1100];
+    settings_load();
+    const char *reshade = getenv("SKYRECOMP_RESHADE");
+    bool use_reshade = g_settings.reshade && (!reshade || strcmp(reshade, "0"));
+    if (!use_reshade) {
+        setenv("DISABLE_VK_LAYER_reshade_1", "1", 1);
+        setenv("VK_LOADER_LAYERS_DISABLE", "VK_LAYER_reshade", 1);
+        LOG("[reshade] disabled by settings\n");
+    }
+    if (use_reshade &&
+        rt_resource("reshade/ReShade64.json", "reshade/ReShade64.json", manifest, sizeof manifest) &&
+        rt_resource("reshade/ReShade64.dll", "reshade/ReShade64.dll", module, sizeof module)) {
+        char *end = strrchr(manifest, '/'), *back = strrchr(manifest, '\\');
+        if (back && (!end || back > end)) end = back;
+        if (end) {
+            *end = 0;
+            char paths[4096];
+            const char *key = getenv("VK_LAYER_PATH") ? "VK_LAYER_PATH" : "VK_ADD_LAYER_PATH";
+            const char *prior = getenv(key);
+            if (snprintf(paths, sizeof paths, "%s%s%s", manifest, prior && *prior ? ";" : "", prior ? prior : "") < sizeof paths) {
+                setenv(key, paths, 1);
+                const char *layers = getenv("VK_INSTANCE_LAYERS");
+                if (!layers || !strstr(layers, "VK_LAYER_reshade")) {
+                    if (snprintf(paths, sizeof paths, "%s%sVK_LAYER_reshade", layers ? layers : "", layers && *layers ? ";" : "") < sizeof paths)
+                        setenv("VK_INSTANCE_LAYERS", paths, 1);
+                }
+                LOG("[vk] local ReShade layer enabled\n");
+            }
+        }
+    }
+#endif
     SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
     settings_load();
+    LOG("[vk] initializing SDL video and input\n");
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) FATAL("SDL_Init: %s\n", SDL_GetError());
+    LOG("[vk] SDL ready\n");
     int win_w = 1280, win_h = 720;
     if (getenv("LARECOMP_WINDOW")) sscanf(getenv("LARECOMP_WINDOW"), "%dx%d", &win_w, &win_h);
     SDL_WindowFlags wflags = SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY;
@@ -658,16 +724,27 @@ void ui_window_init(void) {
     }
     window = SDL_CreateWindow("Sky Recomp", win_w, win_h, wflags);
     if (!window) FATAL("SDL_CreateWindow: %s\n", SDL_GetError());
+    LOG("[vk] SDL window created at %llums\n", (unsigned long long)SDL_GetTicks());
     rt_window_icon(window);
-    // the Fullscreen setting applies from the start screen on (not only once the game runs); test windows stay windows
-    if (g_settings.fullscreen && !getenv("LARECOMP_WINDOW") && !getenv("LARECOMP_HIDDEN")) SDL_SetWindowFullscreen(window, true);
+    LOG("[vk] window icon ready at %llums\n", (unsigned long long)SDL_GetTicks());
+    // Create Vulkan before requesting fullscreen; finish the transition before the game starts presenting.
     create_instance();
+    extern void vk_reshade_init(void);
+    vk_reshade_init();
     if (!SDL_Vulkan_CreateSurface(window, g_vk.inst, NULL, &g_vk.surface)) FATAL("SDL_Vulkan_CreateSurface: %s\n", SDL_GetError());
     pick_device();
     create_device();
+    LOG("[vk] device ready\n");
     create_swapchain();
+    LOG("[vk] swapchain ready\n");
     vk_exec_init();
+    LOG("[vk] execution ready\n");
     vk_shaders_init();
+    LOG("[vk] shaders ready\n");
+    if (g_settings.fullscreen && !getenv("LARECOMP_WINDOW") && !getenv("LARECOMP_HIDDEN")) {
+        if (!SDL_SetWindowFullscreen(window, true) || !SDL_SyncWindow(window))
+            LOG("[vk] fullscreen transition: %s\n", SDL_GetError());
+    }
 }
 
 SDL_Window *ui_window(void) { return window; }
@@ -698,7 +775,7 @@ int ui_run(void) {
     atomic_store(&ui_ready, true);
     uint64_t last_dump = SDL_GetTicksNS();
     for (;;) {
-        if (rt_reboot_requested()) return rt_reboot_requested();  // (runtime/main.c tears the game down)
+        if (rt_reboot_requested()) { input_mouse_update(window, false); return rt_reboot_requested(); }
         if (getenv("LARECOMP_DUMP_THREADS")) {
             uint64_t now = SDL_GetTicksNS();
             if (now - last_dump >= 3000000000ull) {
@@ -709,13 +786,16 @@ int ui_run(void) {
         }
         SDL_Event e;
         while (SDL_WaitEventTimeout(&e, 16)) {
+            if (rt_reboot_requested()) break;
             if (e.type == SDL_EVENT_QUIT) {
                 LOG("window closed\n");
                 exit(0);
             }
             extern bool input_user_blocked(const SDL_Event *e);
             if (input_user_blocked(&e)) continue;  // scripted test runs: the real keyboard / mouse / pads do nothing (as metal.m)
-            if (menu_handle_event(&e)) continue;
+            bool consumed = menu_handle_event(&e);
+            input_mouse_update(window, true);
+            if (consumed) continue;
             input_handle_event(&e);
         }
         menu_apply_window_requests(window);
