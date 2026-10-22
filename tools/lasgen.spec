@@ -5,6 +5,7 @@
 import glob
 import importlib.util
 import os
+import subprocess
 import sys
 
 from PyInstaller.utils.hooks import collect_dynamic_libs, collect_submodules
@@ -43,3 +44,8 @@ exe = EXE(
     upx=False,
 )
 coll = COLLECT(exe, a.binaries, a.datas, strip=sys.platform == 'darwin', upx=False, name='lasgen')
+
+# Unicorn's generated jump-table code is incompatible with the Windows bootloader's CFG flag.
+if sys.platform == 'win32':
+    subprocess.run([sys.executable, os.path.join(TOOLS, 'pe_no_cfg.py'),
+                    os.path.join(DISTPATH, 'lasgen', 'lasgen.exe')], check=True)

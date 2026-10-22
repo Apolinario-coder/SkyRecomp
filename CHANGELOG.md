@@ -1,5 +1,10 @@
 # Changelog
 
+### Windows v1.0.6 setup hotfix - 2026-10-22
+
+- Fixed the packaged game-code generator terminating before writing a log during game setup. The Windows compatibility adjustment now runs automatically whenever the helper is packaged.
+- Failed generator reports now include the exit code and diagnostic log path, including when the helper produces no output.
+
 ## [1.0.6] - 2026-10-21
 
 **Sharper visuals. Freer camera control. A new way to play with keyboard and mouse.** This release brings three major upgrades: Henriko Magnifico's 4K texture pack, an optional free camera, and mouse camera/combat controls.

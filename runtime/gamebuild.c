@@ -420,7 +420,8 @@ bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size
                     if (r != 0) {
                         char last[300];
                         log_tail(g->log, last, sizeof last);
-                        LOG("[gamebuild] generator (%s) failed: %s\n", g->name, last);
+                        LOG("[gamebuild] generator (%s) failed (exit 0x%08x, log %s): %s\n",
+                            g->name, (unsigned)r, g->log, last[0] ? last : "no output was written");
                         snprintf(why, why_size, "the game code couldn't be prepared");
                         ok = false;
                     }
