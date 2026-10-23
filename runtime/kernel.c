@@ -346,7 +346,40 @@ static uint32_t block_current(int64_t timeout_ns) {
             t->wait_result = R_CANCELLED;
             break;
         }
-        if (!kwait(timeout_ns, &ts)) {
+        // Safety check for WAIT_MUTEX: if user-space unlocked the mutex (word == 0)
+        // without calling svcArbitrateUnlock (race on WAITERS_BIT), claim it now.
+        if (t->wait_kind == WAIT_MUTEX && t->wait_addr) {
+            if (mutex_acquire_or_mark(t->wait_addr, t->wait_tag)) {
+                t->wait_kind = WAIT_NONE;
+                t->wait_result = R_OK;
+                break;
+            }
+        }
+        // Use a 20ms safety slice for infinite waits (-1) on CONDVAR/MUTEX to recover from lost wakeups
+        int64_t wait_slice = timeout_ns;
+        struct timespec slice_ts;
+        const struct timespec *pts = &ts;
+        if (timeout_ns < 0 && (t->wait_kind == WAIT_CONDVAR || t->wait_kind == WAIT_MUTEX)) {
+            wait_slice = 20000000ll; // 20 ms
+            deadline(&slice_ts, wait_slice);
+            pts = &slice_ts;
+        }
+        if (!kwait(wait_slice, pts)) {
+            if (timeout_ns < 0) {
+                // Spurious wakeup for infinite condvar wait: reacquire the guest mutex and let
+                // guest user-space (nn::os::WaitEvent / AcquireSemaphore) re-evaluate its predicate!
+                if (t->wait_kind == WAIT_CONDVAR && t->wait_mutex) {
+                    if (mutex_acquire_or_mark(t->wait_mutex, t->wait_tag)) {
+                        t->wait_kind = WAIT_NONE;
+                        t->wait_result = R_OK;
+                        break;
+                    } else {
+                        t->wait_kind = WAIT_MUTEX;
+                        t->wait_addr = t->wait_mutex;
+                    }
+                }
+                continue;
+            }
             t->wait_kind = WAIT_NONE;
             t->wait_result = R_TIMEOUT;
             break;
@@ -358,10 +391,21 @@ static uint32_t block_current(int64_t timeout_ns) {
 
 static uint32_t svc_arbitrate_lock(uint32_t owner, uint64_t addr, uint32_t tag) {
     pthread_mutex_lock(&g_klock);
-    uint32_t v = __atomic_load_n(u32p(addr), __ATOMIC_SEQ_CST);
-    if (v != (owner | WAITERS_BIT)) {
-        pthread_mutex_unlock(&g_klock);
-        return R_OK;
+    // Ensure WAITERS_BIT is set atomically; if the mutex was freed concurrently, acquire it immediately.
+    for (;;) {
+        uint32_t v = __atomic_load_n(u32p(addr), __ATOMIC_SEQ_CST);
+        if (v == 0) {
+            if (__atomic_compare_exchange_n(u32p(addr), &v, tag, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)) {
+                pthread_mutex_unlock(&g_klock);
+                return R_OK;
+            }
+            continue;
+        }
+        if (v != (owner | WAITERS_BIT)) {
+            pthread_mutex_unlock(&g_klock);
+            return R_OK;
+        }
+        break;
     }
     KThread *t = t_cur;
     t->wait_kind = WAIT_MUTEX;
@@ -389,14 +433,10 @@ static uint32_t svc_wait_process_wide_key(uint64_t mutex, uint64_t key, uint32_t
     t->wait_tag = tag;
     __atomic_store_n(u32p(key), 1, __ATOMIC_SEQ_CST);
     uint32_t r = block_current(timeout);
-    if (r != R_OK) {
-        // On Horizon, svcWaitProcessWideKeyAtomic does NOT reacquire the mutex on R_TIMEOUT;
-        // nn::os TimedWait calls InternalCriticalSection::Enter(mutex) in user space when r == R_TIMEOUT.
-        bool any_left = false;
-        for (KThread *w = g_waitlist; w; w = w->wnext)
-            if (w->wait_kind == WAIT_CONDVAR && w->wait_addr == key) any_left = true;
-        if (!any_left) __atomic_store_n(u32p(key), 0, __ATOMIC_SEQ_CST);
-    }
+    bool any_left = false;
+    for (KThread *w = g_waitlist; w; w = w->wnext)
+        if (w->wait_kind == WAIT_CONDVAR && w->wait_addr == key) any_left = true;
+    if (!any_left) __atomic_store_n(u32p(key), 0, __ATOMIC_SEQ_CST);
     pthread_mutex_unlock(&g_klock);
     return r;
 }
