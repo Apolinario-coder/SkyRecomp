@@ -346,7 +346,9 @@ static uint32_t block_current(int64_t timeout_ns) {
             t->wait_result = R_CANCELLED;
             break;
         }
-        if (!kwait(timeout_ns, &ts)) {
+        // A waker may have run between the timeout and reacquiring g_klock; its result (and any
+        // mutex ownership it handed over) wins over the timeout.
+        if (!kwait(timeout_ns, &ts) && t->wait_kind != WAIT_NONE) {
             t->wait_kind = WAIT_NONE;
             t->wait_result = R_TIMEOUT;
             break;
@@ -382,12 +384,15 @@ static uint32_t svc_arbitrate_unlock(uint64_t addr) {
 static uint32_t svc_wait_process_wide_key(uint64_t mutex, uint64_t key, uint32_t tag, int64_t timeout) {
     pthread_mutex_lock(&g_klock);
     KThread *t = t_cur;
+    // Publish the has-waiter flag before releasing the mutex (as Horizon does): nn::os skips
+    // svcSignalProcessWideKey while the key reads 0, so a signaler that takes the freed mutex
+    // before the flag is set would never wake this thread.
+    __atomic_store_n(u32p(key), 1, __ATOMIC_SEQ_CST);
     mutex_release(mutex);
     t->wait_kind = WAIT_CONDVAR;
     t->wait_addr = key;
     t->wait_mutex = mutex;
     t->wait_tag = tag;
-    __atomic_store_n(u32p(key), 1, __ATOMIC_SEQ_CST);
     uint32_t r = block_current(timeout);
     if (r != R_OK) {
         // On Horizon, svcWaitProcessWideKeyAtomic does NOT reacquire the mutex on R_TIMEOUT;
