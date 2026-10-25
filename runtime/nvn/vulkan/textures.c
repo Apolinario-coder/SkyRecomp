@@ -581,16 +581,23 @@ static void upload_texture(NvnTexture *t, TexBackend *b) {
             }
         }
     }
-    if (!full && !restyle) {
+    if (!restyle && b->uploaded) {
         prof_tex_samples++;
         uint64_t sh = fnv_sample(mem, total);
-        if (sh == b->sample_hash) return;
+        if (sh == b->sample_hash && !periodic && !always_full) {
+            if (b->dynamic && ++b->unchanged_frames > 300) b->dynamic = false;
+            return;
+        }
     }
     prof_tex_full++; prof_tex_full_bytes += total; if (b->dynamic) prof_tex_dyn++;
     uint64_t h = hash_full(mem, total);
     b->full_frame = frame;
     b->sample_hash = fnv_sample(mem, total);
-    if (b->uploaded && h == b->data_hash && !restyle) return;
+    if (b->uploaded && h == b->data_hash && !restyle) {
+        if (b->dynamic && ++b->unchanged_frames > 300) b->dynamic = false;
+        return;
+    }
+    b->unchanged_frames = 0;
     if (b->uploaded && h != b->data_hash) b->dynamic = true;
     if (b->tp > 0) b->tp_gen = texpatch_generation();
     b->data_hash = h;

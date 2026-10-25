@@ -502,6 +502,11 @@ static NvnTexture *g_last_presented;
 
 const float *vk_shot_crop(void) { return g_shot_crop; }
 
+static int g_window_crop[4];
+void backend_set_window_crop(const int crop[4]) {
+    if (crop) memcpy(g_window_crop, crop, sizeof g_window_crop);
+}
+
 void backend_present(NvnTexture *t);
 void backend_represent(void) {
     if (g_last_presented) backend_present(g_last_presented);
@@ -538,6 +543,16 @@ void backend_present(NvnTexture *t) {
         extern void widescreen_present_crop(uint64_t, double, float *, double *, double *, double *, double *);
         float crop[4];  // uv origin and size
         widescreen_present_crop(total_frames, shape, crop, &vx, &vy, &vw, &vh);
+        if (g_window_crop[2] > 0 && g_window_crop[3] > 0 && t->width > 0 && t->height > 0) {
+            float u0 = (float)g_window_crop[0] / t->width;
+            float v0 = (float)g_window_crop[1] / t->height;
+            float uw = (float)g_window_crop[2] / t->width;
+            float vh = (float)g_window_crop[3] / t->height;
+            crop[0] = u0 + crop[0] * uw;
+            crop[1] = v0 + crop[1] * vh;
+            crop[2] *= uw;
+            crop[3] *= vh;
+        }
         widescreen_set_factor((float)shape);
         renderer_set_scale((float)sx, (float)sy);
         VkCommandBuffer cb = vk_cmd();

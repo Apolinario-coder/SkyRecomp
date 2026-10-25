@@ -36,6 +36,7 @@ static int count_files_recursive(const char *dir) {
     struct dirent *e;
     while ((e = readdir(d))) {
         if (e->d_name[0] == '.') continue;
+        if (!strcmp(e->d_name, "textures")) continue;
         if (!strcmp(e->d_name, "romfs_metadata.bin")) continue;
         char sub[1200];
         snprintf(sub, sizeof sub, "%s/%s", dir, e->d_name);
@@ -111,6 +112,7 @@ void mods_rescan(void) {
     struct dirent *e;
     while ((e = readdir(d)) && s_mod_count < MAX_MODS) {
         if (e->d_name[0] == '.') continue;
+        if (!strcmp(e->d_name, "textures")) continue;
         char mod_dir[1024];
         snprintf(mod_dir, sizeof mod_dir, "mods/%s", e->d_name);
         if (!dir_exists(mod_dir)) continue;

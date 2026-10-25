@@ -676,7 +676,7 @@ NVN(nvnQueueAcquireTexture) {
 NVN(nvnQueuePresentTexture) {
     NvnWindow *w = HOST(NvnWindow, A(1));
     int i = (int)A(2);
-    if (i >= 0 && i < w->num) backend_present(HOST(NvnTexture, w->textures[i]));
+    if (i >= 0 && i < w->num) { backend_set_window_crop(w->crop); backend_present(HOST(NvnTexture, w->textures[i])); }
 }
 
 // ================================================================== small state objects

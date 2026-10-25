@@ -77,6 +77,7 @@ typedef struct TexBackend {
     bool gpu_owned, uploaded, dynamic, custom, custom_enabled;
     uint64_t data_hash, sample_hash, checked_frame, full_frame;
     uint32_t wgen;  // page write tracking generation at the last upload check (textures.c)
+    uint32_t unchanged_frames;
     bool scalable, presented;
     uint64_t touched_frame, frame_cleared;
     uint32_t level_gen;

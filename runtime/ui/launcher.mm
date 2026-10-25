@@ -1077,6 +1077,23 @@ static void prelaunch_tab(float sc) {
         ImGui::SameLine();
         if (ImGui::Button("Restore fallback font")) remove_fonts();
     }
+    ImGui::Spacing();
+    ImGui::Spacing();
+    heading("Game language");
+    char autol[64];
+    snprintf(autol, sizeof autol, "Auto (%s)", settings_language_name());
+    const char *names[N_LANGUAGES];
+    names[0] = autol;
+    for (int i = 1; i < N_LANGUAGES; i++) names[i] = g_language_names[i];
+    int lang = g_settings.language;
+    ImGui::SetNextItemWidth(280 * sc);
+    if (ImGui::Combo("##language", &lang, names, N_LANGUAGES)) {
+        g_settings.language = lang;
+        settings_save();
+    }
+    ImGui::PushTextWrapPos(0);
+    ImGui::TextDisabled("Selects the in-game text language. Changes take effect when the game boots.");
+    ImGui::PopTextWrapPos();
 }
 
 extern "C" void launcher_run(const char *root) {
