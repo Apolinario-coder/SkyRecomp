@@ -14,11 +14,17 @@
 ssize_t pread(int fd, void *buf, size_t n, off_t off);
 ssize_t pwrite(int fd, const void *buf, size_t n, off_t off);
 
+__declspec(dllimport) int __stdcall SetEnvironmentVariableA(const char *lpName, const char *lpValue);
+
 static inline int setenv(const char *k, const char *v, int overwrite) {
     if (!overwrite && getenv(k)) return 0;
+    SetEnvironmentVariableA(k, v);
     return _putenv_s(k, v);
 }
-static inline int unsetenv(const char *k) { return _putenv_s(k, ""); }
+static inline int unsetenv(const char *k) {
+    SetEnvironmentVariableA(k, NULL);
+    return _putenv_s(k, "");
+}
 
 static inline int fsync(int fd) { return _commit(fd); }
 

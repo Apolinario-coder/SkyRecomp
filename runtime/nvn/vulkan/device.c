@@ -670,19 +670,55 @@ static void quick_exit_handler(void) {
 #endif
 }
 
+#ifdef _WIN32
+static void ensure_reshade_config(void) {
+    const char *preset = "HenrikoMagnifico_Ultra_NO_MOTION_BLUR_v8.ini";
+    FILE *f = fopen("ReShade.ini", "r");
+    if (!f) {
+        FILE *w = fopen("ReShade.ini", "w");
+        if (w) {
+            fprintf(w,
+                "[GENERAL]\n"
+                "EffectSearchPaths=.\\reshade-shaders\\Shaders\\**\n"
+                "TextureSearchPaths=.\\reshade-shaders\\Textures\\**\n"
+                "PresetPath=.\\%s\n"
+                "PerformanceMode=1\n"
+                "SkipLoadingDisabledEffects=1\n"
+                "PreprocessorDefinitions=RESHADE_DEPTH_LINEARIZATION_FAR_PLANE=1000.0,RESHADE_DEPTH_INPUT_IS_UPSIDE_DOWN=1,RESHADE_DEPTH_INPUT_IS_REVERSED=1,RESHADE_DEPTH_INPUT_IS_LOGARITHMIC=0\n"
+                "\n[INPUT]\n"
+                "KeyOverlay=36,0,0,0\n"
+                "KeyEffects=123,0,0,0\n"
+                "\n[OVERLAY]\n"
+                "TutorialProgress=4\n"
+                "ShowFPS=0\n", preset);
+            fclose(w);
+        }
+    } else {
+        fclose(f);
+    }
+}
+#endif
+
 void ui_window_init(void) {
     if (window) return;
     LOG("[vk] initializing window\n");
     atexit(quick_exit_handler);
 #ifdef _WIN32
+    ensure_reshade_config();
     char manifest[1100], module[1100];
     settings_load();
     const char *reshade = getenv("SKYRECOMP_RESHADE");
     bool use_reshade = g_settings.reshade && (!reshade || strcmp(reshade, "0"));
     if (!use_reshade) {
         setenv("DISABLE_VK_LAYER_reshade_1", "1", 1);
-        setenv("VK_LOADER_LAYERS_DISABLE", "VK_LAYER_reshade", 1);
+        setenv("VK_LOADER_LAYERS_DISABLE", "~all~,*reshade*,VK_LAYER_reshade", 1);
+        unsetenv("VK_INSTANCE_LAYERS");
+        unsetenv("VK_LAYER_PATH");
+        unsetenv("VK_ADD_LAYER_PATH");
         LOG("[reshade] disabled by settings\n");
+    } else {
+        unsetenv("DISABLE_VK_LAYER_reshade_1");
+        unsetenv("VK_LOADER_LAYERS_DISABLE");
     }
     if (use_reshade &&
         rt_resource("reshade/ReShade64.json", "reshade/ReShade64.json", manifest, sizeof manifest) &&

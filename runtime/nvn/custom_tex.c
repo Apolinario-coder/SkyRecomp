@@ -94,6 +94,7 @@ SDL_Surface *custom_tex_load(const NvnTexture *t) {
         total += size;
     }
     if (!total) return NULL;
+    if (t->pool && t->pool_offset + total > t->pool->size) return NULL;
     uint8_t *linear = malloc(total);
     if (!linear) return NULL;
     size_t offset = 0;

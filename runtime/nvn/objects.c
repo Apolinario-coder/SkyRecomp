@@ -160,7 +160,8 @@ NVN(nvnEventBuilderGetMemoryOffset) { RET(G(uint64_t, A(0), 8)); }
 static uint64_t event_addr(uint64_t ev) { return G(uint64_t, ev, 0); }
 NVN(nvnEventInitialize) {
     uint64_t pool = G(uint64_t, A(1), 0), off = G(uint64_t, A(1), 8);
-    G(uint64_t, A(0), 0) = HOST(NvnPool, pool)->storage + off;
+    NvnPool *p = pool ? HOST(NvnPool, pool) : NULL;
+    G(uint64_t, A(0), 0) = p ? p->storage + off : 0;
     G(uint64_t, A(0), 8) = pool;
     G(uint64_t, A(0), 16) = off;
     RET(1);
@@ -216,7 +217,8 @@ NVN(nvnBufferBuilderGetMemoryOffset) { RET(G(uint64_t, A(0), 0x10)); }
 NVN(nvnBufferBuilderGetSize) { RET(G(uint64_t, A(0), 0x18)); }
 NVN(nvnBufferInitialize) {
     uint64_t pool = G(uint64_t, A(1), 8), off = G(uint64_t, A(1), 0x10);
-    G(uint64_t, A(0), 0) = HOST(NvnPool, pool)->storage + off;
+    NvnPool *p = pool ? HOST(NvnPool, pool) : NULL;
+    G(uint64_t, A(0), 0) = p ? p->storage + off : 0;
     G(uint64_t, A(0), 8) = pool;
     G(uint64_t, A(0), 0x10) = off;
     G(uint64_t, A(0), 0x18) = G(uint64_t, A(1), 0x18);
@@ -520,7 +522,8 @@ RT_ON_RESET(desc_pools_reset) { memset(g_texture_pools, 0, sizeof g_texture_pool
 
 static NvnDescPool *desc_pool_init(uint64_t guest, uint64_t pool, uint64_t off, int count, size_t entry, NvnDescPool **reg) {
     NvnDescPool *d = calloc(1, sizeof *d);
-    d->addr = HOST(NvnPool, pool)->storage + off;
+    NvnPool *p = pool ? HOST(NvnPool, pool) : NULL;
+    d->addr = p ? p->storage + off : 0;
     d->count = count;
     d->entries = calloc(count, entry);
     SET_HOST(guest, d);

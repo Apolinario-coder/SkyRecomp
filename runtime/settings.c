@@ -52,6 +52,10 @@ const char *const g_language_names[N_LANGUAGES] = {"Auto", "Japanese", "English"
                                                    "Italian", "Dutch", "Russian", "Korean", "Chinese (Simplified)",
                                                    "Chinese (Traditional)"};
 
+#ifdef _WIN32
+unsigned short __stdcall GetUserDefaultUILanguage(void);
+#endif
+
 static const char *language_for_locale(const char *locale) {
     if (!locale || !*locale) return NULL;
     char language[8];
@@ -68,13 +72,13 @@ static const char *language_for_locale(const char *locale) {
             char part[8] = {0};
             if (length < sizeof part) {
                 for (size_t i = 0; i < length; i++) part[i] = (char)tolower((unsigned char)p[i]);
-                if (!strcmp(part, "hans")) return "zh-CN";
-                if (!strcmp(part, "hant")) return "zh-TW";
+                if (!strcmp(part, "hans")) return "zh-Hans";
+                if (!strcmp(part, "hant")) return "zh-Hant";
                 if (!strcmp(part, "tw") || !strcmp(part, "hk") || !strcmp(part, "mo")) traditional = true;
             }
             p += length;
         }
-        return traditional ? "zh-TW" : "zh-CN";
+        return traditional ? "zh-Hant" : "zh-Hans";
     }
     static const struct { const char *loc, *code; } map[] = {{"ja", "ja"}, {"ko", "ko"}, {"ru", "ru"}, {"nl", "nl"},
         {"de", "de"}, {"it", "it"}, {"fr", "fr"}, {"es", "es"}, {"en", "en-US"}};
@@ -84,7 +88,13 @@ static const char *language_for_locale(const char *locale) {
 }
 
 static const char *host_language(void) {
-#ifdef __linux__
+#ifdef _WIN32
+    unsigned short lang = GetUserDefaultUILanguage();
+    if ((lang & 0x3ff) == 0x04) {
+        unsigned short sub = lang >> 10;
+        return (sub == 0x01 || sub == 0x03 || sub == 0x04) ? "zh-Hant" : "zh-Hans";
+    }
+#elif defined(__linux__)
     const char *e = getenv("LC_ALL");
     if (!e || !*e) e = getenv("LC_MESSAGES");
     if (!e || !*e) e = getenv("LANG");
@@ -114,13 +124,15 @@ const char *settings_language(void) {
 
 const char *settings_language_code(void) {
     const char *code = settings_language();
-    if (g_is_skyward && !strcmp(code, "zh-CN")) return "zh-Hans";
-    if (g_is_skyward && !strcmp(code, "zh-TW")) return "zh-Hant";
+    if (!strcmp(code, "zh-CN") || !strcmp(code, "zh-Hans")) return "zh-Hans";
+    if (!strcmp(code, "zh-TW") || !strcmp(code, "zh-Hant")) return "zh-Hant";
     return code;
 }
 
 const char *settings_language_name(void) {
     const char *c = settings_language();
+    if (!strcmp(c, "zh-Hans") || !strcmp(c, "zh-CN")) return "Chinese (Simplified)";
+    if (!strcmp(c, "zh-Hant") || !strcmp(c, "zh-TW")) return "Chinese (Traditional)";
     for (int i = 0; i < N_LANGUAGES; i++)
         if (!strcmp(c, g_language_codes[i])) return g_language_names[i];
     return "English";
@@ -198,8 +210,14 @@ void settings_load(void) {
         else if (!strcmp(key, "language")) {  // ("auto" or one of the game's codes; anything else: auto)
             g_settings.language = LANG_AUTO;
             const char *code = language_for_locale(val);
-            for (int i = 1; i < N_LANGUAGES; i++)
-                if (!strcmp(val, g_language_codes[i]) || (code && !strcmp(code, g_language_codes[i]))) g_settings.language = i;
+            if (!strcmp(val, "zh-Hans") || !strcmp(val, "zh-CN") || (code && !strcmp(code, "zh-Hans")))
+                g_settings.language = 10;
+            else if (!strcmp(val, "zh-Hant") || !strcmp(val, "zh-TW") || (code && !strcmp(code, "zh-Hant")))
+                g_settings.language = 11;
+            else {
+                for (int i = 1; i < N_LANGUAGES; i++)
+                    if (!strcmp(val, g_language_codes[i]) || (code && !strcmp(code, g_language_codes[i]))) g_settings.language = i;
+            }
         }
         else if (!strcmp(key, "tracker")) g_settings.tracker = atoi(val) != 0;
         else if (!strcmp(key, "menu_tip_seen")) g_settings.menu_tip_seen = atoi(val) != 0, tip_key = true;

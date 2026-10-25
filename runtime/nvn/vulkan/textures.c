@@ -505,6 +505,10 @@ static bool upload_custom(NvnTexture *t, TexBackend *b) {
     VkImage image; VmaAllocation mem;
     VkResult result = vmaCreateImage(g_vk.vma, &ci, &ai, &image, &mem, NULL);
     if (result != VK_SUCCESS) {
+        ai.usage = VMA_MEMORY_USAGE_AUTO;
+        result = vmaCreateImage(g_vk.vma, &ci, &ai, &image, &mem, NULL);
+    }
+    if (result != VK_SUCCESS) {
         LOG("[custom_tex] GPU allocation failed (%d), keeping original %ux%u texture\n", result, t->width, t->height);
         SDL_DestroySurface(s); return false;
     }
