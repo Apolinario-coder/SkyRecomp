@@ -122,7 +122,8 @@ static bool find_tools(Tools *t) {
     memset(t, 0, sizeof *t);
     const char *e = getenv("LARECOMP_GEN");
     if (e && *e) snprintf(t->gen, sizeof t->gen, "%s", e);
-    else if (!rt_resource("lasgen" SEP "lasgen" PLAT_EXE_SUFFIX, NULL, t->gen, sizeof t->gen) &&
+    else if (!rt_resource("lasgen" SEP "lasgen" PLAT_EXE_SUFFIX, "build" SEP "helper" SEP "lasgen" SEP "lasgen" PLAT_EXE_SUFFIX, t->gen, sizeof t->gen) &&
+             !rt_resource("build" SEP "helper" SEP "lasgen" SEP "lasgen" PLAT_EXE_SUFFIX, NULL, t->gen, sizeof t->gen) &&
              !(rt_resource(NULL, "tools/" PLAT_VENV_PYTHON, t->gen, sizeof t->gen) &&
                rt_resource(NULL, "tools/gen.py", t->gen_script, sizeof t->gen_script)))
         return false;
@@ -132,7 +133,8 @@ static bool find_tools(Tools *t) {
     else if (file_exists("F:\\msys64\\ucrt64\\bin\\clang.exe")) snprintf(t->cc, sizeof t->cc, "F:\\msys64\\ucrt64\\bin\\clang.exe");
     else if (file_exists("C:\\msys64\\ucrt64\\bin\\clang.exe")) snprintf(t->cc, sizeof t->cc, "C:\\msys64\\ucrt64\\bin\\clang.exe");
 #endif
-    else if (rt_resource("zig" SEP "zig" PLAT_EXE_SUFFIX, NULL, t->cc, sizeof t->cc)) t->zig = true;
+    else if (rt_resource("zig" SEP "zig" PLAT_EXE_SUFFIX, "build" SEP "zig" SEP "zig" PLAT_EXE_SUFFIX, t->cc, sizeof t->cc)) t->zig = true;
+    else if (rt_resource("build" SEP "zig" SEP "zig" PLAT_EXE_SUFFIX, NULL, t->cc, sizeof t->cc)) t->zig = true;
 #ifndef _WIN32
     else if (rt_dev_mode() && file_exists("/usr/bin/clang")) snprintf(t->cc, sizeof t->cc, "/usr/bin/clang");
 #endif
@@ -381,6 +383,7 @@ bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size
         g->exit = -1;
         snprintf(g->log, sizeof g->log, "%s" SEP "gen_%s.log", work, g->name);
         snprintf(g->out, sizeof g->out, "%s" SEP "%s", work, g->name);
+        mkdir(g->out, 0755);
         char nso[1100];
         snprintf(nso, sizeof nso, "%s" SEP "exefs" SEP "%s", game_dir, g->name);
         Args a = {0};

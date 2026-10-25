@@ -536,6 +536,7 @@ def main():
     ap.add_argument('--simd', choices=('asm', 'c'),
                     default='asm' if platform.machine().lower() in ('arm64', 'aarch64') else 'c')
     args = ap.parse_args()
+    os.makedirs(args.outdir, exist_ok=True)
 
     t0 = time.time()
     m = Module(args.name, args.nso, args.base, args.simd)
