@@ -1080,11 +1080,8 @@ static void prelaunch_tab(float sc) {
     ImGui::Spacing();
     ImGui::Spacing();
     heading("Game language");
-    char autol[64];
-    snprintf(autol, sizeof autol, "Auto (%s)", settings_language_name());
     const char *names[N_LANGUAGES];
-    names[0] = autol;
-    for (int i = 1; i < N_LANGUAGES; i++) names[i] = g_language_names[i];
+    for (int i = 0; i < N_LANGUAGES; i++) names[i] = g_language_names[i];
     int lang = g_settings.language;
     ImGui::SetNextItemWidth(280 * sc);
     if (ImGui::Combo("##language", &lang, names, N_LANGUAGES)) {

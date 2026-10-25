@@ -535,11 +535,8 @@ static void tab_display(void) {
                "Turns off the tilt-shift blur at the top and bottom of the screen.");
     opt_toggle("Hide Hero Mode icon", &g_settings.hide_hero_icon, false,
                "Hides the Hero Mode emblem in the corner of the screen while playing a Hero Mode file.");
-    char autol[64];
-    snprintf(autol, sizeof autol, "Auto (%s)", settings_language_name());
     const char *names[N_LANGUAGES];
-    names[0] = autol;
-    for (int i = 1; i < N_LANGUAGES; i++) names[i] = g_language_names[i];
+    for (int i = 0; i < N_LANGUAGES; i++) names[i] = g_language_names[i];
     int lang = g_settings.language;
     if (opt_choice("Language", &lang, names, N_LANGUAGES, LANG_AUTO,
                    "The game's text language. Changing language requires restarting the game to reload text archives.")) {
@@ -657,11 +654,8 @@ static void tab_about(void) {
     header("System language");
     {
         // what the game is told the console's language is: its text follows this (runtime/settings.c)
-        char autol[64];
-        snprintf(autol, sizeof autol, "Auto (%s)", settings_language_name());
         const char *names[N_LANGUAGES];
-        names[0] = autol;
-        for (int i = 1; i < N_LANGUAGES; i++) names[i] = g_language_names[i];
+        for (int i = 0; i < N_LANGUAGES; i++) names[i] = g_language_names[i];
         if (choice("Language", &g_settings.language, names, N_LANGUAGES)) settings_save();
     }
     if (settings_language_pending()) {

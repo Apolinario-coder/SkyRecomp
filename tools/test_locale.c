@@ -27,29 +27,37 @@ int main(void) {
     assert(!language_for_locale(""));
     assert(!language_for_locale("C.UTF-8"));
     assert(!language_for_locale("zhgarbage-CN"));
-    puts("Checking system locale preferences"); fflush(stdout);
-#ifdef __linux__
-    assert(setenv("LC_ALL", "zh-Hans", 1) == 0);
-    assert(!strcmp(settings_language(), "zh-Hans"));
-    unsetenv("LC_ALL"); unsetenv("LC_MESSAGES"); unsetenv("LANG");
-#endif
-    assert(SDL_SetHint(SDL_HINT_PREFERRED_LOCALES, "zh-Hans"));
-    assert(!strcmp(settings_language(), "zh-Hans"));
-    assert(SDL_SetHint(SDL_HINT_PREFERRED_LOCALES, "zh_Hant"));
-    assert(!strcmp(settings_language(), "zh-Hant"));
-    assert(SDL_SetHint(SDL_HINT_PREFERRED_LOCALES, "xx_YY,zh_Hans"));
-    assert(!strcmp(settings_language(), "zh-Hans"));
-    g_settings.language = 2; // Explicit English must override Chinese system settings.
+    puts("Checking default and manual language preferences"); fflush(stdout);
+    g_settings.language = LANG_AUTO;
+    // Default must ALWAYS be English, never influenced by system locale or hints
     assert(!strcmp(settings_language(), "en-US"));
-    g_is_skyward = true;
+    assert(!strcmp(settings_language_code(), "en-US"));
+    assert(SDL_SetHint(SDL_HINT_PREFERRED_LOCALES, "es_ES"));
+    assert(!strcmp(settings_language(), "en-US"));
+    assert(SDL_SetHint(SDL_HINT_PREFERRED_LOCALES, "zh-Hans"));
+    assert(!strcmp(settings_language(), "en-US"));
+
+    // In-game menu selections
+    g_settings.language = 1; // ja
+    assert(!strcmp(settings_language(), "ja"));
+    assert(!strcmp(settings_language_code(), "ja"));
+
+    g_settings.language = 3; // es
+    assert(!strcmp(settings_language(), "es"));
+    assert(!strcmp(settings_language_code(), "es"));
+
+    g_settings.language = 2; // en-US
+    assert(!strcmp(settings_language(), "en-US"));
+    assert(!strcmp(settings_language_code(), "en-US"));
+
     g_settings.language = 10;
     assert(!strcmp(settings_language_code(), "zh-Hans"));
+
     g_settings.language = 11;
     assert(!strcmp(settings_language(), "zh-TW"));
     assert(!strcmp(settings_language_code(), "zh-Hant"));
+
     g_settings.language = LANG_AUTO;
-    g_settings.language = LANG_AUTO;
-    assert(SDL_SetHint(SDL_HINT_PREFERRED_LOCALES, "xx_YY"));
     assert(!strcmp(settings_language(), "en-US"));
-    puts("Locale normalization, system preferences and manual override: PASS");
+    puts("Default English and manual language selection: PASS");
 }

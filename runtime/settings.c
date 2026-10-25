@@ -46,15 +46,11 @@ Settings g_settings = {
 // The game's own text languages: its RomFS carries these per region (regionUS/USen|USes|USfr, regionEU/EUen|EUes|...,
 // regionJP/JPja, regionKR/KRkr, regionTW/TWch, regionCN/CNch), and the game picks one from the system language it
 // reads back (runtime/services/am.c), exactly as it does on the console. Codes as the Switch reports them.
-const char *const g_language_codes[N_LANGUAGES] = {"auto", "ja", "en-US", "es", "fr", "de", "it", "nl", "ru", "ko",
+const char *const g_language_codes[N_LANGUAGES] = {"default", "ja", "en-US", "es", "fr", "de", "it", "nl", "ru", "ko",
                                                    "zh-CN", "zh-TW"};
-const char *const g_language_names[N_LANGUAGES] = {"Auto", "Japanese", "English", "Spanish", "French", "German",
+const char *const g_language_names[N_LANGUAGES] = {"Default (English)", "Japanese", "English", "Spanish", "French", "German",
                                                    "Italian", "Dutch", "Russian", "Korean", "Chinese (Simplified)",
                                                    "Chinese (Traditional)"};
-
-#ifdef _WIN32
-unsigned short __stdcall GetUserDefaultUILanguage(void);
-#endif
 
 static const char *language_for_locale(const char *locale) {
     if (!locale || !*locale) return NULL;
@@ -87,51 +83,9 @@ static const char *language_for_locale(const char *locale) {
     return NULL;
 }
 
-static const char *host_language(void) {
-#ifdef _WIN32
-    unsigned short lang = GetUserDefaultUILanguage();
-    switch (lang & 0x3ff) {
-    case 0x09: return "en-US";
-    case 0x0a: return "es";
-    case 0x0c: return "fr";
-    case 0x07: return "de";
-    case 0x10: return "it";
-    case 0x13: return "nl";
-    case 0x19: return "ru";
-    case 0x12: return "ko";
-    case 0x11: return "ja";
-    case 0x04: {
-        unsigned short sub = lang >> 10;
-        return (sub == 0x01 || sub == 0x03 || sub == 0x04) ? "zh-Hant" : "zh-Hans";
-    }
-    default: break;
-    }
-#elif defined(__linux__)
-    const char *e = getenv("LC_ALL");
-    if (!e || !*e) e = getenv("LC_MESSAGES");
-    if (!e || !*e) e = getenv("LANG");
-    if (e && *e) {
-        const char *code = language_for_locale(e);
-        return code ? code : "en-US";
-    }
-#endif
-    int count = 0;
-    SDL_Locale **locales = SDL_GetPreferredLocales(&count);
-    const char *code = NULL;
-    for (int i = 0; locales && i < count && !code; i++) {
-        char locale[128];
-        snprintf(locale, sizeof locale, "%s%s%s", locales[i]->language ? locales[i]->language : "",
-                 locales[i]->country ? "-" : "", locales[i]->country ? locales[i]->country : "");
-        code = language_for_locale(locale);
-    }
-    SDL_free(locales);
-    if (code) return code;
-    return "en-US";
-}
-
 const char *settings_language(void) {
     int i = g_settings.language;
-    return i > LANG_AUTO && i < N_LANGUAGES ? g_language_codes[i] : host_language();
+    return i > LANG_AUTO && i < N_LANGUAGES ? g_language_codes[i] : "en-US";
 }
 
 const char *settings_language_code(void) {
@@ -143,11 +97,13 @@ const char *settings_language_code(void) {
 }
 
 const char *settings_language_name(void) {
-    const char *c = settings_language();
-    if (!strcmp(c, "zh-Hans") || !strcmp(c, "zh-CN")) return "Chinese (Simplified)";
-    if (!strcmp(c, "zh-Hant") || !strcmp(c, "zh-TW")) return "Chinese (Traditional)";
-    for (int i = 0; i < N_LANGUAGES; i++)
-        if (!strcmp(c, g_language_codes[i])) return g_language_names[i];
+    int i = g_settings.language;
+    if (i > LANG_AUTO && i < N_LANGUAGES) {
+        const char *c = g_language_codes[i];
+        if (!strcmp(c, "zh-Hans") || !strcmp(c, "zh-CN")) return "Chinese (Simplified)";
+        if (!strcmp(c, "zh-Hant") || !strcmp(c, "zh-TW")) return "Chinese (Traditional)";
+        return g_language_names[i];
+    }
     return "English";
 }
 
