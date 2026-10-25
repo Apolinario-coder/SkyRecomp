@@ -90,9 +90,21 @@ static const char *language_for_locale(const char *locale) {
 static const char *host_language(void) {
 #ifdef _WIN32
     unsigned short lang = GetUserDefaultUILanguage();
-    if ((lang & 0x3ff) == 0x04) {
+    switch (lang & 0x3ff) {
+    case 0x09: return "en-US";
+    case 0x0a: return "es";
+    case 0x0c: return "fr";
+    case 0x07: return "de";
+    case 0x10: return "it";
+    case 0x13: return "nl";
+    case 0x19: return "ru";
+    case 0x12: return "ko";
+    case 0x11: return "ja";
+    case 0x04: {
         unsigned short sub = lang >> 10;
         return (sub == 0x01 || sub == 0x03 || sub == 0x04) ? "zh-Hant" : "zh-Hans";
+    }
+    default: break;
     }
 #elif defined(__linux__)
     const char *e = getenv("LC_ALL");
@@ -126,6 +138,7 @@ const char *settings_language_code(void) {
     const char *code = settings_language();
     if (!strcmp(code, "zh-CN") || !strcmp(code, "zh-Hans")) return "zh-Hans";
     if (!strcmp(code, "zh-TW") || !strcmp(code, "zh-Hant")) return "zh-Hant";
+    if (!strcmp(code, "en")) return "en-US";
     return code;
 }
 
@@ -148,10 +161,12 @@ bool settings_language_pending(void) {
     return game_language[0] && strcmp(game_language, settings_language_code()) != 0;
 }
 
+static bool s_settings_loaded;
+RT_ON_RESET(settings_reset) { s_settings_loaded = false; }
+
 void settings_load(void) {
-    static bool loaded;
-    if (loaded) return;
-    loaded = true;
+    if (s_settings_loaded) return;
+    s_settings_loaded = true;
     FILE *f = fopen(SETTINGS_FILE, "r");
     if (!f) return;
     char line[2048];

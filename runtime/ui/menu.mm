@@ -545,23 +545,16 @@ static void tab_display(void) {
                    "The game's text language. Changing language requires restarting the game to reload text archives.")) {
         g_settings.language = lang;
         settings_save();
-        if (settings_language_pending()) ImGui::OpenPopup("Restart for language");
     }
-    opt_end();
-    if (ImGui::BeginPopupModal("Restart for language", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
-        if (ImGui::IsKeyPressed(ImGuiKey_Escape, false) || ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight, false))
-            ImGui::CloseCurrentPopup();
-        ImGui::TextUnformatted("Restart the game to apply the selected language?\nProgress since your last save will be lost.");
-        if (ImGui::Button("Restart game")) {
+    if (settings_language_pending()) {
+        if (opt_button("Restart to apply language",
+                       "Restarts the game immediately to reload text in the chosen language. Progress since your last save will be lost.")) {
             settings_save();
             rt_request_reboot(RT_REBOOT_GAME);
-            ImGui::CloseCurrentPopup();
             set_open(false);
         }
-        ImGui::SameLine();
-        if (ImGui::Button("Restart later")) ImGui::CloseCurrentPopup();
-        ImGui::EndPopup();
     }
+    opt_end();
 }
 
 // Cosmetics: tunic / heart colours, live (runtime/nvn/texpatch.c); never part of a seed
@@ -669,27 +662,17 @@ static void tab_about(void) {
         const char *names[N_LANGUAGES];
         names[0] = autol;
         for (int i = 1; i < N_LANGUAGES; i++) names[i] = g_language_names[i];
-        if (choice("Language", &g_settings.language, names, N_LANGUAGES)) { settings_save(); if (settings_language_pending()) ImGui::OpenPopup("Restart for language"); }
+        if (choice("Language", &g_settings.language, names, N_LANGUAGES)) settings_save();
     }
     if (settings_language_pending()) {
         hint("Language change pending. The game must restart to reload its text. Save your progress first.");
-        if (ImGui::Button("Apply language and restart...")) ImGui::OpenPopup("Restart for language");
-    } else {
-        hint("The game's text language. Changes made before Play apply when the game starts.");
-    }
-    if (ImGui::BeginPopupModal("Restart for language", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
-        if (ImGui::IsKeyPressed(ImGuiKey_Escape, false) || ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight, false))
-            ImGui::CloseCurrentPopup();
-        ImGui::TextUnformatted("Restart the game to apply the selected language?\nProgress since your last save will be lost.");
-        if (ImGui::Button("Restart game")) {
+        if (ImGui::Button("Restart game to apply language")) {
             settings_save();
             rt_request_reboot(RT_REBOOT_GAME);
-            ImGui::CloseCurrentPopup();
             set_open(false);
         }
-        ImGui::SameLine();
-        if (ImGui::Button("Restart later")) ImGui::CloseCurrentPopup();
-        ImGui::EndPopup();
+    } else {
+        hint("The game's text language. Changes made before Play apply when the game starts.");
     }
     ImGui::Spacing();
     header("Controls");
