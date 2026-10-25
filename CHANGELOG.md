@@ -5,6 +5,7 @@
 This update focuses on stability, eliminating unexpected crashes and freezes during gameplay (especially at 60 and 120 FPS).
 
 ### Crash and freeze fixes
+- **Fixed random gameplay freezes:** Solved the lost condition variable wakeup race condition where the game screen hangs while background music continues playing. Special thanks and credit to @Taktloss (PR #58) and @ColdincD (PR #55) for identifying the root cause and providing fixes.
 - **Fixed random gameplay crashes:** The game no longer crashes unexpectedly during gameplay or in scenes with heavy draw activity at 60 and 120 FPS.
 - **Better GPU compatibility:** Resolved video memory issues that caused crashes on graphics cards with limited memory or without hardware features like Resizable BAR.
 - **Texture stability:** Safer loading for custom texture packs, preventing freezes when loading new areas.
