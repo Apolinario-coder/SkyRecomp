@@ -15,7 +15,7 @@
 
 // From the Makefile: the flags the game code is compiled and linked with (as `make` builds it in a source checkout)
 #ifndef GAMELIB_CFLAGS
-#define GAMELIB_CFLAGS "-O1 -fno-strict-aliasing -fvisibility=hidden"
+#define GAMELIB_CFLAGS "-O0 -fno-strict-aliasing -fvisibility=hidden"
 #endif
 #ifndef GAMELIB_SHARED
 #define GAMELIB_SHARED "-shared"
@@ -128,6 +128,10 @@ static bool find_tools(Tools *t) {
         return false;
     e = getenv("LARECOMP_CC");
     if (e && *e) snprintf(t->cc, sizeof t->cc, "%s", e);
+#ifdef _WIN32
+    else if (file_exists("F:\\msys64\\ucrt64\\bin\\clang.exe")) snprintf(t->cc, sizeof t->cc, "F:\\msys64\\ucrt64\\bin\\clang.exe");
+    else if (file_exists("C:\\msys64\\ucrt64\\bin\\clang.exe")) snprintf(t->cc, sizeof t->cc, "C:\\msys64\\ucrt64\\bin\\clang.exe");
+#endif
     else if (rt_resource("zig" SEP "zig" PLAT_EXE_SUFFIX, NULL, t->cc, sizeof t->cc)) t->zig = true;
 #ifndef _WIN32
     else if (rt_dev_mode() && file_exists("/usr/bin/clang")) snprintf(t->cc, sizeof t->cc, "/usr/bin/clang");

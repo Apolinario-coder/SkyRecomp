@@ -10,6 +10,9 @@ import shutil
 CC = r"C:\msys64\ucrt64\bin\clang.exe"
 if os.path.exists(CC):
     CC_ARGS = []
+elif os.path.exists(r"F:\msys64\ucrt64\bin\clang.exe"):
+    CC = r"F:\msys64\ucrt64\bin\clang.exe"
+    CC_ARGS = []
 elif shutil.which("clang"):
     CC = "clang"
     CC_ARGS = []
@@ -41,6 +44,7 @@ except FileNotFoundError:
     CACHE_VALID = False
 
 BASE_CFLAGS = [
+    "-O0",
     "-fno-strict-aliasing",
     "-Wno-return-type",
     "-Wno-unused-label",
@@ -56,12 +60,7 @@ def compile_unit(src, obj):
         return True, src, None, 0.0
     
     t0 = time.time()
-    sz = os.path.getsize(src)
-    
-    # For large files (> 500KB), use -O0 to prevent compiler optimizer from hanging
-    opt_level = "-O0" if sz > 500 * 1024 else "-O1"
-    
-    cmd = [CC] + CC_ARGS + ["-c", src, "-o", obj, opt_level] + BASE_CFLAGS
+    cmd = [CC] + CC_ARGS + ["-c", src, "-o", obj] + BASE_CFLAGS
     res = subprocess.run(cmd, capture_output=True, text=True)
     dt = time.time() - t0
     if res.returncode != 0:
@@ -143,18 +142,50 @@ def main():
                     sys.exit(1)
         print("All code generation complete!\n")
 
-    # 3. All generated module C files
+    # 3. All generated module C files (batched into Unity compilation units)
+    unity_dir = os.path.join(BUILD_DIR, "unity_src")
+    os.makedirs(unity_dir, exist_ok=True)
+    BATCH_SIZE = 25  # chunks per unity compilation unit
+
     for mod in modules:
         mod_dir = os.path.join("ssh_generated", mod)
         if not os.path.exists(mod_dir):
             print(f"[WARN] Directory not found: {mod_dir}")
             continue
-        for f in os.listdir(mod_dir):
-            if f.endswith(".c"):
-                src_path = os.path.abspath(os.path.join(mod_dir, f))
-                stem = f[:-2]
-                obj_path = os.path.join(OBJ_DIR, f"{mod}_{stem}.o")
-                sources.append((src_path, obj_path))
+        c_files = sorted([f for f in os.listdir(mod_dir) if f.endswith(".c")])
+        tables = [f for f in c_files if f.endswith("_table.c")]
+        chunks = [f for f in c_files if not f.endswith("_table.c")]
+
+        for tf in tables:
+            src_path = os.path.abspath(os.path.join(mod_dir, tf))
+            stem = tf[:-2]
+            obj_path = os.path.join(OBJ_DIR, f"{mod}_{stem}.o")
+            sources.append((src_path, obj_path))
+
+        for b_idx in range(0, len(chunks), BATCH_SIZE):
+            batch = chunks[b_idx:b_idx + BATCH_SIZE]
+            unity_src = os.path.join(unity_dir, f"unity_{mod}_{b_idx // BATCH_SIZE:03d}.c")
+            unity_obj = os.path.join(OBJ_DIR, f"unity_{mod}_{b_idx // BATCH_SIZE:03d}.o")
+
+            lines = ['#include "cpu.h"\n']
+            for cf in batch:
+                full_p = os.path.abspath(os.path.join(mod_dir, cf)).replace("\\", "/")
+                lines.append(f'#include "{full_p}"\n')
+            
+            unity_content = "".join(lines)
+            needs_write = True
+            if os.path.exists(unity_src):
+                try:
+                    with open(unity_src, "r", encoding="utf-8") as f:
+                        if f.read() == unity_content:
+                            needs_write = False
+                except Exception:
+                    pass
+            if needs_write:
+                with open(unity_src, "w", encoding="utf-8") as f:
+                    f.write(unity_content)
+            
+            sources.append((unity_src, unity_obj))
                 
     total = len(sources)
     print(f"Total C source translation units: {total}")
