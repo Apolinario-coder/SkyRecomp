@@ -86,7 +86,7 @@ static void save_png(id<MTLTexture> tex, const char *path) {
 static const uint8_t BUILD_ID[8] = {0xd8, 0x24, 0xd4, 0xb1, 0xbb, 0xd4, 0x5d, 0x03};  // Skyward Sword HD v1.0.0 main
 // The release tag this build is (also names the release files; Makefile / tools/bundle_macos.sh / make_dmg.sh read
 // it): beta_<n> until 1.0, then v<major>.<minor>.<patch>.
-#define LARECOMP_VERSION "v2.0.0"
+#define LARECOMP_VERSION "v2.0.2"
 
 // ------------------------------------------------------------------ Skyward Sword HD design tokens & vector ornaments
 static const ImU32 kColGold       = IM_COL32(238, 198, 92, 255);
