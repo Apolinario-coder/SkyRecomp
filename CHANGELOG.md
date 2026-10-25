@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.0.0] - 2026-10-25
+
+This update focuses on stability, eliminating unexpected crashes and freezes during gameplay (especially at 60 and 120 FPS).
+
+### Crash and freeze fixes
+- **Fixed random gameplay crashes:** The game no longer crashes unexpectedly during gameplay or in scenes with heavy draw activity at 60 and 120 FPS.
+- **Better GPU compatibility:** Resolved video memory issues that caused crashes on graphics cards with limited memory or without hardware features like Resizable BAR.
+- **Texture stability:** Safer loading for custom texture packs, preventing freezes when loading new areas.
+- **Setup fix:** Fixed a crash that could occur during the initial ROM setup on Windows.
+
 ### Windows v1.0.6 setup hotfix - 2026-10-22
 
 - Fixed the packaged game-code generator terminating before writing a log during game setup. The Windows compatibility adjustment now runs automatically whenever the helper is packaged.
