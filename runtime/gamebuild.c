@@ -102,7 +102,7 @@ static void args_free(Args *a) {
 
 // ------------------------------------------------------------------ the tools
 typedef struct {
-    char gen[1100], gen_script[1100];  // generator: lasgen, or (source checkout) the venv's python + tools/gen.py
+    char gen[1100], gen_script[1100];  // generator: skygen, or (source checkout) the venv's python + tools/gen.py
     char cc[1100];                     // compiler: zig (as `zig cc`), or LARECOMP_CC / clang
     bool zig;
     uint64_t build_stamp;
@@ -122,7 +122,9 @@ static bool find_tools(Tools *t) {
     memset(t, 0, sizeof *t);
     const char *e = getenv("LARECOMP_GEN");
     if (e && *e) snprintf(t->gen, sizeof t->gen, "%s", e);
-    else if (!rt_resource("lasgen" SEP "lasgen" PLAT_EXE_SUFFIX, "build" SEP "helper" SEP "lasgen" SEP "lasgen" PLAT_EXE_SUFFIX, t->gen, sizeof t->gen) &&
+    else if (!rt_resource("skygen" SEP "skygen" PLAT_EXE_SUFFIX, "build" SEP "helper" SEP "skygen" SEP "skygen" PLAT_EXE_SUFFIX, t->gen, sizeof t->gen) &&
+             !rt_resource("lasgen" SEP "lasgen" PLAT_EXE_SUFFIX, "build" SEP "helper" SEP "lasgen" SEP "lasgen" PLAT_EXE_SUFFIX, t->gen, sizeof t->gen) &&
+             !rt_resource("build" SEP "helper" SEP "skygen" SEP "skygen" PLAT_EXE_SUFFIX, NULL, t->gen, sizeof t->gen) &&
              !rt_resource("build" SEP "helper" SEP "lasgen" SEP "lasgen" PLAT_EXE_SUFFIX, NULL, t->gen, sizeof t->gen) &&
              !(rt_resource(NULL, "tools/" PLAT_VENV_PYTHON, t->gen, sizeof t->gen) &&
                rt_resource(NULL, "tools/gen.py", t->gen_script, sizeof t->gen_script)))

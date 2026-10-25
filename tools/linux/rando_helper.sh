@@ -1,10 +1,10 @@
 #!/bin/bash
 # tools/linux/rando_helper.sh <x86_64|aarch64> (inside the build container of that arch, tools/linux/appimage.sh): the
-# seed generator and the game code generator frozen by PyInstaller (tools/rando/rando_gen.spec, tools/lasgen.spec, as
+# seed generator and the game code generator frozen by PyInstaller (tools/rando/rando_gen.spec, tools/skygen.spec, as
 # `make rando-helper` / `make gen-helper`) with Ubuntu 22.04's Python 3.12, into build/linux/<arch>/helper/rando-gen
-# and helper/lasgen. On arm64 oead and keystone-engine have no wheels on PyPI:
+# and helper/skygen. On arm64 oead and keystone-engine have no wheels on PyPI:
 # pip builds them from source (slow under QEMU; kept in build/linux/<arch>/wheels for the next run).
-# The seed generator needs the vendored LAS-Randomizer (third_party/LAS-Randomizer); without it only lasgen is built.
+# The seed generator needs the vendored LAS-Randomizer (third_party/LAS-Randomizer); without it only skygen is built.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 L=$PWD/build/linux/$1
@@ -35,5 +35,5 @@ if [ -f "$RANDO" ]; then
     du -sh "$L/helper/rando-gen"
 fi
 "$V/bin/python" -m PyInstaller --noconfirm --clean --log-level WARN --distpath "$L/helper" --workpath "$L/pyinstaller" \
-    tools/lasgen.spec
-du -sh "$L/helper/lasgen"
+    tools/skygen.spec
+du -sh "$L/helper/skygen"
