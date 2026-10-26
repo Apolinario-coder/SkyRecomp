@@ -253,7 +253,9 @@ static void motion_sample(const SDL_GamepadSensorEvent *s) {
         float dt = motion.t && t > motion.t ? (float)((double)(t - motion.t) * 1e-9) : 0;
         if (dt > 0.1f) dt = 0;  // (a gap: the controller slept, or events were held up)
         motion.t = t;
-        for (int i = 0; i < 3; i++) motion.vel[i] = menu ? 0 : v[i] / (2 * (float)M_PI);
+        // (gyro_sens scales the turn, so the angle and orientation below follow it too; a third-party pad in
+        // Switch mode can report a much faster gyro than a Pro Controller)
+        for (int i = 0; i < 3; i++) motion.vel[i] = menu ? 0 : v[i] / (2 * (float)M_PI) * g_settings.gyro_sens;
         for (int i = 0; i < 3; i++) motion.angle[i] += motion.vel[i] * dt;
         motion_integrate(motion.q, motion.vel, dt);
     }
