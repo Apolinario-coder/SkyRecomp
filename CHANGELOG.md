@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.0.2] - 2026-10-25
+
+- **Language fixes and regional support:** Added automatic regional fallback so game data with either European (`en-GB`, `es-ES`, `fr-FR`) or North American (`en-US`, `es-419`, `fr-CA`) files correctly displays in English or the chosen language, preventing unwanted fallbacks.
+- **Fixed game code linking error during setup:** Added `-fno-sanitize=all` to prevent undefined compiler runtime references during initial setup build.
+- **Fixed introductory video hang:** Prevented controller skip action on non-skippable introductory cutscenes to ensure audio and video remain in sync.
+
 ## [2.0.0] - 2026-10-25
 
 This update focuses on stability, eliminating unexpected crashes and freezes during gameplay (especially at 60 and 120 FPS).
