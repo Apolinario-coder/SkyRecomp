@@ -46,11 +46,16 @@ Settings g_settings = {
 // The game's own text languages: its RomFS carries these per region (regionUS/USen|USes|USfr, regionEU/EUen|EUes|...,
 // regionJP/JPja, regionKR/KRkr, regionTW/TWch, regionCN/CNch), and the game picks one from the system language it
 // reads back (runtime/services/am.c), exactly as it does on the console. Codes as the Switch reports them.
-const char *const g_language_codes[N_LANGUAGES] = {"default", "ja", "en-US", "es", "fr", "de", "it", "nl", "ru", "ko",
-                                                   "zh-CN", "zh-TW"};
-const char *const g_language_names[N_LANGUAGES] = {"Default (English)", "Japanese", "English", "Spanish", "French", "German",
-                                                   "Italian", "Dutch", "Russian", "Korean", "Chinese (Simplified)",
-                                                   "Chinese (Traditional)"};
+const char *const g_language_codes[N_LANGUAGES] = {
+    "default", "en-US", "en-GB", "es", "es-419", "fr", "fr-CA", "de", "it", "nl", "ru", "ja", "ko", "zh-CN", "zh-TW"
+};
+const char *const g_language_names[N_LANGUAGES] = {
+    "Default (English)", "English (US)", "English (UK)", "Spanish (Europe)", "Spanish (Latin America)",
+    "French (Europe)", "French (Canada)", "German", "Italian", "Dutch", "Russian", "Japanese", "Korean",
+    "Chinese (Simplified)", "Chinese (Traditional)"
+};
+
+extern bool romfs_find_file(const char *rel, int *out_fd, uint64_t *out_off, uint64_t *out_size);
 
 static const char *language_for_locale(const char *locale) {
     if (!locale || !*locale) return NULL;
@@ -85,26 +90,70 @@ static const char *language_for_locale(const char *locale) {
 
 const char *settings_language(void) {
     int i = g_settings.language;
-    return i > LANG_AUTO && i < N_LANGUAGES ? g_language_codes[i] : "en-US";
+    return i > LANG_AUTO && i < N_LANGUAGES ? g_language_codes[i] : "default";
 }
 
 const char *settings_language_code(void) {
     const char *code = settings_language();
+
+    // Default / English resolution:
+    if (!strcmp(code, "default") || !strcmp(code, "en") || !strcmp(code, "en-US")) {
+        // If US English is missing from the game's RomFS but EU English exists, use en-GB!
+        if (!romfs_find_file("US/Object/en_US/0-Common.arc", NULL, NULL, NULL) &&
+            romfs_find_file("EU/Object/en_GB/0-Common.arc", NULL, NULL, NULL)) {
+            return "en-GB";
+        }
+        return "en-US";
+    }
+    if (!strcmp(code, "en-GB")) {
+        if (!romfs_find_file("EU/Object/en_GB/0-Common.arc", NULL, NULL, NULL) &&
+            romfs_find_file("US/Object/en_US/0-Common.arc", NULL, NULL, NULL)) {
+            return "en-US";
+        }
+        return "en-GB";
+    }
+    // Spanish resolution:
+    if (!strcmp(code, "es")) {
+        if (!romfs_find_file("EU/Object/es_ES/0-Common.arc", NULL, NULL, NULL) &&
+            romfs_find_file("US/Object/es_US/0-Common.arc", NULL, NULL, NULL)) {
+            return "es-419";
+        }
+        return "es";
+    }
+    if (!strcmp(code, "es-419")) {
+        if (!romfs_find_file("US/Object/es_US/0-Common.arc", NULL, NULL, NULL) &&
+            romfs_find_file("EU/Object/es_ES/0-Common.arc", NULL, NULL, NULL)) {
+            return "es";
+        }
+        return "es-419";
+    }
+    // French resolution:
+    if (!strcmp(code, "fr")) {
+        if (!romfs_find_file("EU/Object/fr_FR/0-Common.arc", NULL, NULL, NULL) &&
+            romfs_find_file("US/Object/fr_US/0-Common.arc", NULL, NULL, NULL)) {
+            return "fr-CA";
+        }
+        return "fr";
+    }
+    if (!strcmp(code, "fr-CA")) {
+        if (!romfs_find_file("US/Object/fr_US/0-Common.arc", NULL, NULL, NULL) &&
+            romfs_find_file("EU/Object/fr_FR/0-Common.arc", NULL, NULL, NULL)) {
+            return "fr";
+        }
+        return "fr-CA";
+    }
     if (!strcmp(code, "zh-CN") || !strcmp(code, "zh-Hans")) return "zh-Hans";
     if (!strcmp(code, "zh-TW") || !strcmp(code, "zh-Hant")) return "zh-Hant";
-    if (!strcmp(code, "en")) return "en-US";
     return code;
 }
 
 const char *settings_language_name(void) {
     int i = g_settings.language;
     if (i > LANG_AUTO && i < N_LANGUAGES) {
-        const char *c = g_language_codes[i];
-        if (!strcmp(c, "zh-Hans") || !strcmp(c, "zh-CN")) return "Chinese (Simplified)";
-        if (!strcmp(c, "zh-Hant") || !strcmp(c, "zh-TW")) return "Chinese (Traditional)";
         return g_language_names[i];
     }
-    return "English";
+    if (!strcmp(settings_language_code(), "en-GB")) return "English (UK)";
+    return "English (US)";
 }
 
 static char game_language[8];
@@ -178,16 +227,13 @@ void settings_load(void) {
         else if (!strcmp(key, "prompts")) g_settings.prompts = !strcmp(val, "nintendo") ? PROMPTS_NINTENDO : !strcmp(val, "xbox") ?
                                                               PROMPTS_XBOX : !strcmp(val, "playstation") ? PROMPTS_PLAYSTATION :
                                                               !strcmp(val, "keyboard") ? PROMPTS_KEYBOARD : PROMPTS_AUTO;
-        else if (!strcmp(key, "language")) {  // ("auto" or one of the game's codes; anything else: auto)
+        else if (!strcmp(key, "language")) {
             g_settings.language = LANG_AUTO;
-            const char *code = language_for_locale(val);
-            if (!strcmp(val, "zh-Hans") || !strcmp(val, "zh-CN") || (code && !strcmp(code, "zh-Hans")))
-                g_settings.language = 10;
-            else if (!strcmp(val, "zh-Hant") || !strcmp(val, "zh-TW") || (code && !strcmp(code, "zh-Hant")))
-                g_settings.language = 11;
-            else {
-                for (int i = 1; i < N_LANGUAGES; i++)
-                    if (!strcmp(val, g_language_codes[i]) || (code && !strcmp(code, g_language_codes[i]))) g_settings.language = i;
+            for (int i = 1; i < N_LANGUAGES; i++) {
+                if (!strcasecmp(val, g_language_codes[i])) { g_settings.language = i; break; }
+                if (!strcasecmp(val, "zh-Hans") && !strcmp(g_language_codes[i], "zh-CN")) { g_settings.language = i; break; }
+                if (!strcasecmp(val, "zh-Hant") && !strcmp(g_language_codes[i], "zh-TW")) { g_settings.language = i; break; }
+                if (!strcasecmp(val, "en") && !strcmp(g_language_codes[i], "en-US")) { g_settings.language = i; break; }
             }
         }
         else if (!strcmp(key, "tracker")) g_settings.tracker = atoi(val) != 0;
