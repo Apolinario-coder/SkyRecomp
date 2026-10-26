@@ -148,8 +148,17 @@ void vk_pace_frame(void) {
     static int cap_fps = -1;
     if (cap_fps < 0) { const char *e = getenv("LARECOMP_UNLOCK_FPS"); cap_fps = !e || atoi(e) == 0; }
     if (cap_fps) {
-        const uint64_t period_ns = rt_frame_period_ns();
+        // The game's own swap interval (1 = 60 Hz, 2 = its 30 fps mode): on a console the compositor holds each
+        // present that many vsyncs - here the pacer does, so the game's 30 fps mode presents at 30 and plays at
+        // full speed instead of advancing the world twice per presented frame.
+        const uint32_t interval = rt_game_interval();
+        const uint64_t period_ns = rt_frame_period_ns() * interval;
         static uint64_t next_present_ns;
+        static uint32_t interval_seen = 1;
+        if (interval_seen != interval) {  // (the game changed its frame mode: re-anchor the present grid)
+            interval_seen = interval;
+            next_present_ns = 0;
+        }
         uint64_t t0 = plat_now_ns();
         if (!next_present_ns) next_present_ns = t0;
         next_present_ns += period_ns;

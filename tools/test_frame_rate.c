@@ -53,4 +53,24 @@ int main(void) {
     assert(rt_sky_frame_step(0.5f) == 1);
     g_is_skyward = false;
     assert(rt_frame_rate() == 60 && rt_frame_scale() == 1);
+    // The game's swap interval (runtime/hle/framepace.c feeds it): sanitized for the pacer, logged on change.
+    assert(rt_game_interval() == 1);
+    rt_game_interval_seen(2);   // the game's own 30 fps mode
+    assert(rt_game_interval() == 2);
+    rt_game_interval_seen(2);   // (staying there is not a change)
+    assert(rt_game_interval() == 2);
+    rt_game_interval_seen(0);   // garbage-proof: 0 -> 1 (a frame period of 0 would spin the pacer)
+    assert(rt_game_interval() == 1);
+    rt_game_interval_seen(99);  // and anything absurd clamps to 4
+    assert(rt_game_interval() == 4);
+    rt_game_interval_seen(1);
+    assert(rt_game_interval() == 1);
+    // The pacer's period follows it: 60 fps target -> one frame period per present at interval 1, two in the
+    // game's 30 fps mode.
+    g_settings.frame_rate = 60;
+    g_is_skyward = true;
+    assert(rt_frame_period_ns() * rt_game_interval() == rt_frame_period_ns());
+    rt_game_interval_seen(2);
+    assert(rt_frame_period_ns() * rt_game_interval() == rt_frame_period_ns() * 2);
+    rt_game_interval_seen(1);
 }
