@@ -276,7 +276,7 @@ static void ex_open_path(Cpu *c, const char *path) {
     e->pkt = av_packet_alloc();
     e->ntracks = 0;
     // the opening at launch can always be skipped, vanilla and randomizer (with no save yet the game forces it)
-    e->skippable = rel && (strstr(rel, "movie/opening.webm") || strstr(rel, "Movie/Startup.webm") || strstr(rel, "Movie/Title.webm") || strstr(rel, "THP/Demo01_01.webm"));
+    e->skippable = rel && (strstr(rel, "movie/opening.webm") || strstr(rel, "Movie/Startup.webm") || strstr(rel, "Movie/Title.webm"));
     if (e->skippable) g_skip_pressed_at = 0;  // (a press that ended the title's attract replay isn't for this one)
     for (unsigned i = 0; i < e->fmt->nb_streams && e->ntracks < 16; i++)
         if (e->fmt->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO ||

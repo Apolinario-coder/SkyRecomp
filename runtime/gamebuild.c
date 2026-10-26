@@ -15,7 +15,7 @@
 
 // From the Makefile: the flags the game code is compiled and linked with (as `make` builds it in a source checkout)
 #ifndef GAMELIB_CFLAGS
-#define GAMELIB_CFLAGS "-O0 -fno-strict-aliasing -fvisibility=hidden"
+#define GAMELIB_CFLAGS "-O0 -fno-strict-aliasing -fvisibility=hidden -fno-sanitize=all"
 #endif
 #ifndef GAMELIB_SHARED
 #define GAMELIB_SHARED "-shared"
@@ -218,6 +218,24 @@ static void log_tail(const char *path, char *out, size_t n) {  // the last line 
     snprintf(out, n, "%s", nl ? nl + 1 : buf);
 }
 
+static void log_error(const char *path, char *out, size_t n) {  // first error line, or the last line
+    out[0] = 0;
+    FILE *f = fopen(path, "rb");
+    if (!f) return;
+    char line[512];
+    while (fgets(line, sizeof line, f)) {
+        if (strstr(line, "error:") || strstr(line, "undefined symbol")) {
+            size_t k = strlen(line);
+            while (k && (line[k - 1] == '\n' || line[k - 1] == '\r')) line[--k] = 0;
+            snprintf(out, n, "%s", line);
+            fclose(f);
+            return;
+        }
+    }
+    fclose(f);
+    log_tail(path, out, n);
+}
+
 // ------------------------------------------------------------------ compiling
 typedef struct {
     char src[1100], obj[1100], log[1100], stamp[1100];  // stamp: what obj was compiled from (resuming, below)
@@ -258,6 +276,7 @@ static void add_cflags(Args *a, const Tools *t) {
             add(a, f);
         }
     }
+    if (t->zig) add(a, "-fno-sanitize=all");
 }
 
 // ------------------------------------------------------------------ resuming
@@ -552,7 +571,7 @@ bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size
         int r = p ? wait_for(p) : 255;
         if (r != 0) {
             char last[300];
-            log_tail(log, last, sizeof last);
+            log_error(log, last, sizeof last);
             LOG("[gamebuild] linking failed: %s\n", last);
             snprintf(why, why_size, "the game code didn't link");
             ok = false;
