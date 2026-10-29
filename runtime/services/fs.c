@@ -373,6 +373,13 @@ bool romfs_find_file(const char *rel, int *out_fd, uint64_t *out_off, uint64_t *
     return false;
 }
 
+// Calls fn for each RomFS file whose path starts with `prefix` (runtime/nvn/texpatch.c: every layout archive)
+void romfs_each(const char *prefix, void (*fn)(const char *path)) {
+    size_t n = strlen(prefix);
+    for (int i = 0; i < rom_nfiles; i++)
+        if (!strncasecmp(rom_files[i].path, prefix, n)) fn(rom_files[i].path);
+}
+
 void romfs_file_read_hook(const char *path);
 
 // ------------------------------------------------------------------ IStorage (raw RomFS image)

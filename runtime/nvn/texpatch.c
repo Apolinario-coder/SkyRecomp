@@ -5,17 +5,17 @@
 // The prompt glyphs are 48x48 layout textures (BtnA_00, BtnL_01, ... in the UI archives' __Combined.bntx: BC5
 // masks, BC3 / ASTC colour versions) and the pictogram font's sheet (pictogram.bffnt: RGBA8, the inline icons of
 // message text). They are recognised by content: the user's own UI archives are read once and each texture the game
-// uploads is compared with the known ones (same size, same bytes). A known glyph keeps the game's button shape and
-// colours; only its label is redrawn: the old label (the pixels inside the shape that differ from the body colour)
-// is painted over with the body colour and the new label (Xbox letters, PlayStation symbols, drawn here with a
-// system font / simple geometry) composited in its place. Changed 4x4 blocks are re-encoded to the original format.
+// uploads is compared with the known ones (same size, same bytes). A known glyph is replaced whole: its region is
+// cleared and a new icon (runtime/nvn/prompt_icons.c: Xbox, PlayStation, Nintendo and keyboard designs, no font
+// files) drawn where the old one's shape was. Changed 4x4 blocks are re-encoded to the original format.
 //
 // Labels follow the controller bindings (runtime/hle/bindings.c; by position unless remapped): each Switch button's
 // glyph names the controller button now driving it. Defaults: Switch A (east) = Xbox B / circle, B (south) = Xbox A /
 // cross, X (north) = Y / triangle, Y (west) = X / square; L / R = LB / RB, L1 / R1; ZL / ZR = LT / RT, L2 / R2;
 // Plus / Minus = Menu / View, Options / Create. A button remapped on a Nintendo-style pad gets Nintendo letters; one
-// moved to a stick click / the d-pad gets LS / RS (L3 / R3) or an arrow. Stick glyphs stay. (The keyboard has no
-// glyphs of its own: keyboard bindings don't change the prompts.)
+// moved to a stick click / the d-pad gets LS / RS (L3 / R3) or a d-pad. Sticks are L3 / R3, LS / RS too; the HUD's
+// d-pad (a pane per direction) becomes a d-pad's four buttons. Keyboard prompts name the bound key (or mouse button),
+// and a stick's or the d-pad's glyph its four keys.
 #include "texpatch.h"
 
 #include <math.h>
@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #ifndef _WIN32
+#include <strings.h>
 #include <unistd.h>
 #endif
 #include <SDL3/SDL.h>
@@ -34,57 +35,24 @@
 #include "../rando.h"
 #include "../settings.h"
 #include "astc.h"
+#include "prompt_icons.h"
 #include "tegra.h"
 
-#define STBTT_STATIC
-#define STB_TRUETYPE_IMPLEMENTATION
-#include "../../third_party/imgui/imstb_truetype.h"
-
-enum { K_BC5, K_BC3, K_ASTC4, K_RGBA8, K_BC1, K_RG8 };
-enum { R_A = 1, R_B, R_X, R_Y, R_L, R_R, R_ZL, R_ZR, R_PLUS, R_MINUS, R_HERO, R_SHEET,
-       R_SHEET_1, R_SHEET_3, R_SHEET_4,
-       R_BOTTLE, R_BOTTLE_MODEL, R_FAIRY_MODEL,
-       R_ITEM_CURSOR, R_TUNIC, R_TUNIC_RED, R_TUNIC_BLUE, R_HEART, R_POWDER_MODEL,
-       R_BASICINFO_BG };
-enum { STYLE_NINTENDO, STYLE_XBOX, STYLE_PS, STYLE_KEYBOARD };
-// labels: R_A..R_MINUS = the button that role is on by default; or these
-enum { L_LS = 32, L_RS, L_DUP, L_DDOWN, L_DLEFT, L_DRIGHT, L_OTHER };
-
-static const char *r_name(int role) {
-    switch (role) {
-    case R_A: return "A";
-    case R_B: return "B";
-    case R_X: return "X";
-    case R_Y: return "Y";
-    case R_L: return "L";
-    case R_R: return "R";
-    case R_ZL: return "ZL";
-    case R_ZR: return "ZR";
-    case R_PLUS: return "PLUS";
-    case R_MINUS: return "MINUS";
-    case R_SHEET_1: return "SHEET_1";
-    case R_SHEET_3: return "SHEET_3";
-    case R_SHEET_4: return "SHEET_4";
-    default: return "other";
-    }
-}
-
-typedef struct {
-    float body[4];
-    float body_rim[4];
-    float lab[4];
-    bool is_face_button;
-} ButtonLook;
+enum { K_BC5, K_BC3, K_ASTC4, K_RGBA8, K_BC1, K_RG8, K_GR8 /* RG8, alpha in red */, K_R8 /* intensity = alpha */ };
+// roles: the prompt glyphs' R_A..R_MINUS / L_* (prompt_icons.h), then these
+enum { R_HERO = R_MINUS + 1, R_SHEET, R_SHEET_1, R_SHEET_3, R_SHEET_4, R_BOTTLE, R_BOTTLE_MODEL, R_FAIRY_MODEL,
+       R_ITEM_CURSOR, R_TUNIC, R_TUNIC_RED, R_TUNIC_BLUE, R_HEART, R_POWDER_MODEL, R_BASICINFO_BG };
 
 typedef struct {
     uint8_t role, kind, srgb;
     uint16_t w, h, levels;
     uint32_t size;
-    uint8_t *data;  // the texture's (block-linear) bytes as stored in the game files
+    uint8_t *data;  // the texture's (block-linear) bytes as stored in the game files; gx: the decoded image (RGBA8)
     char name[32];
+    uint8_t gx;     // a GX texture (Skyward Sword HD): 1 = not uploaded yet, 2 = kind is the upload's
 } Ref;
 
-static Ref g_refs[512];
+static Ref g_refs[1024];
 static int g_nrefs;
 static pthread_once_t g_once = PTHREAD_ONCE_INIT;
 
@@ -124,7 +92,7 @@ static int role_of(const char *name) {
         {"tr_plusBtn_", R_PLUS}, {"tr_minusBtn_", R_MINUS}, {"tr_minusBtnSmall_", R_MINUS},
         {"tr_crossBtnBasicD_", L_DDOWN}, {"tr_crossBtnBasicL_", L_DLEFT},
         {"tr_crossBtnBasicR_", L_DRIGHT}, {"tr_crossBtnBasicT_", L_DUP},
-        {"tr_crossBtnBasic_", L_OTHER},
+        {"tr_crossBtnBasic_", L_DPAD},
         {"tr_lStick_", L_LS}, {"tr_rStick_", L_RS},
         {"th_zBtn_", R_ZL}, {"th_nunchakuBtn_", L_LS}, {"tr_nunchakuBtn_", L_LS}, {"tr_cBtn_", R_L},
         {"tr_basicInfoWinLT_", R_BASICINFO_BG},
@@ -220,188 +188,176 @@ static uint8_t *romfs_read_file(const char *path, size_t *out_len) {
     return d;
 }
 
-static uint8_t *decode_tpl(const uint8_t *tpl, size_t len, uint32_t *out_w, uint32_t *out_h) {
-    if (len < 0x28 || tpl[0] != 0x00 || tpl[1] != 0x20 || tpl[2] != 0xaf || tpl[3] != 0x30) return NULL;
-    uint32_t tex_tab = rd32_be(tpl + 8);
-    if (tex_tab + 4 > len) return NULL;
-    uint32_t im_hdr = rd32_be(tpl + tex_tab);
-    if (im_hdr + 12 > len) return NULL;
-    uint16_t h = rd16_be(tpl + im_hdr), w = rd16_be(tpl + im_hdr + 2);
-    uint32_t fmt = rd32_be(tpl + im_hdr + 4), d_off = rd32_be(tpl + im_hdr + 8);
-    if (d_off >= len || !w || !h) return NULL;
-    const uint8_t *raw = tpl + d_off;
-    size_t raw_len = len - d_off;
-    uint8_t *px = malloc((size_t)w * h * 4);
-    if (!px) return NULL;
-    memset(px, 0, (size_t)w * h * 4);
-    if (fmt == 6) {  // RGBA8 (4x4 tiles of 32 bytes AR + 32 bytes GB)
-        size_t src_idx = 0;
-        for (uint32_t by = 0; by < h; by += 4) {
-            for (uint32_t bx = 0; bx < w; bx += 4) {
-                if (src_idx + 64 > raw_len) break;
-                const uint8_t *ar = raw + src_idx, *gb = raw + src_idx + 32;
-                src_idx += 64;
-                int k = 0;
-                for (uint32_t y = 0; y < 4; y++) {
-                    for (uint32_t x = 0; x < 4; x++, k++) {
-                        if (bx + x < w && by + y < h) {
-                            uint8_t *p = px + ((by + y) * w + bx + x) * 4;
-                            p[0] = ar[k * 2 + 1];  // R
-                            p[1] = gb[k * 2];      // G
-                            p[2] = gb[k * 2 + 1];  // B
-                            p[3] = ar[k * 2];      // A
-                        }
-                    }
+// ------------------------------------------------------------------ Skyward Sword HD: GX textures (TPL, BRFNT)
+// Its layouts keep the Wii's U8 archives of TPL textures, and its fonts BRFNT sheets: GX formats, which the game turns
+// into NVN ones as it loads them (I4 / I8 -> R8, IA4 / IA8 -> RG8, RGB5A3 / RGBA8 -> RGBA8). These refs hold the
+// decoded image; an upload matches one by its pixels, within the rounding of that conversion (4- and 5-bit channels
+// widened another way), and the ref takes the upload's kind (texpatch_identify).
+static bool tp_log(void) {  // LARECOMP_TEXPATCH_LOG=1: every button texture found, and every glyph-sized upload left unmatched
+    static int on = -1;
+    if (on < 0) on = getenv("LARECOMP_TEXPATCH_LOG") && atoi(getenv("LARECOMP_TEXPATCH_LOG"));
+    return on;
+}
+
+static uint8_t x5(int v) { return (uint8_t)(v << 3 | v >> 2); }
+static uint8_t x3(int v) { return (uint8_t)(v << 5 | v << 2 | v >> 1); }
+static void gx_565(uint16_t v, uint8_t *p) {
+    p[0] = x5(v >> 11), p[1] = (uint8_t)((v >> 5 & 63) << 2 | (v >> 5 & 63) >> 4), p[2] = x5(v & 31), p[3] = 255;
+}
+
+// A GX texture (format fmt, w x h, in its tiles) as RGBA8; NULL for a format not read here (palettes) or data cut short
+static uint8_t *gx_decode(uint32_t fmt, const uint8_t *s, size_t len, uint32_t w, uint32_t h) {
+    //                     I4 I8 IA4 IA8 RGB565 RGB5A3 RGBA8 .. CMPR
+    static const uint8_t tw[15] = {8, 8, 8, 4, 4, 4, 4, [14] = 8}, th[15] = {8, 4, 4, 4, 4, 4, 4, [14] = 8},
+                         bpp[15] = {4, 8, 8, 16, 16, 16, 32, [14] = 4};
+    if (fmt > 14 || !tw[fmt] || !w || !h) return NULL;
+    uint32_t nx = (w + tw[fmt] - 1) / tw[fmt], ny = (h + th[fmt] - 1) / th[fmt], tb = tw[fmt] * th[fmt] * bpp[fmt] / 8;
+    if ((size_t)nx * ny * tb > len) return NULL;
+    uint8_t *px = calloc((size_t)w * h, 4);
+    for (uint32_t ty = 0; ty < ny; ty++)
+        for (uint32_t tx = 0; tx < nx; tx++) {
+            const uint8_t *b = s + ((size_t)ty * nx + tx) * tb;
+            for (int i = 0; i < tw[fmt] * th[fmt]; i++) {
+                uint32_t x = tx * tw[fmt] + i % tw[fmt], y = ty * th[fmt] + i / tw[fmt];
+                uint8_t p[4];
+                switch (fmt) {
+                case 0: p[0] = p[1] = p[2] = p[3] = (uint8_t)((b[i / 2] >> (i & 1 ? 0 : 4) & 15) * 17); break;
+                case 1: p[0] = p[1] = p[2] = p[3] = b[i]; break;
+                case 2: p[0] = p[1] = p[2] = (uint8_t)((b[i] & 15) * 17), p[3] = (uint8_t)((b[i] >> 4) * 17); break;
+                case 3: p[0] = p[1] = p[2] = b[2 * i + 1], p[3] = b[2 * i]; break;
+                case 4: gx_565(rd16_be(b + 2 * i), p); break;
+                case 5: {
+                    uint16_t v = rd16_be(b + 2 * i);
+                    if (v & 0x8000) p[0] = x5(v >> 10 & 31), p[1] = x5(v >> 5 & 31), p[2] = x5(v & 31), p[3] = 255;
+                    else p[0] = (uint8_t)((v >> 8 & 15) * 17), p[1] = (uint8_t)((v >> 4 & 15) * 17),
+                         p[2] = (uint8_t)((v & 15) * 17), p[3] = x3(v >> 12 & 7);
+                    break;
                 }
+                case 6: p[3] = b[2 * i], p[0] = b[2 * i + 1], p[1] = b[32 + 2 * i], p[2] = b[33 + 2 * i]; break;
+                default: {  // CMPR: 2 x 2 DXT1 blocks (big-endian colours, indices from the top bits)
+                    const uint8_t *d = b + 8 * ((y % 8) / 4 * 2 + (x % 8) / 4);
+                    uint16_t c0 = rd16_be(d), c1 = rd16_be(d + 2);
+                    uint8_t c[4][4];
+                    gx_565(c0, c[0]), gx_565(c1, c[1]);
+                    for (int k = 0; k < 4; k++) {
+                        c[2][k] = (uint8_t)(c0 > c1 ? (2 * c[0][k] + c[1][k]) / 3 : (c[0][k] + c[1][k]) / 2);
+                        c[3][k] = (uint8_t)(c0 > c1 ? (c[0][k] + 2 * c[1][k]) / 3 : 0);
+                    }
+                    memcpy(p, c[d[4 + y % 4] >> (6 - 2 * (x % 4)) & 3], 4);
+                }
+                }
+                if (x < w && y < h) memcpy(px + ((size_t)y * w + x) * 4, p, 4);
             }
         }
-    } else if (fmt == 3) {  // IA8
-        size_t src_idx = 0;
-        for (uint32_t by = 0; by < h; by += 4) {
-            for (uint32_t bx = 0; bx < w; bx += 4) {
-                if (src_idx + 32 > raw_len) break;
-                for (uint32_t y = 0; y < 4; y++) {
-                    for (uint32_t x = 0; x < 4; x++) {
-                        if (bx + x < w && by + y < h) {
-                            uint8_t a = raw[src_idx], i = raw[src_idx + 1];
-                            uint8_t *p = px + ((by + y) * w + bx + x) * 4;
-                            p[0] = i; p[1] = i; p[2] = i; p[3] = a;
-                        }
-                        src_idx += 2;
-                    }
-                }
-            }
-        }
-    } else if (fmt == 5) {  // RGB5A3
-        size_t src_idx = 0;
-        for (uint32_t by = 0; by < h; by += 4) {
-            for (uint32_t bx = 0; bx < w; bx += 4) {
-                if (src_idx + 32 > raw_len) break;
-                for (uint32_t y = 0; y < 4; y++) {
-                    for (uint32_t x = 0; x < 4; x++) {
-                        uint16_t v = (uint16_t)(raw[src_idx] << 8 | raw[src_idx + 1]);
-                        src_idx += 2;
-                        if (bx + x < w && by + y < h) {
-                            uint8_t *p = px + ((by + y) * w + bx + x) * 4;
-                            if (v & 0x8000) {
-                                p[0] = ((v >> 10) & 0x1f) * 255 / 31;
-                                p[1] = ((v >> 5) & 0x1f) * 255 / 31;
-                                p[2] = (v & 0x1f) * 255 / 31;
-                                p[3] = 255;
-                            } else {
-                                p[3] = ((v >> 12) & 7) * 255 / 7;
-                                p[0] = ((v >> 8) & 0xf) * 255 / 15;
-                                p[1] = ((v >> 4) & 0xf) * 255 / 15;
-                                p[2] = (v & 0xf) * 255 / 15;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    } else {
-        free(px);
-        return NULL;
-    }
-    *out_w = w;
-    *out_h = h;
     return px;
 }
 
-static void scan_u8_arc(const uint8_t *b, size_t len) {
-    if (len < 0x20 || b[0] != 0x55 || b[1] != 0xaa || b[2] != 0x38 || b[3] != 0x2d) return;
-    uint32_t root_node = rd32_be(b + 4);
-    if (root_node + 12 > len) return;
-    uint32_t num_nodes = rd32_be(b + root_node + 8);
-    uint32_t string_pool = root_node + num_nodes * 12;
-    if (string_pool > len) return;
-    for (uint32_t i = 1; i < num_nodes; i++) {
-        const uint8_t *node = b + root_node + i * 12;
-        if ((size_t)(root_node + i * 12 + 12) > len || node[0]) continue;  // directory
-        uint32_t name_off = (uint32_t)(node[1] << 16 | node[2] << 8 | node[3]);
-        if (string_pool + name_off >= len) continue;
-        const char *name = (const char *)b + string_pool + name_off;
+static void add_gx_ref(int role, const uint8_t *rgba, uint32_t w, uint32_t h, const char *name) {
+    int n = g_nrefs;
+    add_ref(role, K_RGBA8, 0, w, h, 1, rgba, w * h * 4, name);
+    if (g_nrefs > n) g_refs[n].gx = 1;
+}
+
+static int g_gx_unread[16];  // button textures in a GX format not read (by format; 15: not a TPL)
+
+// The button textures of one layout archive (U8): only its node table and those textures are read
+static void scan_u8(const char *rel) {
+    extern bool romfs_find_file(const char *rel, int *out_fd, uint64_t *out_off, uint64_t *out_size);
+    int fd;
+    uint64_t off, size;
+    uint8_t hd[16];
+    if (!romfs_find_file(rel, &fd, &off, &size) || size < 16 || pread(fd, hd, 16, (off_t)off) != 16 ||
+        rd32_be(hd) != 0x55AA382D) return;
+    uint32_t root = rd32_be(hd + 4), n = rd32_be(hd + 8);  // node table + names
+    if (n < 12 || n > (64u << 20) || root + (uint64_t)n > size) return;
+    uint8_t *t = malloc(n + 1);
+    t[n] = 0;
+    if (pread(fd, t, n, (off_t)(off + root)) != (ssize_t)n) { free(t); return; }
+    uint32_t nodes = rd32_be(t + 8), names = nodes * 12;
+    for (uint32_t i = 1; i < nodes && names < n && i * 12 + 12 <= n; i++) {
+        const uint8_t *e = t + i * 12;
+        uint32_t no = (uint32_t)(e[1] << 16 | e[2] << 8 | e[3]), at = rd32_be(e + 4), sz = rd32_be(e + 8);
+        if (e[0] || names + no >= n) continue;  // (a directory)
+        const char *name = (const char *)t + names + no;
         int role = role_of(name);
-        if (!role) continue;
-        uint32_t data_off = rd32_be(node + 4), sz = rd32_be(node + 8);
-        if (data_off + sz > len) continue;
-        uint32_t w = 0, h = 0;
-        uint8_t *rgba = decode_tpl(b + data_off, sz, &w, &h);
-        if (rgba) {
-            add_ref(role, K_RGBA8, 0, w, h, 1, rgba, w * h * 4, name);
-            uint8_t *rg8 = malloc((size_t)w * h * 2);
-            for (uint32_t p = 0; p < w * h; p++) {
-                rg8[p * 2] = rgba[p * 4];          // Intensity
-                rg8[p * 2 + 1] = rgba[p * 4 + 3];  // Alpha
+        if (!role || sz < 0x20 || sz > (4u << 20) || at + (uint64_t)sz > size) continue;
+        uint8_t *f = malloc(sz), *rgba = NULL;
+        uint32_t w = 0, h = 0, gx = 15;
+        if (pread(fd, f, sz, (off_t)(off + at)) == (ssize_t)sz && rd32_be(f) == 0x0020AF30) {  // TPL: its first image
+            uint32_t tab = rd32_be(f + 8), im = tab + 4 <= sz ? rd32_be(f + tab) : sz;
+            if (im + 12 <= sz) {
+                h = rd16_be(f + im), w = rd16_be(f + im + 2), gx = rd32_be(f + im + 4);
+                uint32_t d = rd32_be(f + im + 8);
+                if (d < sz) rgba = gx_decode(gx, f + d, sz - d, w, h);
             }
-            add_ref(role, K_RG8, 0, w, h, 1, rg8, w * h * 2, name);
-            free(rg8);
-            free(rgba);
         }
+        if (rgba) add_gx_ref(role, rgba, w, h, name);
+        else g_gx_unread[gx < 15 ? gx : 15]++;
+        if (tp_log()) LOG("[texpatch] %s: %s %ux%u, gx format %u%s\n", rel, name, w, h, gx, rgba ? "" : " (not read)");
+        free(f);
+        free(rgba);
     }
+    free(t);
+}
+
+// The picture font's glyph cells (Font/picture_00.brfnt: the icons inside message text): g_cell_w x g_cell_h, every
+// g_pitch_x / g_pitch_y pixels of a sheet
+static int g_cell_w = 80, g_cell_h = 80, g_pitch_x = 80, g_pitch_y = 80;
+
+static void scan_brfnt(const char *rel) {
+    size_t len;
+    uint8_t *f = romfs_read_file(rel, &len);
+    if (!f) return;
+    bool picture = strstr(rel, "picture_00") != NULL;
+    for (size_t o = len >= 0x10 ? rd16_be(f + 0xC) : len; o + 0x20 <= len;) {  // its blocks: FINF, TGLP, ...
+        uint32_t bs = rd32_be(f + o + 4);
+        if (memcmp(f + o, "TGLP", 4)) {
+            if (bs < 8) break;
+            o += bs;
+            continue;
+        }
+        const uint8_t *g = f + o;
+        uint32_t ss = rd32_be(g + 0xC), ns = rd16_be(g + 0x10), fmt = rd16_be(g + 0x12), sw = rd16_be(g + 0x18),
+                 sh = rd16_be(g + 0x1A), img = rd32_be(g + 0x1C);
+        LOG("[texpatch] %s: %u sheets of %ux%u, gx format %u, cells %ux%u (%u per row, %u rows), images at %#x\n", rel,
+            ns, sw, sh, fmt, g[8], g[9], rd16_be(g + 0x14), rd16_be(g + 0x16), img);
+        if (picture && g[8] && g[9] && 3 * (g[8] + 1) <= (int)sw && 3 * (g[9] + 1) <= (int)sh)
+            g_cell_w = g[8], g_cell_h = g[9], g_pitch_x = g[8] + 1, g_pitch_y = g[9] + 1;
+        // the images' offset: from the file's start, or (as this was first read) from the block's. (Format bit 15:
+        // compressed sheets, not read.)
+        for (int from = 0; picture && fmt < 0x8000 && from < 2; from++) {
+            size_t at = img + (from ? o : 0);
+            for (uint32_t i = 0; i < ns && at + (size_t)(i + 1) * ss <= len; i++) {
+                int role = i == 1 ? R_SHEET_1 : i == 3 ? R_SHEET_3 : i == 4 ? R_SHEET_4 : 0;
+                uint8_t *rgba = role ? gx_decode(fmt, f + at + (size_t)i * ss, ss, sw, sh) : NULL;
+                char nm[32];
+                snprintf(nm, sizeof nm, "picture_00 sheet %u", i);
+                if (rgba) add_gx_ref(role, rgba, sw, sh, nm);
+                free(rgba);
+            }
+        }
+        break;
+    }
+    free(f);
+}
+
+static void scan_arc_file(const char *path) { size_t n = strlen(path); if (n > 4 && !strcasecmp(path + n - 4, ".arc")) scan_u8(path); }
+static void scan_font_file(const char *path) { size_t n = strlen(path); if (n > 6 && !strcasecmp(path + n - 6, ".brfnt")) scan_brfnt(path); }
+
+static void load_gx_refs(void) {
+    extern void romfs_each(const char *prefix, void (*fn)(const char *path));
+    romfs_each("Layout/", scan_arc_file);
+    romfs_each("Font/", scan_font_file);
+    char unread[200] = "";
+    for (int i = 0; i < 16; i++)
+        if (g_gx_unread[i])
+            snprintf(unread + strlen(unread), sizeof unread - strlen(unread), "%s %d %s %d", *unread ? "," : "; not read:",
+                     g_gx_unread[i], i < 15 ? "in gx format" : "not TPLs", i);
+    LOG("[texpatch] Skyward Sword HD: %d known button prompt textures%s\n", g_nrefs, unread);
 }
 
 static void load_refs(void) {
-    if (!g_is_las) {
-        static const char *const arcs[] = {
-            "Layout/DoButton.arc", "Layout/FileSelect.arc", "Layout/Shop.arc", "Layout/System2D.arc",
-            "Layout/Map2D.arc", "Layout/MenuOptions.arc", "Layout/MenuPause.arc", "Layout/MenuHelp.arc",
-            "Layout/SeekerStone.arc", "Layout/SoftwareKeyboard.arc", "Layout/Title2D.arc",
-            "Layout/Main2D.arc", "Layout/CursorStick.arc", "Layout/CommonArrow.arc"
-        };
-        for (unsigned i = 0; i < sizeof arcs / sizeof *arcs; i++) {
-            size_t len = 0;
-            uint8_t *d = romfs_read_file(arcs[i], &len);
-            if (d) {
-                scan_u8_arc(d, len);
-                free(d);
-            }
-        }
-        // Load message box / dialogue font icons from Font/picture_00.brfnt
-        size_t flen = 0;
-        uint8_t *brfnt = romfs_read_file("Font/picture_00.brfnt", &flen);
-        if (brfnt && flen > 0x50) {
-            uint32_t sheet_off = 0x30 + rd32_be(brfnt + 0x30 + 28);
-            uint32_t sheet_size = 131072;
-            for (int s = 0; s < 5; s++) {
-                if (sheet_off + (s + 1) * sheet_size <= flen) {
-                    const uint8_t *raw = brfnt + sheet_off + s * sheet_size;
-                    uint8_t *lin_rg8 = malloc(256 * 256 * 2);
-                    uint8_t *lin_rgba = malloc(256 * 256 * 4);
-                    size_t p = 0;
-                    for (uint32_t by = 0; by < 256; by += 4) {
-                        for (uint32_t bx = 0; bx < 256; bx += 4) {
-                            for (uint32_t y = 0; y < 4; y++) {
-                                for (uint32_t x = 0; x < 4; x++) {
-                                    uint8_t a = raw[p], i = raw[p + 1];
-                                    p += 2;
-                                    uint32_t idx = (by + y) * 256 + bx + x;
-                                    lin_rg8[idx * 2] = i;
-                                    lin_rg8[idx * 2 + 1] = a;
-                                    lin_rgba[idx * 4] = i;
-                                    lin_rgba[idx * 4 + 1] = i;
-                                    lin_rgba[idx * 4 + 2] = i;
-                                    lin_rgba[idx * 4 + 3] = a;
-                                }
-                            }
-                        }
-                    }
-                    int role = (s == 1) ? R_SHEET_1 : (s == 3) ? R_SHEET_3 : (s == 4) ? R_SHEET_4 : 0;
-                    if (role) {
-                        char nm[32];
-                        snprintf(nm, sizeof nm, "picture_00_%d.brfnt", s);
-                        add_ref(role, K_RG8, 0, 256, 256, 1, lin_rg8, 256 * 256 * 2, nm);
-                        add_ref(role, K_RGBA8, 0, 256, 256, 1, lin_rgba, 256 * 256 * 4, nm);
-                    }
-                    free(lin_rg8);
-                    free(lin_rgba);
-                }
-            }
-            free(brfnt);
-        }
-        LOG("[texpatch] Skyward Sword HD: %d known button prompt textures\n", g_nrefs);
-        return;
-    }
+    if (!g_is_las) { load_gx_refs(); return; }
     scan_sarc("region_common/ui/Game.arc");
     scan_sarc("region_common/ui/StartUp.arc");
     scan_sarc("regionUS/common/ui/GameRegionCommon.arc");
@@ -477,41 +433,93 @@ static TexLayout g_tunic_layout;  // (the game's tunic texture: its levels' plac
 static bool g_tunic_layout_ok;
 bool texpatch_is_item_cursor(int id) { return id >= 0 && id < g_nrefs && g_refs[id].role == R_ITEM_CURSOR; }
 
+// The upload's texel i (lin: its level 0 as `kind`) as RGBA
+static void texel(const uint8_t *lin, int kind, size_t i, uint8_t p[4]) {
+    switch (kind) {
+    case K_RGBA8: memcpy(p, lin + 4 * i, 4); break;
+    case K_RG8: p[0] = p[1] = p[2] = lin[2 * i], p[3] = lin[2 * i + 1]; break;
+    case K_GR8: p[0] = p[1] = p[2] = lin[2 * i + 1], p[3] = lin[2 * i]; break;
+    default: p[0] = p[1] = p[2] = p[3] = lin[i];
+    }
+}
+
+// How many of the upload's pixels differ from a decoded GX image (counting stops at `stop`): alpha by more than the
+// conversions' rounding anywhere, colour where it's opaque (a conversion may premultiply, or drop clear pixels' colour)
+static size_t gx_mismatch(const uint8_t *lin, int kind, const uint8_t *rgba, size_t n, size_t stop) {
+    size_t bad = 0;
+    for (size_t i = 0; i < n && bad < stop; i++) {
+        uint8_t p[4];
+        texel(lin, kind, i, p);
+        const uint8_t *q = rgba + 4 * i;
+        bool off = abs(p[3] - q[3]) > 20;
+        for (int k = 0; k < 3 && !off && q[3] >= 250; k++) off = abs(p[k] - q[k]) > 20;
+        bad += off;
+    }
+    return bad;
+}
+
+// GX ref i, as uploaded in `kind`: its own entry the first time, a copy (same image) for another kind
+static int ref_as(int i, int kind) {
+    static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_lock(&lock);
+    int id = i;
+    if (g_refs[i].gx == 1) g_refs[i].kind = (uint8_t)kind, g_refs[i].gx = 2;
+    else if (g_refs[i].kind != kind) {
+        id = -1;
+        for (int j = 0; j < g_nrefs && id < 0; j++)
+            if (g_refs[j].gx == 2 && g_refs[j].data == g_refs[i].data && g_refs[j].kind == kind) id = j;
+        if (id < 0 && g_nrefs < (int)(sizeof g_refs / sizeof *g_refs)) {
+            g_refs[g_nrefs] = g_refs[i];
+            g_refs[g_nrefs].kind = (uint8_t)kind;
+            id = g_nrefs++;
+        }
+        if (id < 0) id = i;
+    }
+    pthread_mutex_unlock(&lock);
+    return id;
+}
+
 int texpatch_identify(const NvnTexture *t) {
     pthread_once(&g_once, load_refs);
     if (!t->addr || t->depth > 1) return -1;
     uint64_t total = tegra_total_size(&t->layout);
     if (!g_is_las && t->width <= 256 && t->height <= 256 && t->layout.fmt) {
-        uint32_t bpb = t->layout.fmt->bpb;
-        if (bpb == 4 || bpb == 2) {
+        uint32_t f = t->format;
+        int kinds[2] = {-1, -1};
+        if ((f >= 0x25 && f <= 0x28) || f == 0x38) kinds[0] = K_RGBA8;
+        else if (f >= 0x0D && f <= 0x10) kinds[0] = K_RG8, kinds[1] = K_GR8;
+        else if (f >= 0x01 && f <= 0x04) kinds[0] = K_R8;
+        if (kinds[0] >= 0) {
+            uint32_t bpb = t->layout.fmt->bpb;
             uint8_t lin[256 * 256 * 4];
             LevelLayout l = tegra_level(&t->layout, 0);
-            bool linear = (t->flags & 0x10) != 0;
-            if (linear) {
+            if (t->flags & 0x10) {
                 uint32_t row = l.wb * bpb;
                 for (uint32_t y = 0; y < l.hb; y++)
                     memcpy(lin + (uint64_t)y * row, (const uint8_t *)(uintptr_t)t->addr + (uint64_t)y * t->stride, row);
             } else {
                 tegra_deswizzle((const uint8_t *)(uintptr_t)t->addr, lin, l.wb, l.hb, 1, bpb, l.block_height_log2, l.block_depth_log2);
             }
-            for (int i = 0; i < g_nrefs; i++) {
-                const Ref *r = &g_refs[i];
-                if (r->w == t->width && r->h == t->height) {
-                    if (r->kind == K_RGBA8 && bpb == 4) {
-                        if (!memcmp(lin, r->data, (size_t)t->width * t->height * 4)) {
-                            static int nlog;
-                            if (nlog++ < 64) LOG("[texpatch] %s (%ux%u role %d) identified\n", r->name, r->w, r->h, r->role);
-                            return i;
-                        }
-                    } else if (r->kind == K_RG8 && bpb == 2) {
-                        if (!memcmp(lin, r->data, (size_t)t->width * t->height * 2)) {
-                            static int nlog;
-                            if (nlog++ < 64) LOG("[texpatch] %s (%ux%u role %d) identified\n", r->name, r->w, r->h, r->role);
-                            return i;
-                        }
+            size_t n = (size_t)t->width * t->height, best = n + 1;
+            int closest = -1;
+            for (int pass = 0; pass < 1 + tp_log(); pass++)  // (pass 1: how close the nearest one came, for the log)
+                for (int i = 0; i < g_nrefs; i++) {
+                    const Ref *r = &g_refs[i];
+                    if (!r->gx || r->w != t->width || r->h != t->height) continue;
+                    for (int k = 0; k < 2 && kinds[k] >= 0; k++) {
+                        size_t off = gx_mismatch(lin, kinds[k], r->data, n, pass ? n : n / 256 + 1);
+                        if (pass && off < best) best = off, closest = i;
+                        if (pass || off > n / 256) continue;
+                        int id = ref_as(i, kinds[k]);
+                        static int nlog;
+                        if (nlog++ < 96) LOG("[texpatch] %s (%ux%u role %d kind %d) identified\n", r->name, r->w, r->h, r->role, kinds[k]);
+                        return id;
                     }
                 }
-            }
+            static int nmiss;
+            if (closest >= 0 && nmiss++ < 64)
+                LOG("[texpatch] unmatched %ux%u fmt %#x (%u layers): closest %s, %.1f%% of its pixels off\n", t->width,
+                    t->height, f, t->layout.layers, g_refs[closest].name, 100.0 * best / n);
         }
     }
     for (int i = 0; i < g_nrefs; i++) {
@@ -619,39 +627,6 @@ static int role_to_slot(int role) {
     }
 }
 
-static const char *keyboard_key_name(int sc) {
-    if (sc <= 0 || sc >= SDL_SCANCODE_COUNT) return "";
-    switch (sc) {
-    case SDL_SCANCODE_RETURN: case SDL_SCANCODE_KP_ENTER: return "Enter";
-    case SDL_SCANCODE_ESCAPE: return "Esc";
-    case SDL_SCANCODE_BACKSPACE: return "Bksp";
-    case SDL_SCANCODE_TAB: return "Tab";
-    case SDL_SCANCODE_SPACE: return "Space";
-    case SDL_SCANCODE_LSHIFT: case SDL_SCANCODE_RSHIFT: return "Shift";
-    case SDL_SCANCODE_LCTRL: case SDL_SCANCODE_RCTRL: return "Ctrl";
-    case SDL_SCANCODE_LALT: case SDL_SCANCODE_RALT: return "Alt";
-    case SDL_SCANCODE_CAPSLOCK: return "Caps";
-    case SDL_SCANCODE_PAGEUP: return "PgUp";
-    case SDL_SCANCODE_PAGEDOWN: return "PgDn";
-    case SDL_SCANCODE_DELETE: return "Del";
-    case SDL_SCANCODE_INSERT: return "Ins";
-    case SDL_SCANCODE_KP_0: return "0";
-    case SDL_SCANCODE_KP_1: return "1";
-    case SDL_SCANCODE_KP_2: return "2";
-    case SDL_SCANCODE_KP_3: return "3";
-    case SDL_SCANCODE_KP_4: return "4";
-    case SDL_SCANCODE_KP_5: return "5";
-    case SDL_SCANCODE_KP_6: return "6";
-    case SDL_SCANCODE_KP_7: return "7";
-    case SDL_SCANCODE_KP_8: return "8";
-    case SDL_SCANCODE_KP_9: return "9";
-    default: {
-        const char *name = SDL_GetScancodeName((SDL_Scancode)sc);
-        return (name && *name) ? name : "?";
-    }
-    }
-}
-
 static uint32_t labels_hash(void) {
     uint32_t h = 0;
     for (int r = R_A; r <= R_MINUS; r++) h = h * 41 + (uint32_t)(prompt_label(r) - r + 64);
@@ -662,11 +637,18 @@ static uint32_t labels_hash(void) {
 // (a Nintendo-style glyph is only redrawn when its button was remapped)
 static bool restyled(int role, int style) { return style != STYLE_NINTENDO || prompt_label(role) != role; }
 
+static bool prompt_dark(void) {  // LARECOMP_PROMPT_LOOK=light|dark: test override
+    static int env = -2;
+    if (env == -2) { const char *e = getenv("LARECOMP_PROMPT_LOOK"); env = !e ? -1 : !strcmp(e, "dark"); }
+    return env >= 0 ? env : g_settings.prompt_look == PROMPT_LOOK_DARK;
+}
+
 static void cosmetics_test(void);
 
 uint32_t texpatch_generation(void) {  // (a rebind re-uploads the glyphs, like a style change; so does a tunic colour)
     cosmetics_test();
-    return (1 + (uint32_t)prompt_style() + (hide_hero() ? 4 : 0) + (labels_hash() << 3)) ^ (uint32_t)g_settings.tunic * 0x9E3779B1u;
+    return (1 + (uint32_t)prompt_style() + (hide_hero() ? 4 : 0) + (labels_hash() << 3)) ^ (uint32_t)g_settings.tunic * 0x9E3779B1u ^
+           (prompt_dark() ? 0x85EBCA6Bu : 0);
 }
 
 // ------------------------------------------------------------------ block codecs (BC4/BC5, BC1/BC3, ASTC 4x4)
@@ -780,15 +762,9 @@ static void astc_encode4(const uint8_t px[16][4], bool srgb, uint8_t *b) {
 static void decode_image(const Ref *r, const uint8_t *src, uint32_t row, uint8_t *img) {
     uint32_t W = r->w, H = r->h, bw = (W + 3) / 4, bh = (H + 3) / 4;
     if (r->kind == K_RGBA8) { for (uint32_t y = 0; y < H; y++) memcpy(img + y * W * 4, src + y * row, W * 4); return; }
-    if (r->kind == K_RG8) {
-        for (uint32_t y = 0; y < H; y++) {
-            const uint8_t *s = src + y * row;
-            uint8_t *d = img + y * W * 4;
-            for (uint32_t x = 0; x < W; x++) {
-                uint8_t i = s[x * 2], a = s[x * 2 + 1];
-                d[x * 4] = i; d[x * 4 + 1] = i; d[x * 4 + 2] = i; d[x * 4 + 3] = a;
-            }
-        }
+    if (r->kind == K_RG8 || r->kind == K_GR8 || r->kind == K_R8) {
+        for (uint32_t y = 0; y < H; y++)
+            for (uint32_t x = 0; x < W; x++) texel(src + y * row, r->kind, x, img + (y * W + x) * 4);
         return;
     }
     if (r->kind == K_ASTC4) {
@@ -819,14 +795,14 @@ static void decode_image(const Ref *r, const uint8_t *src, uint32_t row, uint8_t
 static void encode_image(const Ref *r, const uint8_t *img, const uint8_t *dirty, uint8_t *dst, uint32_t row) {
     uint32_t W = r->w, H = r->h, bw = (W + 3) / 4, bh = (H + 3) / 4;
     if (r->kind == K_RGBA8) { for (uint32_t y = 0; y < H; y++) memcpy(dst + y * row, img + y * W * 4, W * 4); return; }
-    if (r->kind == K_RG8) {
+    if (r->kind == K_RG8 || r->kind == K_GR8 || r->kind == K_R8) {  // (intensity, alpha)
         for (uint32_t y = 0; y < H; y++) {
             const uint8_t *s = img + y * W * 4;
             uint8_t *d = dst + y * row;
             for (uint32_t x = 0; x < W; x++) {
-                uint8_t i = (uint8_t)((s[x * 4] * 299 + s[x * 4 + 1] * 587 + s[x * 4 + 2] * 114) / 1000);
-                d[x * 2] = i;
-                d[x * 2 + 1] = s[x * 4 + 3];
+                uint8_t i = (uint8_t)((s[x * 4] * 299 + s[x * 4 + 1] * 587 + s[x * 4 + 2] * 114) / 1000), a = s[x * 4 + 3];
+                if (r->kind == K_R8) d[x] = (uint8_t)(i * a / 255);
+                else d[x * 2 + (r->kind == K_GR8)] = i, d[x * 2 + (r->kind != K_GR8)] = a;
             }
         }
         return;
@@ -855,404 +831,52 @@ static void encode_image(const Ref *r, const uint8_t *img, const uint8_t *dirty,
         }
 }
 
-// ------------------------------------------------------------------ labels
-static stbtt_fontinfo g_font;
-static bool g_font_ok;
-static uint8_t *g_font_data;
-
-static void load_font(void) {  // a bold system font for the letters (none of the game's fonts are needed)
-    static const char *const paths[] = {
-        "/System/Library/Fonts/Supplemental/Arial Rounded Bold.ttf", "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
-        "/Library/Fonts/Arial Bold.ttf", "C:/Windows/Fonts/arialbd.ttf", "C:/Windows/Fonts/segoeuib.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf",
-        "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans-Bold.ttf",
-    };
-    for (unsigned i = 0; i < sizeof paths / sizeof *paths && !g_font_ok; i++) {
-        FILE *f = fopen(paths[i], "rb");
-        if (!f) continue;
-        fseek(f, 0, SEEK_END);
-        long n = ftell(f);
-        fseek(f, 0, SEEK_SET);
-        g_font_data = malloc((size_t)n);
-        if (fread(g_font_data, 1, (size_t)n, f) == (size_t)n && stbtt_InitFont(&g_font, g_font_data, stbtt_GetFontOffsetForIndex(g_font_data, 0)))
-            g_font_ok = true;
-        else { free(g_font_data); g_font_data = NULL; }
-        fclose(f);
-    }
-    if (!g_font_ok) LOG("[texpatch] no system font for the button letters: Xbox letters stay Nintendo's\n");
-}
-
-#define CV 256  // label canvas (drawn large, then fitted into the glyph)
-
-static float sat(float v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
-static float seg_dist(float px, float py, float ax, float ay, float bx, float by) {
-    float vx = bx - ax, vy = by - ay, wx = px - ax, wy = py - ay;
-    float t = sat((wx * vx + wy * vy) / (vx * vx + vy * vy + 1e-6f));
-    float dx = wx - t * vx, dy = wy - t * vy;
-    return sqrtf(dx * dx + dy * dy);
-}
-
-typedef struct { float ax, ay, bx, by; } Seg;
-
-static void draw_segs(float *cv, const Seg *s, int n, float r) {  // round-capped strokes
-    for (int y = 0; y < CV; y++)
-        for (int x = 0; x < CV; x++) {
-            float d = 1e9f;
-            for (int i = 0; i < n; i++) { float e = seg_dist(x + 0.5f, y + 0.5f, s[i].ax, s[i].ay, s[i].bx, s[i].by); if (e < d) d = e; }
-            float a = sat(r - d + 0.5f);
-            if (a > cv[y * CV + x]) cv[y * CV + x] = a;
+// ------------------------------------------------------------------ icons
+// Redraw one glyph: img (W x H RGBA8, alpha in channel `ach`), region x0, y0 w x h (flip: stored upside down, font
+// sheets). The new icon fills the old one's shape (its alpha's bounds), and the rest of the region is cleared.
+// mono: an intensity-only texture (RG8, R8, BC5).
+static void redraw(uint8_t *img, int W, int x0, int y0, int w, int h, int ach, bool flip, bool mono, int role, int style,
+                   uint8_t *dirty, int bw) {
+    int bx0 = w, by0 = h, bx1 = -1, by1 = -1, area = 0;
+    for (int y = 0; y < h; y++)
+        for (int x = 0; x < w; x++) {
+            int sy = flip ? h - 1 - y : y;
+            if (img[((y0 + sy) * W + x0 + x) * 4 + ach] <= 127) continue;
+            area++;
+            if (x < bx0) bx0 = x;
+            if (x > bx1) bx1 = x;
+            if (y < by0) by0 = y;
+            if (y > by1) by1 = y;
         }
-}
-
-static void draw_ring(float *cv, float cx, float cy, float rad, float th) {
-    for (int y = 0; y < CV; y++)
-        for (int x = 0; x < CV; x++) {
-            float d = hypotf(x + 0.5f - cx, y + 0.5f - cy);
-            float a = sat(th / 2 - fabsf(d - rad) + 0.5f);
-            if (a > cv[y * CV + x]) cv[y * CV + x] = a;
-        }
-}
-
-static void draw_rect(float *cv, float x0, float y0, float x1, float y1, float th) {
-    Seg s[4] = {{x0, y0, x1, y0}, {x1, y0, x1, y1}, {x1, y1, x0, y1}, {x0, y1, x0, y0}};
-    draw_segs(cv, s, 4, th / 2);
-}
-
-static bool draw_text(float *cv, const char *text) {
-    if (!g_font_ok || !text || !*text) return false;
-    float sc = stbtt_ScaleForPixelHeight(&g_font, 180.0f);
-    float total_w = 0;
-    for (const char *p = text; *p; p++) {
-        int adv, lsb;
-        stbtt_GetCodepointHMetrics(&g_font, *p, &adv, &lsb);
-        total_w += adv * sc;
-        if (p[1]) total_w += stbtt_GetCodepointKernAdvance(&g_font, p[0], p[1]) * sc;
-    }
-    if (total_w > 220.0f) {
-        float f = 220.0f / total_w;
-        sc *= f;
-        total_w *= f;
-    }
-    float x = (CV - total_w) / 2.0f;
-    for (const char *p = text; *p; p++) {
-        int adv, lsb, x0, y0, x1, y1;
-        stbtt_GetCodepointHMetrics(&g_font, *p, &adv, &lsb);
-        stbtt_GetCodepointBitmapBox(&g_font, *p, sc, sc, &x0, &y0, &x1, &y1);
-        int w = x1 - x0, h = y1 - y0, ox = (int)x + x0, oy = (int)(CV * 0.78f) + y0;
-        if (w > 0 && h > 0) {
-            unsigned char *bm = malloc((size_t)w * h);
-            stbtt_MakeCodepointBitmap(&g_font, bm, w, h, w, sc, sc, *p);
-            for (int yy = 0; yy < h; yy++)
-                for (int xx = 0; xx < w; xx++) {
-                    int X = ox + xx, Y = oy + yy;
-                    if (X >= 0 && X < CV && Y >= 0 && Y < CV) { float a = bm[yy * w + xx] / 255.0f; if (a > cv[Y * CV + X]) cv[Y * CV + X] = a; }
-                }
-            free(bm);
-        }
-        x += adv * sc;
-        if (p[1]) x += stbtt_GetCodepointKernAdvance(&g_font, p[0], p[1]) * sc;
-    }
-    return true;
-}
-
-// The new label `role` (R_* / L_*, canvas coverage). symbol = true: a square pictogram (fitted by its size, not cap
-// height).
-static bool draw_label(int role, int style, float *cv, bool *symbol) {
-    memset(cv, 0, sizeof(float) * CV * CV);
-    if (style == STYLE_KEYBOARD) {
-        int slot = role_to_slot(role);
-        int sc = (slot >= 0 && slot < BIND_KEY_COUNT) ? g_bind_key[slot] : 0;
-        if (sc == SDL_SCANCODE_UP) {
-            static const float up[3][4] = {{128, 228, 128, 40}, {128, 34, 46, 116}, {128, 34, 210, 116}};
-            Seg s[3];
-            for (int i = 0; i < 3; i++) s[i] = (Seg){up[i][0], up[i][1], up[i][2], up[i][3]};
-            draw_segs(cv, s, 3, 16);
-            *symbol = true;
-            return true;
-        }
-        if (sc == SDL_SCANCODE_DOWN) {
-            static const float up[3][4] = {{128, 228, 128, 40}, {128, 34, 46, 116}, {128, 34, 210, 116}};
-            Seg s[3];
-            for (int i = 0; i < 3; i++) s[i] = (Seg){256 - up[i][0], 256 - up[i][1], 256 - up[i][2], 256 - up[i][3]};
-            draw_segs(cv, s, 3, 16);
-            *symbol = true;
-            return true;
-        }
-        if (sc == SDL_SCANCODE_LEFT) {
-            static const float up[3][4] = {{128, 228, 128, 40}, {128, 34, 46, 116}, {128, 34, 210, 116}};
-            Seg s[3];
-            for (int i = 0; i < 3; i++) s[i] = (Seg){up[i][1], 256 - up[i][0], up[i][3], 256 - up[i][2]};
-            draw_segs(cv, s, 3, 16);
-            *symbol = true;
-            return true;
-        }
-        if (sc == SDL_SCANCODE_RIGHT) {
-            static const float up[3][4] = {{128, 228, 128, 40}, {128, 34, 46, 116}, {128, 34, 210, 116}};
-            Seg s[3];
-            for (int i = 0; i < 3; i++) s[i] = (Seg){256 - up[i][1], up[i][0], 256 - up[i][3], up[i][2]};
-            draw_segs(cv, s, 3, 16);
-            *symbol = true;
-            return true;
-        }
-        const char *txt = keyboard_key_name(sc);
-        if (!txt || !*txt) txt = "?";
-        *symbol = false;
-        return draw_text(cv, txt);
-    }
-    *symbol = role == R_PLUS || role == R_MINUS || (style == STYLE_PS && role <= R_Y) || role >= L_DUP;
-    if (role >= L_DUP && role <= L_DRIGHT) {  // d-pad: an arrow (drawn pointing up, then turned)
-        static const float up[3][4] = {{128, 228, 128, 40}, {128, 34, 46, 116}, {128, 34, 210, 116}};
-        Seg s[3];
-        for (int i = 0; i < 3; i++) {
-            float p[4];
-            for (int k = 0; k < 4; k += 2) {
-                float x = up[i][k] - 128, y = up[i][k + 1] - 128;
-                float rx = role == L_DUP ? x : role == L_DDOWN ? -x : role == L_DLEFT ? y : -y;
-                float ry = role == L_DUP ? y : role == L_DDOWN ? -y : role == L_DLEFT ? -x : x;
-                p[k] = rx + 128, p[k + 1] = ry + 128;
-            }
-            s[i] = (Seg){p[0], p[1], p[2], p[3]};
-        }
-        draw_segs(cv, s, 3, 16);
-        return true;
-    }
-    if (role == L_OTHER) { draw_ring(cv, 128, 128, 40, 80); return true; }  // a paddle / extra button: a dot
-    if (role == L_LS || role == L_RS)
-        return draw_text(cv, style == STYLE_PS ? (role == L_LS ? "L3" : "R3") : (role == L_LS ? "LS" : "RS"));
-    if (style == STYLE_NINTENDO && role == R_PLUS) {
-        Seg s[2] = {{128, 40, 128, 216}, {40, 128, 216, 128}};
-        draw_segs(cv, s, 2, 18);
-        return true;
-    }
-    if (style == STYLE_NINTENDO && role == R_MINUS) {
-        Seg s[1] = {{40, 128, 216, 128}};
-        draw_segs(cv, s, 1, 18);
-        return true;
-    }
-    if (role == R_PLUS) {  // Menu / Options: three bars
-        Seg s[3] = {{48, 64, 208, 64}, {48, 128, 208, 128}, {48, 192, 208, 192}};
-        draw_segs(cv, s, 3, 15);
-        return true;
-    }
-    if (role == R_MINUS) {
-        if (style == STYLE_XBOX) {  // View: two overlapping windows
-            draw_rect(cv, 92, 40, 220, 140, 22);
-            for (int y = 104; y < 228; y++) for (int x = 24; x < 164; x++) cv[y * CV + x] = 0;  // (front window hides the back)
-            draw_rect(cv, 36, 116, 152, 216, 22);
-        } else {  // Create / Share: three rays
-            Seg s[3] = {{128, 40, 128, 140}, {48, 92, 104, 164}, {208, 92, 152, 164}};
-            draw_segs(cv, s, 3, 15);
-            Seg d[1] = {{128, 206, 128, 206}};
-            draw_segs(cv, d, 1, 20);
-        }
-        return true;
-    }
-    if (style == STYLE_PS && role <= R_Y) {
-        if (role == R_A) draw_ring(cv, 128, 128, 96, 26);  // east: circle
-        else if (role == R_B) { Seg s[2] = {{44, 44, 212, 212}, {212, 44, 44, 212}}; draw_segs(cv, s, 2, 14); }  // south: cross
-        else if (role == R_X) { Seg s[3] = {{128, 30, 226, 200}, {226, 200, 30, 200}, {30, 200, 128, 30}}; draw_segs(cv, s, 3, 13); }  // north: triangle
-        else draw_rect(cv, 44, 44, 212, 212, 26);  // west: square
-        return true;
-    }
-    static const char *const xbox[] = {"", "B", "A", "Y", "X", "LB", "RB", "LT", "RT"};
-    static const char *const ps[] = {"", "", "", "", "", "L1", "R1", "L2", "R2"};
-    static const char *const nin[] = {"", "A", "B", "X", "Y", "L", "R", "ZL", "ZR"};
-    if (role > R_ZR) return false;
-    return draw_text(cv, style == STYLE_XBOX ? xbox[role] : style == STYLE_PS ? ps[role] : nin[role]);
-}
-
-static ButtonLook get_button_look(int role, int style) {
-    ButtonLook look = {0};
-    int label = prompt_label(role);
-    look.body[3] = 255.0f;
-    look.body_rim[3] = 255.0f;
-    look.lab[3] = 255.0f;
-
-    if (style == STYLE_KEYBOARD) {
-        look.is_face_button = false;
-        // Premium Dark Graphite Mechanical Keycap
-        look.body[0] = 34.0f;  look.body[1] = 36.0f;  look.body[2] = 42.0f;
-        look.body_rim[0] = 18.0f; look.body_rim[1] = 20.0f; look.body_rim[2] = 24.0f;
-        look.lab[0] = 255.0f; look.lab[1] = 255.0f; look.lab[2] = 255.0f;
-    } else if (style == STYLE_XBOX) {
-        if (label == R_B) { // Xbox "A"
-            look.is_face_button = true;
-            // Vibrant Xbox Green
-            look.body[0] = 16.0f;  look.body[1] = 175.0f; look.body[2] = 32.0f;
-            look.body_rim[0] = 10.0f; look.body_rim[1] = 110.0f; look.body_rim[2] = 20.0f;
-            look.lab[0] = 255.0f; look.lab[1] = 255.0f; look.lab[2] = 255.0f;
-        } else if (label == R_A) { // Xbox "B"
-            look.is_face_button = true;
-            // Vibrant Xbox Red
-            look.body[0] = 230.0f; look.body[1] = 32.0f;  look.body[2] = 45.0f;
-            look.body_rim[0] = 140.0f; look.body_rim[1] = 18.0f; look.body_rim[2] = 25.0f;
-            look.lab[0] = 255.0f; look.lab[1] = 255.0f; look.lab[2] = 255.0f;
-        } else if (label == R_Y) { // Xbox "X"
-            look.is_face_button = true;
-            // Vibrant Xbox Blue
-            look.body[0] = 0.0f;   look.body[1] = 125.0f; look.body[2] = 245.0f;
-            look.body_rim[0] = 0.0f;   look.body_rim[1] = 70.0f;  look.body_rim[2] = 150.0f;
-            look.lab[0] = 255.0f; look.lab[1] = 255.0f; look.lab[2] = 255.0f;
-        } else if (label == R_X) { // Xbox "Y"
-            look.is_face_button = true;
-            // Vibrant Xbox Amber-Yellow
-            look.body[0] = 255.0f; look.body[1] = 185.0f; look.body[2] = 0.0f;
-            look.body_rim[0] = 175.0f; look.body_rim[1] = 115.0f; look.body_rim[2] = 0.0f;
-            look.lab[0] = 255.0f; look.lab[1] = 255.0f; look.lab[2] = 255.0f;
-        } else {
-            // Shoulders (LB, RB, LT, RT), Menu, View, D-pad, Sticks
-            look.is_face_button = false;
-            look.body[0] = 48.0f;  look.body[1] = 52.0f;  look.body[2] = 58.0f;
-            look.body_rim[0] = 30.0f; look.body_rim[1] = 32.0f; look.body_rim[2] = 36.0f;
-            look.lab[0] = 255.0f; look.lab[1] = 255.0f; look.lab[2] = 255.0f;
-        }
-    } else if (style == STYLE_PS) {
-        look.is_face_button = (label <= R_Y);
-        // Sleek PlayStation controller dark disc
-        look.body[0] = 38.0f;  look.body[1] = 42.0f;  look.body[2] = 50.0f;
-        look.body_rim[0] = 22.0f; look.body_rim[1] = 24.0f; look.body_rim[2] = 28.0f;
-
-        if (label == R_B) { // Cross (✕): Electric Blue
-            look.lab[0] = 45.0f;  look.lab[1] = 140.0f; look.lab[2] = 255.0f;
-        } else if (label == R_A) { // Circle (○): Vibrant Red
-            look.lab[0] = 255.0f; look.lab[1] = 65.0f;  look.lab[2] = 75.0f;
-        } else if (label == R_X) { // Triangle (△): Vibrant Green
-            look.lab[0] = 0.0f;   look.lab[1] = 225.0f; look.lab[2] = 130.0f;
-        } else if (label == R_Y) { // Square (□): Vibrant Pink
-            look.lab[0] = 255.0f; look.lab[1] = 100.0f; look.lab[2] = 180.0f;
-        } else {
-            look.lab[0] = 255.0f; look.lab[1] = 255.0f; look.lab[2] = 255.0f;
-        }
-    } else {
-        look.is_face_button = (label <= R_Y);
-        look.body[0] = 48.0f;  look.body[1] = 52.0f;  look.body[2] = 58.0f;
-        look.body_rim[0] = 30.0f; look.body_rim[1] = 32.0f; look.body_rim[2] = 36.0f;
-        look.lab[0] = 255.0f; look.lab[1] = 255.0f; look.lab[2] = 255.0f;
-    }
-    return look;
-}
-
-// Relabel one glyph: img (W x H RGBA8, alpha channel `ach` = the shape), region x0,y0 w,h. flip: the region is
-// stored upside down (font sheets).
-static void relabel(uint8_t *img, int W, int x0, int y0, int w, int h, int ach, bool flip, int role, int style,
-                    uint8_t *dirty, int bw) {
-    int n = w * h;
-    uint8_t *px = malloc((size_t)n * 4), *S = calloc((size_t)n, 1), *I = calloc((size_t)n, 1);
-    int *stack = malloc(sizeof(int) * (size_t)n * 4);
-    float *cv = malloc(sizeof(float) * CV * CV);
-    for (int y = 0; y < h; y++) {
-        int sy = flip ? h - 1 - y : y;
-        memcpy(px + y * w * 4, img + ((y0 + sy) * W + x0) * 4, (size_t)w * 4);
-    }
-    // shape: alpha > 0.5 with its holes filled (the region outside it is what the border reaches)
-    uint8_t *out = calloc((size_t)n, 1);
-    int sp = 0;
-    for (int i = 0; i < n; i++) {
-        int x = i % w, y = i / w;
-        if ((x == 0 || y == 0 || x == w - 1 || y == h - 1) && px[i * 4 + ach] <= 127) { out[i] = 1; stack[sp++] = i; }
-    }
-    while (sp) {
-        int i = stack[--sp], x = i % w, y = i / w;
-        const int nb[4] = {x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1, y > 0 ? i - w : -1, y < h - 1 ? i + w : -1};
-        for (int k = 0; k < 4; k++)
-            if (nb[k] >= 0 && !out[nb[k]] && px[nb[k] * 4 + ach] <= 127) { out[nb[k]] = 1; stack[sp++] = nb[k]; }
-    }
-    int sx0 = w, sy0 = h, sx1 = -1, sy1 = -1, area = 0;
-    for (int i = 0; i < n; i++)
-        if (!out[i]) {
-            S[i] = 1, area++;
-            int x = i % w, y = i / w;
-            if (x < sx0) sx0 = x;
-            if (x > sx1) sx1 = x;
-            if (y < sy0) sy0 = y;
-            if (y > sy1) sy1 = y;
-        }
-    if (area < 25) goto done;
-    int inset = w >= 150 ? 12 : (w >= 70 ? 6 : (w >= 40 ? 3 : 2));
-    for (int i = 0; i < n; i++) {
-        int x = i % w, y = i / w, ok = S[i];
-        for (int dy = -inset; dy <= inset && ok; dy++)
-            for (int dx = -inset; dx <= inset && ok; dx++) {
-                int xx = x + dx, yy = y + dy;
-                ok = xx >= 0 && yy >= 0 && xx < w && yy < h && S[yy * w + xx];
-            }
-        I[i] = (uint8_t)ok;
-    }
-
-    ButtonLook look = get_button_look(role, style);
-    bool symbol = false;
-    int label = (style == STYLE_KEYBOARD) ? role : prompt_label(role);
-    if (!draw_label(label, style, cv, &symbol)) goto done;
-
-    int cx0 = CV, cy0 = CV, cx1 = -1, cy1 = -1;
-    for (int i = 0; i < CV * CV; i++)
-        if (cv[i] > 0.02f) {
-            int x = i % CV, y = i / CV;
-            if (x < cx0) cx0 = x;
-            if (x > cx1) cx1 = x;
-            if (y < cy0) cy0 = y;
-            if (y > cy1) cy1 = y;
-        }
-    if (cx1 < 0) goto done;
-
-    float tcx = (sx0 + sx1 + 1) / 2.0f, tcy = (sy0 + sy1 + 1) / 2.0f;
-    float rad = fminf(sx1 - sx0 + 1, sy1 - sy0 + 1) / 2.0f;
-    if (rad < 1.0f) rad = 1.0f;
-
-    // Repaint the button interior with authentic controller colors
-    for (int i = 0; i < n; i++) {
-        if (!I[i]) continue;
-        int x = i % w, y = i / w;
-        float dist = hypotf(x + 0.5f - tcx, y + 0.5f - tcy);
-        float norm_d = dist / rad;
-        if (norm_d > 1.0f) norm_d = 1.0f;
-        float shade_factor = look.is_face_button ? 0.35f : 0.20f;
-        for (int k = 0; k < 3; k++) {
-            px[i * 4 + k] = (uint8_t)lroundf(look.body[k] * (1.0f - norm_d * shade_factor) + look.body_rim[k] * (norm_d * shade_factor));
-        }
-    }
-
-    float iw = (float)(sx1 - sx0 + 1), ih = (float)(sy1 - sy0 + 1);
-    float cw = (float)(cx1 - cx0 + 1), ch = (float)(cy1 - cy0 + 1);
-    float th;
-    if (symbol) {
-        float s = fminf(iw, ih) * (style == STYLE_PS && prompt_label(role) <= R_Y ? 0.54f : 0.60f);
-        th = s * ch / fmaxf(cw, ch);
-    } else {
-        th = fminf(ih * 0.55f, iw * 0.72f * ch / cw);
-    }
-    float tw = th * cw / ch, k = ch / th;
-    float bx0 = tcx - tw / 2.0f, by0 = tcy - th / 2.0f;
-    for (int y = (int)floorf(by0); y <= (int)ceilf(by0 + th); y++)
-        for (int x = (int)floorf(bx0); x <= (int)ceilf(bx0 + tw); x++) {
-            if (x < 0 || y < 0 || x >= w || y >= h || !S[y * w + x]) continue;
-            float a = 0;
-            for (int sy = 0; sy < 4; sy++)
-                for (int sx = 0; sx < 4; sx++) {
-                    float u = cx0 + (x + (sx + 0.5f) / 4.0f - bx0) * k;
-                    float v = cy0 + (y + (sy + 0.5f) / 4.0f - by0) * k;
-                    int iu = (int)u, iv = (int)v;
-                    if (iu >= cx0 && iv >= cy0 && iu <= cx1 && iv <= cy1) a += cv[iv * CV + iu];
-                }
-            a /= 16.0f;
-            if (a <= 0.0f) continue;
-            uint8_t *p = px + (y * w + x) * 4;
-            for (int c = 0; c < 3; c++) p[c] = (uint8_t)lroundf(p[c] * (1.0f - a) + look.lab[c] * a);
-        }
-
-    // write back, marking changed blocks
+    if (area < 25) return;
+    // keyboard: the keys bound to the glyph's input (a stick, the whole d-pad: up, left, down, right)
+    static const int8_t four[3][4] = {{BIND_LS_UP, BIND_LS_LEFT, BIND_LS_DOWN, BIND_LS_RIGHT},
+                                      {BIND_RS_UP, BIND_RS_LEFT, BIND_RS_DOWN, BIND_RS_RIGHT},
+                                      {BIND_UP, BIND_LEFT, BIND_DOWN, BIND_RIGHT}};
+    int keys[4] = {0}, k = role == L_LS ? 0 : role == L_RS ? 1 : role == L_DPAD ? 2 : -1;
+    for (int i = 0; i < 4 && k >= 0; i++) keys[i] = g_bind_key[four[k][i]];
+    if (k < 0 && role_to_slot(role) >= 0) keys[0] = g_bind_key[role_to_slot(role)];
+    int label = style == STYLE_KEYBOARD ? role : prompt_label(role);
+    if (style != STYLE_KEYBOARD && role >= L_DUP && role <= L_DRIGHT) label = L_ARM_UP + role - L_DUP;  // (a HUD pane)
+    float *cv = calloc((size_t)w * h * 4, sizeof(float));
+    prompt_icon(cv, w, h, (float)bx0, (float)by0, (float)(bx1 - bx0 + 1), (float)(by1 - by0 + 1), style, label, keys,
+                mono, prompt_dark());
     for (int y = 0; y < h; y++) {
         int sy = flip ? h - 1 - y : y;
         uint8_t *d = img + ((y0 + sy) * W + x0) * 4;
-        for (int x = 0; x < w; x++)
-            if (memcmp(d + x * 4, px + (y * w + x) * 4, 4)) {
-                memcpy(d + x * 4, px + (y * w + x) * 4, 4);
+        for (int x = 0; x < w; x++) {
+            const float *c = cv + ((size_t)y * w + x) * 4;
+            uint8_t o[4] = {0}, a = (uint8_t)lroundf(c[3] * 255);
+            for (int i = 0; i < 3 && a; i++) o[i] = (uint8_t)fminf(255, lroundf(c[i] / c[3] * 255));
+            if (ach == 1) o[0] = (uint8_t)((o[0] * 299 + o[1] * 587 + o[2] * 114) / 1000), o[1] = a, o[2] = 0;  // (BC5)
+            o[3] = a;
+            if (memcmp(d + x * 4, o, 4)) {
+                memcpy(d + x * 4, o, 4);
                 dirty[((y0 + sy) / 4) * bw + (x0 + x) / 4] = 1;
             }
+        }
     }
-
-done:
-    free(px); free(S); free(I); free(stack); free(cv); free(out);
+    free(cv);
 }
 
 // ------------------------------------------------------------------ cosmetics (Cosmetics tab): tunic and heart colours
@@ -1465,36 +1089,32 @@ void texpatch_apply(int id, uint32_t lv, uint8_t *blocks, uint32_t w, uint32_t h
         for (int rl = R_A; rl <= R_MINUS; rl++) any |= restyled(rl, style);
         if (!any) return;
     }
-    LOG("[texpatch] apply: %s (%dx%d role %d) style %d\n", r->name, w, h, r->role, style);
-    static pthread_once_t font_once = PTHREAD_ONCE_INIT;
-    pthread_once(&font_once, load_font);
+    LOG("[texpatch] apply: %s (%dx%d role %d kind %d) style %d\n", r->name, w, h, r->role, r->kind, style);
     int bw = (int)(w + 3) / 4;
     uint8_t *img = malloc((size_t)w * h * 4), *dirty = calloc((size_t)bw * ((h + 3) / 4), 1);
     decode_image(r, blocks, row, img);
     int ach = r->kind == K_BC5 ? 1 : 3;
-    if (r->role == R_SHEET_1) {
-        if (restyled(R_B, style)) relabel(img, (int)w, 160, 0, 80, 80, ach, false, R_B, style, dirty, bw);
-        if (restyled(R_A, style)) relabel(img, (int)w, 0, 80, 80, 80, ach, false, R_A, style, dirty, bw);
-    } else if (r->role == R_SHEET_3) {
-        if (restyled(R_L, style)) relabel(img, (int)w, 0, 0, 80, 80, ach, false, R_L, style, dirty, bw);
-        if (restyled(R_R, style)) relabel(img, (int)w, 80, 0, 80, 80, ach, false, R_R, style, dirty, bw);
-        if (restyled(R_ZL, style)) relabel(img, (int)w, 160, 0, 80, 80, ach, false, R_ZL, style, dirty, bw);
-        if (restyled(R_ZR, style)) relabel(img, (int)w, 0, 80, 80, 80, ach, false, R_ZR, style, dirty, bw);
-        if (restyled(R_X, style)) relabel(img, (int)w, 80, 80, 80, 80, ach, false, R_X, style, dirty, bw);
-        if (restyled(R_Y, style)) relabel(img, (int)w, 160, 80, 80, 80, ach, false, R_Y, style, dirty, bw);
-        if (restyled(R_PLUS, style)) relabel(img, (int)w, 0, 160, 80, 80, ach, false, R_PLUS, style, dirty, bw);
-        if (restyled(R_MINUS, style)) relabel(img, (int)w, 80, 160, 80, 80, ach, false, R_MINUS, style, dirty, bw);
-    } else if (r->role == R_SHEET_4) {
-        if (restyled(L_LS, style)) relabel(img, (int)w, 0, 80, 80, 80, ach, false, L_LS, style, dirty, bw);
-        if (restyled(L_RS, style)) relabel(img, (int)w, 80, 80, 80, 80, ach, false, L_RS, style, dirty, bw);
+    bool mono = r->kind == K_BC5 || r->kind == K_RG8 || r->kind == K_GR8 || r->kind == K_R8;
+    // the picture font's sheets: which glyph cell (column, row) is which button
+    static const struct { uint8_t sheet, col, row, role; } cells[] = {
+        {R_SHEET_1, 2, 0, R_B}, {R_SHEET_1, 0, 1, R_A},
+        {R_SHEET_3, 0, 0, R_L}, {R_SHEET_3, 1, 0, R_R}, {R_SHEET_3, 2, 0, R_ZL}, {R_SHEET_3, 0, 1, R_ZR},
+        {R_SHEET_3, 1, 1, R_X}, {R_SHEET_3, 2, 1, R_Y}, {R_SHEET_3, 0, 2, R_PLUS}, {R_SHEET_3, 1, 2, R_MINUS},
+        {R_SHEET_4, 0, 1, L_LS}, {R_SHEET_4, 1, 1, L_RS}};
+    if (r->role == R_SHEET_1 || r->role == R_SHEET_3 || r->role == R_SHEET_4) {
+        for (unsigned i = 0; i < sizeof cells / sizeof *cells; i++) {
+            int x0 = cells[i].col * g_pitch_x, y0 = cells[i].row * g_pitch_y;
+            if (cells[i].sheet == r->role && x0 + g_cell_w <= (int)w && y0 + g_cell_h <= (int)h && restyled(cells[i].role, style))
+                redraw(img, (int)w, x0, y0, g_cell_w, g_cell_h, ach, false, mono, cells[i].role, style, dirty, bw);
+        }
     } else if (r->role == R_SHEET) {
         for (int g = 0; g < (int)sizeof k_sheet_roles; g++) {
             int y0 = (int)h - (g / 4 + 1) * 64;
             if (k_sheet_roles[g] && y0 >= 0 && (g % 4 + 1) * 64 <= (int)w && restyled(k_sheet_roles[g], style))
-                relabel(img, (int)w, (g % 4) * 64, y0, 64, 64, ach, true, k_sheet_roles[g], style, dirty, bw);
+                redraw(img, (int)w, (g % 4) * 64, y0, 64, 64, ach, true, mono, k_sheet_roles[g], style, dirty, bw);
         }
     } else if (restyled(r->role, style)) {
-        relabel(img, (int)w, 0, 0, (int)w, (int)h, ach, false, r->role, style, dirty, bw);
+        redraw(img, (int)w, 0, 0, (int)w, (int)h, ach, false, mono, r->role, style, dirty, bw);
     }
     encode_image(r, img, dirty, blocks, row);
     free(img);

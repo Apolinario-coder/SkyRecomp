@@ -28,7 +28,7 @@ id<MTLBuffer> g_guest_buffer;  // wraps the guest heap so GPU addresses map to b
 uint64_t g_guest_buffer_base;
 
 // ================================================================== formats
-typedef struct { MTLPixelFormat pf; uint8_t expand_rgb; uint8_t force_alpha_one; } MtlFormat;
+typedef struct { MTLPixelFormat pf; uint8_t expand_rgb; uint8_t force_alpha_one; uint8_t remap; } MtlFormat;
 
 static MtlFormat mtl_format(uint32_t f) {
     switch (f) {
@@ -77,10 +77,13 @@ static MtlFormat mtl_format(uint32_t f) {
     case 0x36: return (MtlFormat){MTLPixelFormatDepth32Float_Stencil8};
     case 0x37: return (MtlFormat){MTLPixelFormatRGBA8Unorm_sRGB, 0, 1};
     case 0x38: return (MtlFormat){MTLPixelFormatRGBA8Unorm_sRGB};
-    case 0x39: return (MtlFormat){MTLPixelFormatABGR4Unorm};
-    case 0x3A: return (MtlFormat){MTLPixelFormatB5G6R5Unorm};
-    case 0x3B: return (MtlFormat){MTLPixelFormatA1BGR5Unorm};
-    case 0x3C: return (MtlFormat){MTLPixelFormatB5G6R5Unorm};
+    // The 16-bit formats: NVN and Metal both name channels from the low bits up (RGB565: red in bits 0-4; see
+    // vulkan/textures.c fmt_of), but Metal has only the BGR / ABGR orders: those, their channels put back in the
+    // view (remap, renderer.m apply_swizzle). Sampled as GL's (red in the high bits) before: RGB565 brown wood was blue.
+    case 0x39: return (MtlFormat){MTLPixelFormatABGR4Unorm, 0, 0, REMAP_REVERSE};    // RGBA4
+    case 0x3A: return (MtlFormat){MTLPixelFormatBGR5A1Unorm, 0, 1, REMAP_SWAP_RB};   // RGB5
+    case 0x3B: return (MtlFormat){MTLPixelFormatBGR5A1Unorm, 0, 0, REMAP_SWAP_RB};   // RGB5A1
+    case 0x3C: return (MtlFormat){MTLPixelFormatB5G6R5Unorm, 0, 0, REMAP_SWAP_RB};   // RGB565
     case 0x3D: return (MtlFormat){MTLPixelFormatRGB10A2Unorm};
     case 0x3E: return (MtlFormat){MTLPixelFormatRGB10A2Uint};
     case 0x3F: return (MtlFormat){MTLPixelFormatRG11B10Float};
@@ -132,8 +135,9 @@ static MtlFormat mtl_format(uint32_t f) {
     case 0x92: return (MtlFormat){MTLPixelFormatASTC_10x10_sRGB};
     case 0x93: return (MtlFormat){MTLPixelFormatASTC_12x10_sRGB};
     case 0x94: return (MtlFormat){MTLPixelFormatASTC_12x12_sRGB};
-    case 0x95: case 0x97: return (MtlFormat){MTLPixelFormatA1BGR5Unorm};
-    case 0x96: return (MtlFormat){MTLPixelFormatA1BGR5Unorm};
+    case 0x95: return (MtlFormat){MTLPixelFormatBGR5A1Unorm, 0, 1};  // BGR5 (the 16-bit formats: 0x39 above)
+    case 0x96: return (MtlFormat){MTLPixelFormatBGR5A1Unorm};        // BGR5A1
+    case 0x97: return (MtlFormat){MTLPixelFormatA1BGR5Unorm};        // A1BGR5
     case 0x98: return (MtlFormat){MTLPixelFormatBGRA8Unorm, 0, 1};
     case 0x99: return (MtlFormat){MTLPixelFormatBGRA8Unorm};
     case 0x9A: return (MtlFormat){MTLPixelFormatBGRA8Unorm_sRGB, 0, 1};
@@ -147,6 +151,7 @@ bool renderer_format_is_depth(uint32_t f) { return f >= 0x31 && f <= 0x36; }
 bool renderer_format_has_stencil(uint32_t f) { return f == 0x31 || f == 0x35 || f == 0x36; }
 MTLPixelFormat renderer_pixel_format(uint32_t f) { return mtl_format(f).pf; }
 bool renderer_format_alpha_one(uint32_t f) { return mtl_format(f).force_alpha_one; }
+uint8_t renderer_format_remap(uint32_t f) { return mtl_format(f).remap; }
 
 // ================================================================== textures
 typedef struct {

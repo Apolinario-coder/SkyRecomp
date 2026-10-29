@@ -1040,9 +1040,14 @@ static id<MTLTexture> apply_swizzle(id<MTLTexture> tex, NvnTexture *t, const Nvn
     const uint8_t *sw = (has_view && (v->setmask & 8)) ? v->swizzle : t->swizzle;
     uint8_t c[4];
     for (int i = 0; i < 4; i++) c[i] = sw[i] <= 5 ? sw[i] : (uint8_t)(2 + i);
-    if (!c[0] && !c[1] && !c[2] && !c[3]) return tex;  // never set: identity
+    uint8_t remap = renderer_format_remap(t->format);  // (the 16-bit formats: channels in another order, metal.m)
+    if (!c[0] && !c[1] && !c[2] && !c[3]) {  // never set: identity
+        if (!remap) return tex;
+        c[0] = 2, c[1] = 3, c[2] = 4, c[3] = 5;
+    }
     if (renderer_format_alpha_one(t->format))
         for (int i = 0; i < 4; i++) if (c[i] == MTLTextureSwizzleAlpha) c[i] = MTLTextureSwizzleOne;
+    for (int i = 0; i < 4; i++) c[i] = renderer_remap_channel(remap, c[i]);
     if (c[0] == 2 && c[1] == 3 && c[2] == 4 && c[3] == (renderer_format_alpha_one(t->format) ? 1 : 5)) return tex;
     if (tex.sampleCount > 1 || renderer_format_is_depth(t->format)) return tex;
     uint32_t swz = c[0] | c[1] << 8 | c[2] << 16 | (uint32_t)c[3] << 24;
@@ -1606,6 +1611,12 @@ static uint64_t pipeline_state_hash(Prog *pr) {
 
 static void draw(CmdRec *r, bool indexed) {
     if (!st.program) { stat_skipped++; return; }
+    // NVN's front-and-back cull (Face 3) drops every polygon while points and lines still draw; Metal has no such cull
+    // mode, so a polygon draw goes here. (How the game hides a material: the Remlit's night face and claws by day,
+    // zeldaret/ss d_a_e_remly.cpp applyScaryMat - drawn before, as cull none. Modes: 0-3 points / lines, 10-11 lines
+    // with adjacency.)
+    uint32_t pmode = (uint32_t)r->x[0];
+    if (st.poly[0] == 3 && pmode >= 4 && pmode != 10 && pmode != 11) return;
     static bool logged_modes;
     if (!logged_modes) {
         logged_modes = true;

@@ -15,7 +15,7 @@
 #include "../texpatch.h"
 
 // ================================================================== formats
-typedef struct { VkFormat vf; uint8_t expand_rgb, alpha_one; } VkFmt;
+typedef struct { VkFormat vf; uint8_t expand_rgb, alpha_one, remap; } VkFmt;  // (remap: REMAP_*, in the sampled view)
 
 // DEPTH24_STENCIL8 as itself where the GPU has it for everything the game does with depth (NVIDIA, Intel): half the
 // bytes of D32_SFLOAT_S8_UINT (4 instead of 8 per pixel) for every depth test, clear and copy - the game copies its
@@ -83,10 +83,16 @@ static VkFmt fmt_of(uint32_t f) {
     case 0x36: return (VkFmt){VK_FORMAT_D32_SFLOAT_S8_UINT};
     case 0x37: return (VkFmt){VK_FORMAT_R8G8B8A8_SRGB, 0, 1};
     case 0x38: return (VkFmt){VK_FORMAT_R8G8B8A8_SRGB};
-    case 0x39: return (VkFmt){VK_FORMAT_R4G4B4A4_UNORM_PACK16};   // Metal ABGR4Unorm
-    case 0x3A: return (VkFmt){VK_FORMAT_R5G6B5_UNORM_PACK16};     // Metal B5G6R5Unorm
-    case 0x3B: return (VkFmt){VK_FORMAT_R5G5B5A1_UNORM_PACK16};   // Metal A1BGR5Unorm
-    case 0x3C: return (VkFmt){VK_FORMAT_R5G6B5_UNORM_PACK16};
+    // The 16-bit formats: NVN names their channels from the low bits up, as DXGI and Metal do (RGB565: red in bits 0-4,
+    // RGBA4: red 0-3 ... alpha 12-15, BGR5A1: blue 0-4 ... alpha 15, A1BGR5: alpha 0 ... red 11-15). devkitPro/deko3d
+    // source/maxwell/format_traits.inc: RGB565 is the hardware's B5G6R5 read R,G,B and doesn't render natively, BGR565 /
+    // BGR5A1 render as the DXGI-ordered B5G6R5 / B5G5R5A1. Vulkan names them from the high bits: the nearest core format,
+    // its channels put back in the view (remap, vk_view). Read with red in the high bits before: RGB565 brown wood was
+    // blue.
+    case 0x39: return (VkFmt){VK_FORMAT_R4G4B4A4_UNORM_PACK16, 0, 0, REMAP_REVERSE};  // RGBA4
+    case 0x3A: return (VkFmt){VK_FORMAT_A1R5G5B5_UNORM_PACK16, 0, 1, REMAP_SWAP_RB};  // RGB5
+    case 0x3B: return (VkFmt){VK_FORMAT_A1R5G5B5_UNORM_PACK16, 0, 0, REMAP_SWAP_RB};  // RGB5A1
+    case 0x3C: return (VkFmt){VK_FORMAT_R5G6B5_UNORM_PACK16, 0, 0, REMAP_SWAP_RB};    // RGB565
     case 0x3D: return (VkFmt){VK_FORMAT_A2B10G10R10_UNORM_PACK32};
     case 0x3E: return (VkFmt){VK_FORMAT_A2B10G10R10_UINT_PACK32};
     case 0x3F: return (VkFmt){VK_FORMAT_B10G11R11_UFLOAT_PACK32};
@@ -137,7 +143,9 @@ static VkFmt fmt_of(uint32_t f) {
     case 0x92: return (VkFmt){VK_FORMAT_ASTC_10x10_SRGB_BLOCK};
     case 0x93: return (VkFmt){VK_FORMAT_ASTC_12x10_SRGB_BLOCK};
     case 0x94: return (VkFmt){VK_FORMAT_ASTC_12x12_SRGB_BLOCK};
-    case 0x95: case 0x96: case 0x97: return (VkFmt){VK_FORMAT_R5G5B5A1_UNORM_PACK16};
+    case 0x95: return (VkFmt){VK_FORMAT_A1R5G5B5_UNORM_PACK16, 0, 1};  // BGR5 (the 16-bit formats: 0x39 above)
+    case 0x96: return (VkFmt){VK_FORMAT_A1R5G5B5_UNORM_PACK16};        // BGR5A1
+    case 0x97: return (VkFmt){VK_FORMAT_R5G5B5A1_UNORM_PACK16};        // A1BGR5
     case 0x98: return (VkFmt){VK_FORMAT_B8G8R8A8_UNORM, 0, 1};
     case 0x99: return (VkFmt){VK_FORMAT_B8G8R8A8_UNORM};
     case 0x9A: return (VkFmt){VK_FORMAT_B8G8R8A8_SRGB, 0, 1};
@@ -787,15 +795,16 @@ VkImageView vk_view(NvnTexture *t, const NvnTextureView *v, bool has_view, bool 
         const uint8_t *s = v && (v->setmask & 8) ? v->swizzle : t->swizzle;
         uint8_t c[4];
         for (int i = 0; i < 4; i++) c[i] = s[i] <= 5 ? s[i] : (uint8_t)(2 + i);
-        if (c[0] || c[1] || c[2] || c[3]) {  // never set: identity
-            if (fmt_of(t->format).alpha_one)
-                for (int i = 0; i < 4; i++) if (c[i] == 5) c[i] = 1;
-            // NVN swizzle 0 zero, 1 one, 2..5 r,g,b,a == VkComponentSwizzle - 1
+        if (!c[0] && !c[1] && !c[2] && !c[3]) c[0] = 2, c[1] = 3, c[2] = 4, c[3] = 5;  // never set: identity
+        VkFmt f = fmt_of(t->format);
+        for (int i = 0; i < 4; i++) {
+            if (f.alpha_one && c[i] == 5) c[i] = 1;
+            c[i] = renderer_remap_channel(f.remap, c[i]);
+        }
+        // NVN swizzle 0 zero, 1 one, 2..5 r,g,b,a == VkComponentSwizzle - 1
+        if (!(c[0] == 2 && c[1] == 3 && c[2] == 4 && c[3] == 5))
             sw = (VkComponentMapping){(VkComponentSwizzle)(c[0] + 1), (VkComponentSwizzle)(c[1] + 1), (VkComponentSwizzle)(c[2] + 1),
                                       (VkComponentSwizzle)(c[3] + 1)};
-        } else if (fmt_of(t->format).alpha_one) {
-            sw.a = VK_COMPONENT_SWIZZLE_ONE;
-        }
     }
     VkImageViewType want = view_type_for(want_textype);
     VkImageViewType have = b->base_type;
