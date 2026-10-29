@@ -601,7 +601,8 @@ static uint64_t free_camera_input(uint64_t b, int32_t *right_x, int32_t *right_y
         }
         const bool hold_off = l_now && free_cam_on;   // L held while the eye is on: the stick fights
         if (hold_off) b &= ~(1ull << BTN_L);          // ...without the game seeing L+stick (its camera)
-        const bool r_held = (b & (1ull << BTN_R)) != 0;
+        // (R3 too: rolling and the sword pull press the right stick, which nudges it - as L + R3 the game ignored them, #86)
+        const bool r_held = (b & ((1ull << BTN_R) | (1ull << BTN_RSTICK))) != 0;
         const bool zl_held = (b & (1ull << BTN_ZL)) != 0, zr_held = (b & (1ull << BTN_ZR)) != 0;
         if (!free_cam_on || hold_off || r_held || zl_held || zr_held) {
             // no free camera: the stick keeps its own game action (sword, aim, item wheel)
@@ -617,7 +618,7 @@ static uint64_t free_camera_input(uint64_t b, int32_t *right_x, int32_t *right_y
         free_cam_on = true;   // switching the setting back on starts with the free camera active
         free_cam_l_down = false;
     }
-    free_cam_active = g_settings.free_cam && free_cam_on && !(b & ((1ull << BTN_R) | (1ull << BTN_ZL) | (1ull << BTN_ZR))) && !free_cam_l_down;
+    free_cam_active = g_settings.free_cam && free_cam_on && !(b & ((1ull << BTN_R) | (1ull << BTN_RSTICK) | (1ull << BTN_ZL) | (1ull << BTN_ZR))) && !free_cam_l_down;
     *right_x = rx; *right_y = ry;
     b &= ~(0xfull << 20);
     if (rx < -16000) b |= 1ull << 20;
