@@ -409,7 +409,8 @@ static void *extract_thread(void *) {
                 goto done;
             }
 
-            if (file_exists(romfs) && !is_dir(romfs)) {
+            // (never a romfs.bin onto itself: opening it to write empties it before it is read, #81)
+            if (file_exists(romfs) && !is_dir(romfs) && !rt_same_path(romfs.c_str(), (g_root + "/romfs.bin").c_str())) {
                 set_job("Copying game data archive...");
                 FILE *in = fopen(romfs.c_str(), "rb");
                 FILE *out = fopen((g_root + "/romfs.bin").c_str(), "wb");
@@ -421,6 +422,7 @@ static void *extract_thread(void *) {
                 if (in) fclose(in);
                 if (out) fclose(out);
             } else if (file_exists(romfs + "/romfs.bin")) {
+                if (rt_same_path((romfs + "/romfs.bin").c_str(), (g_root + "/romfs.bin").c_str())) goto copied;
                 set_job("Copying game data archive...");
                 FILE *in = fopen((romfs + "/romfs.bin").c_str(), "rb");
                 FILE *out = fopen((g_root + "/romfs.bin").c_str(), "wb");
@@ -448,6 +450,7 @@ static void *extract_thread(void *) {
                 }
             }
 
+        copied:
             if (!build_game_code()) goto done;
         }
     } else {

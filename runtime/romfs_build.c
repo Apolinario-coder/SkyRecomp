@@ -4,6 +4,7 @@
 // has to be consistent: directories and files are sorted by name, children before siblings' children.
 #include "romfs_build.h"
 
+#include "paths.h"
 #include "platform.h"  // (Windows: POSIX mkdir)
 
 #include <dirent.h>
@@ -308,6 +309,7 @@ static bool copy_dir(Dir *d, const char *dst, uint64_t *done, uint64_t total, vo
 }
 
 bool romfs_copy_tree(const char *src, const char *dst, void (*progress)(uint64_t, uint64_t)) {
+    if (rt_same_path(src, dst)) return true;  // (the folder picked is the game folder itself: already there, #81)
     Dir *t = scan(src, "", NULL, 0);
     if (!t) return false;
     Lists l = {0};

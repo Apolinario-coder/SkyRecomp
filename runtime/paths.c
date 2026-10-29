@@ -46,6 +46,11 @@ static bool is_dir(const char *p) {
     return stat(p, &st) == 0 && S_ISDIR(st.st_mode);
 }
 
+bool rt_same_path(const char *a, const char *b) {
+    char ra[1100], rb[1100];
+    return resolve(a, ra, sizeof ra) && resolve(b, rb, sizeof rb) && path_eq(ra, rb);
+}
+
 static bool exists(const char *p) {
     struct stat st;
     return stat(p, &st) == 0;
