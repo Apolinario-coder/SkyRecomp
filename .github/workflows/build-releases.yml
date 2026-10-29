@@ -208,14 +208,35 @@ jobs:
           EOF
           printf 'APPL????' > "$APP/Contents/PkgInfo"
 
-          # Bundle Homebrew dylibs
-          for d in $(otool -L "$APP/Contents/MacOS/skyrecomp" | awk '{print $1}' | grep '/opt/homebrew'); do
-            name=$(basename "$d")
-            cp "$d" "$APP/Contents/Frameworks/$name" || true
-            chmod u+w "$APP/Contents/Frameworks/$name" 2>/dev/null || true
-            install_name_tool -change "$d" "@rpath/$name" "$APP/Contents/MacOS/skyrecomp" 2>/dev/null || true
+          # Bundle Homebrew dylibs, and the Homebrew dylibs those load, recursively: FFmpeg's codecs are Homebrew
+          # packages of their own, which a one-level copy left out (the app then only started where Homebrew had them)
+          FW="$APP/Contents/Frameworks"
+          todo=("$APP/Contents/MacOS/skyrecomp")
+          while [ ${#todo[@]} -gt 0 ]; do
+            f=${todo[0]}; todo=("${todo[@]:1}")
+            for d in $(otool -L "$f" | tail -n +2 | awk '{print $1}' | grep -E '^(/opt/homebrew/|@rpath/|@loader_path/)'); do
+              name=$(basename "$d")
+              case "$d" in @*) src=/opt/homebrew/lib/$name ;; *) src=$d ;; esac
+              if [ ! -e "$FW/$name" ]; then
+                [ -e "$src" ] || continue  # (an @rpath one that isn't Homebrew's: the system's)
+                cp -L "$src" "$FW/$name"
+                chmod u+w "$FW/$name"
+                install_name_tool -id "@rpath/$name" "$FW/$name"
+                todo+=("$FW/$name")
+              fi
+              [ "$d" = "@rpath/$name" ] || install_name_tool -change "$d" "@rpath/$name" "$f"
+            done
           done
-          install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP/Contents/MacOS/skyrecomp" 2>/dev/null || true
+          # (its build rpaths go: dyld would look in Homebrew's folders before the bundle's)
+          for r in $(otool -l "$APP/Contents/MacOS/skyrecomp" | awk '/LC_RPATH/ {getline; getline; print $2}'); do
+            install_name_tool -delete_rpath "$r" "$APP/Contents/MacOS/skyrecomp"
+          done
+          install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP/Contents/MacOS/skyrecomp"
+          for f in "$FW"/*.dylib; do
+            install_name_tool -add_rpath "@loader_path" "$f" 2>/dev/null || true
+            codesign -f -s - "$f"  # (install_name_tool invalidated its signature: Apple Silicon won't load it unsigned)
+          done
+          ! otool -L "$APP/Contents/MacOS/skyrecomp" "$FW"/*.dylib | grep /opt/homebrew  # (nothing left pointing there)
 
           codesign -f -s - "$APP"
 
