@@ -15,7 +15,7 @@
 
 // From the Makefile: the flags the game code is compiled and linked with (as `make` builds it in a source checkout)
 #ifndef GAMELIB_CFLAGS
-#define GAMELIB_CFLAGS "-O0 -fno-strict-aliasing -fvisibility=hidden -fno-sanitize=all"
+#define GAMELIB_CFLAGS "-O0 -g0 -DNDEBUG -fno-strict-aliasing -fvisibility=hidden -fno-sanitize=all"
 #endif
 #ifndef GAMELIB_SHARED
 #define GAMELIB_SHARED "-shared"

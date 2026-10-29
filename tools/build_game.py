@@ -45,6 +45,8 @@ except FileNotFoundError:
 
 BASE_CFLAGS = [
     "-O0",
+    "-g0",
+    "-DNDEBUG",
     "-fno-strict-aliasing",
     "-Wno-return-type",
     "-Wno-unused-label",
