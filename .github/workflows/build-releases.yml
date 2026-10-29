@@ -231,3 +231,42 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload ${RELEASE_TAG} SkyRecomp-${RELEASE_TAG}-macOS.dmg SkyRecomp-${RELEASE_TAG}-macOS.zip --clobber
+
+  # The .app the way `make app` builds it: SDL3 and an LGPL FFmpeg from pinned sources (make deps), every dylib it
+  # loads copied in recursively and pointed at @rpath (tools/bundle_macos.sh). Unlike build-macos above (Homebrew's
+  # SDL3/FFmpeg, one level of dylibs copied), it starts on a Mac without Homebrew. Needs macOS 15+ (APP_MIN).
+  build-macos-15:
+    name: Build macOS 15 Release
+    runs-on: macos-15
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+
+      - name: Install Build Tools
+        run: brew install cmake ninja
+
+      - name: Build pinned SDL3 and LGPL FFmpeg
+        run: make deps
+
+      - name: Build game setup tools
+        run: |
+          build/deps/python/bin/python3.12 -m venv build/setup-venv
+          build/setup-venv/bin/pip install pyinstaller==6.22.3 capstone==5.0.9 unicorn==2.1.4 lz4==4.4.5
+          build/setup-venv/bin/python -m PyInstaller --noconfirm --clean --log-level WARN --distpath build/helper --workpath build/pyinstaller tools/skygen.spec
+          bash tools/fetch_zig.sh
+
+      - name: Create macOS App Bundle & DMG
+        run: |
+          sed -i '' "s/^#define LARECOMP_VERSION .*/#define LARECOMP_VERSION \"$RELEASE_TAG\"/" runtime/ui/launcher.mm
+          make -j$(sysctl -n hw.ncpu) app
+          tools/make_dmg.sh
+          cp "build/dist/Sky Recomp-${RELEASE_TAG}-macOS.dmg" SkyRecomp-${RELEASE_TAG}-macOS15.dmg
+          (cd build && ditto -c -k --keepParent "Sky Recomp.app" ../SkyRecomp-${RELEASE_TAG}-macOS15.zip)
+
+      - name: Upload to GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${RELEASE_TAG} SkyRecomp-${RELEASE_TAG}-macOS15.dmg SkyRecomp-${RELEASE_TAG}-macOS15.zip --clobber
