@@ -1604,7 +1604,7 @@ static uint64_t pipeline_state_hash(Prog *pr) {
     h = hmix(h, &st.nstream, sizeof st.nstream);
     h = hmix(h, st.stream, sizeof st.stream[0] * (size_t)(st.nstream < 16 ? st.nstream : 16));
     h = hmix(h, &st.channel_mask, sizeof st.channel_mask);
-    h = hmix(h, &st.color_state[0], sizeof st.color_state[0]);
+    h = hmix(h, &st.color_state[0], 2);  // (blend enables, logic op)
     h = hmix(h, &st.ms[0xC], 1);
     return h ? h : 1;
 }
@@ -1784,6 +1784,19 @@ static void draw(CmdRec *r, bool indexed) {
             ca.destinationAlphaBlendFactor = blend_factor(b[4]);
             ca.rgbBlendOperation = blend_op(b[5]);
             ca.alphaBlendOperation = blend_op(b[6]);
+        }
+        // Logic op (NVN's numbering is Vulkan's; it replaces blending). Metal has none: OR as max blending, exact for
+        // channels that are 0 or 1 - the shadow masks, where each caster ORs its own channel into a shared target
+        // (Link's red, an NPC's green) and a plain write let the last one drawn erase the others' (Vulkan: exec.c).
+        uint8_t lop = st.color_state[1] & 15;
+        if (lop == 7 && !rt_kind(st.rt.color[i]->format)) {
+            ca.blendingEnabled = YES;
+            ca.sourceRGBBlendFactor = ca.destinationRGBBlendFactor = MTLBlendFactorOne;
+            ca.sourceAlphaBlendFactor = ca.destinationAlphaBlendFactor = MTLBlendFactorOne;
+            ca.rgbBlendOperation = ca.alphaBlendOperation = MTLBlendOperationMax;
+        } else if (lop != 3) {
+            static uint16_t seen;
+            if (!(seen & (1u << lop))) seen |= 1u << lop, LOG("[metal] logic op %u not emulated: drawn as a copy\n", lop);
         }
     }
     pd.alphaToCoverageEnabled = st.ms[0xC] != 0;
