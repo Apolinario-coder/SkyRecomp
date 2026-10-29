@@ -641,6 +641,9 @@ static void tab_about(void) {
                  "K still interacts. Esc releases the mouse. Explicit mouse button bindings take priority.");
         }
     }
+    slider("Gyro sensitivity", &g_settings.gyro_sens, 0.1f, 2.0f, "%.2fx");
+    hint("How far the aim moves when you turn a controller with a gyro (bow, slingshot, first-person view). "
+         "1.00x = the controller's own motion; lower it if the aim is too twitchy.");
     ImGui::Spacing();
     header("Button prompts");
     {

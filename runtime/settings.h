@@ -41,6 +41,7 @@ typedef struct {
     float free_cam_sens; // camera-only stick speed, 0.25x to 2x
     bool mouse_controls; // mouse camera and combat while free camera look is enabled
     float mouse_sens;    // relative mouse speed, 0.25x to 4x
+    float gyro_sens;     // controller gyro aim speed, 0.1x to 2x: runtime/hle/input.c motion_sample
     bool move_360;       // analog movement in any direction (the game snaps the stick to 8): runtime/hle/qol.c
     bool blur_removal;   // no tilt-shift blur at the top / bottom of the screen
     bool hide_hero_icon; // no Hero Mode icon on the HUD

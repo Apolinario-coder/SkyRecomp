@@ -6,6 +6,7 @@
 #include <SDL3/SDL.h>
 #include <ctype.h>
 #include <math.h>
+#include <pthread.h>
 #include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,6 +17,7 @@
 #include "../settings.h"
 #include "../input_bind.h"
 #include "stick.h"
+#include "motion.h"
 #include "../frame_rate.h"
 
 extern bool menu_input_captured(void);  // runtime/ui/menu.mm: overlay menu or name entry up
@@ -179,7 +181,8 @@ bool input_user_blocked(const SDL_Event *e) {
     case SDL_EVENT_MOUSE_MOTION: case SDL_EVENT_MOUSE_BUTTON_DOWN: case SDL_EVENT_MOUSE_BUTTON_UP:
     case SDL_EVENT_MOUSE_WHEEL:
     case SDL_EVENT_GAMEPAD_ADDED: case SDL_EVENT_GAMEPAD_AXIS_MOTION: case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
-    case SDL_EVENT_GAMEPAD_BUTTON_UP: case SDL_EVENT_JOYSTICK_ADDED: case SDL_EVENT_JOYSTICK_AXIS_MOTION:
+    case SDL_EVENT_GAMEPAD_BUTTON_UP: case SDL_EVENT_GAMEPAD_SENSOR_UPDATE: case SDL_EVENT_JOYSTICK_ADDED:
+    case SDL_EVENT_JOYSTICK_AXIS_MOTION:
     case SDL_EVENT_JOYSTICK_BUTTON_DOWN: case SDL_EVENT_JOYSTICK_BUTTON_UP:
         return true;
     default:
@@ -209,13 +212,71 @@ int input_pad_family(void) {
     return env >= 0 ? env : pad_family;
 }
 
+// The controller's motion, for the game's six-axis sensor (gyro aiming and the motion camera, which the game offers
+// with a Pro Controller): written by sensor events on the main thread, read by GetSixAxisSensorState on the game's.
+// Switch units and axes (runtime/hle/motion.h): acceleration in g, angular velocity in rotations / s, angle in
+// rotations, q the controller's orientation since it was connected.
+static pthread_mutex_t motion_lock = PTHREAD_MUTEX_INITIALIZER;
+static struct { bool on; float acc[3], vel[3], angle[3], q[4]; uint64_t t; } motion = {.q = {0, 0, 0, 1}};
+
+static void motion_reset(bool on) {
+    pthread_mutex_lock(&motion_lock);
+    memset(&motion, 0, sizeof motion);
+    motion.q[3] = 1;
+    motion.on = on;
+    pthread_mutex_unlock(&motion_lock);
+}
+
+static const MotionMap *motion_axes(void) {  // (main thread only)
+    static MotionMap m;
+    static bool done;
+    if (!done) {
+        done = true;
+        const char *e = getenv("LARECOMP_GYRO_MAP");
+        if (!e || !motion_parse_map(e, &m)) {
+            if (e) LOG("[input] LARECOMP_GYRO_MAP=%s: not like \"x,-z,y\", ignored\n", e);
+            motion_parse_map("x,-z,y", &m);
+        }
+    }
+    return &m;
+}
+
+static void motion_sample(const SDL_GamepadSensorEvent *s) {
+    float v[3];
+    motion_map(motion_axes(), s->data, v);
+    bool menu = menu_input_captured();  // (the overlay has the controls: the aim stays where it was, no jump after)
+    uint64_t t = s->sensor_timestamp ? s->sensor_timestamp : s->timestamp;
+    pthread_mutex_lock(&motion_lock);
+    if (s->sensor == SDL_SENSOR_ACCEL) {
+        for (int i = 0; i < 3; i++) motion.acc[i] = -v[i] / SDL_STANDARD_GRAVITY;  // (SDL: the push against gravity)
+    } else if (s->sensor == SDL_SENSOR_GYRO) {
+        float dt = motion.t && t > motion.t ? (float)((double)(t - motion.t) * 1e-9) : 0;
+        if (dt > 0.1f) dt = 0;  // (a gap: the controller slept, or events were held up)
+        motion.t = t;
+        // (gyro_sens scales the turn, so the angle and orientation below follow it too; a third-party pad in
+        // Switch mode can report a much faster gyro than a Pro Controller)
+        for (int i = 0; i < 3; i++) motion.vel[i] = menu ? 0 : v[i] / (2 * (float)M_PI) * g_settings.gyro_sens;
+        for (int i = 0; i < 3; i++) motion.angle[i] += motion.vel[i] * dt;
+        motion_integrate(motion.q, motion.vel, dt);
+    }
+    pthread_mutex_unlock(&motion_lock);
+}
+
+static void pad_opened(void) {  // its name, its button prompts, its gyro (DualSense, DualShock 4, Switch controllers)
+    bool gyro = SDL_GamepadHasSensor(pad, SDL_SENSOR_GYRO) && SDL_SetGamepadSensorEnabled(pad, SDL_SENSOR_GYRO, true);
+    if (gyro && SDL_GamepadHasSensor(pad, SDL_SENSOR_ACCEL)) SDL_SetGamepadSensorEnabled(pad, SDL_SENSOR_ACCEL, true);
+    LOG("[input] gamepad: %s (%s)\n", SDL_GetGamepadName(pad), gyro ? "gyro" : "no gyro");
+    note_family();
+    motion_reset(gyro);
+}
+
 void input_handle_event(const SDL_Event *e) {
     static bool scanned;  // pads present at startup: their ADDED event may have gone to the start screen's loop
     if (!scanned) {
         scanned = true;
         int n = 0;
         SDL_JoystickID *ids = SDL_GetGamepads(&n);
-        if (n > 0 && !pad) { pad = SDL_OpenGamepad(ids[0]); LOG("[input] gamepad: %s\n", SDL_GetGamepadName(pad)); note_family(); }
+        if (n > 0 && !pad && (pad = SDL_OpenGamepad(ids[0]))) pad_opened();
         SDL_free(ids);
     }
     switch (e->type) {
@@ -258,14 +319,17 @@ void input_handle_event(const SDL_Event *e) {
         }
         break;
     case SDL_EVENT_GAMEPAD_ADDED:
-        if (!pad) { pad = SDL_OpenGamepad(e->gdevice.which); LOG("[input] gamepad: %s\n", SDL_GetGamepadName(pad)); note_family(); }
+        if (!pad && (pad = SDL_OpenGamepad(e->gdevice.which))) pad_opened();
         break;
     case SDL_EVENT_GAMEPAD_REMOVED:
-        if (pad && SDL_GetGamepadID(pad) == e->gdevice.which) { SDL_CloseGamepad(pad); pad = NULL; note_family(); }
+        if (pad && SDL_GetGamepadID(pad) == e->gdevice.which) { SDL_CloseGamepad(pad); pad = NULL; note_family(); motion_reset(false); }
         recompute_pad();
         break;
     case SDL_EVENT_GAMEPAD_AXIS_MOTION: case SDL_EVENT_GAMEPAD_BUTTON_DOWN: case SDL_EVENT_GAMEPAD_BUTTON_UP:
         recompute_pad();
+        break;
+    case SDL_EVENT_GAMEPAD_SENSOR_UPDATE:
+        if (pad && !host_test && SDL_GetGamepadID(pad) == e->gsensor.which) motion_sample(&e->gsensor);
         break;
     }
 }
@@ -730,16 +794,26 @@ HLE_FUNC("_ZN2nn3hid21GetSixAxisSensorStateEPNS0_18SixAxisSensorStateERKNS0_19Si
     memset(s, 0, 0x60);
     *(int64_t *)(s + 0x00) = (int64_t)rt_frame_period_ns();  // deltaTimeNanoSeconds
     *(int64_t *)(s + 0x08) = ++sixaxis_samp; // samplingNumber
-    *(float *)(s + 0x14) = -1.0f;            // acceleration.y = -1g
-    *(float *)(s + 0x34) = 1.0f;             // direction[0][0]
-    *(float *)(s + 0x44) = 1.0f;             // direction[1][1]
-    *(float *)(s + 0x54) = 1.0f;             // direction[2][2]
+    pthread_mutex_lock(&motion_lock);
+    if (motion.on) {  // a controller with a gyro (the motion state above)
+        memcpy(s + 0x10, motion.acc, 12);    // acceleration
+        memcpy(s + 0x1C, motion.vel, 12);    // angularVelocity
+        memcpy(s + 0x28, motion.angle, 12);  // angle
+        motion_dir_from_q(motion.q, (float *)(s + 0x34));  // direction
+    } else {  // none: a controller at rest
+        *(float *)(s + 0x14) = -1.0f;            // acceleration.y = -1g
+        *(float *)(s + 0x34) = 1.0f;             // direction[0][0]
+        *(float *)(s + 0x44) = 1.0f;             // direction[1][1]
+        *(float *)(s + 0x54) = 1.0f;             // direction[2][2]
+    }
+    pthread_mutex_unlock(&motion_lock);
     *(uint32_t *)(s + 0x58) = 1;             // attributes = IsConnected
     c->x[0] = 0;
 }
+// (this, out): the quaternion of that state's own direction (identity for one at rest)
 HLE_FUNC("_ZNK2nn3hid18SixAxisSensorState13GetQuaternionEPNS_4util4neon12Vector4fTypeE", hid_sixaxis_quat) {
     float *q = (float *)(uintptr_t)c->x[1];
-    if (q) { q[0] = 0.0f; q[1] = 0.0f; q[2] = 0.0f; q[3] = 1.0f; }
+    if (q) motion_q_from_dir((const float *)(uintptr_t)(c->x[0] + 0x34), q);
     c->x[0] = 0;
 }
 
