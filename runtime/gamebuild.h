@@ -13,6 +13,10 @@ typedef struct {
     // now and then, from the calling thread: how far the whole build is (0..1) and what it's doing
     void (*progress)(double fraction, const char *step);
     int jobs;  // compiler processes at once (>= 1)
+    // false: the fast build - LLVM's slowest passes capped, and a file still compiling after a few minutes compiled
+    // again at -O0 (a few giant functions run unoptimized). true: everything at full -O1, as `make` builds it: faster
+    // game code, a build of an hour or more on a laptop (runtime/gamebuild.c)
+    bool optimized;
 } GameBuildOpts;
 
 // Builds it (a few minutes). false: why says what went wrong (details in the log).

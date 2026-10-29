@@ -36,7 +36,7 @@ MINFLAG  := $(if $(MACOS_MIN),-mmacosx-version-min=$(MACOS_MIN))
 CC       := clang $(MINFLAG) $(CROSS)
 CXX      := clang++ $(MINFLAG) $(CROSS)
 IMGUI    := third_party/imgui
-GENFLAGS := -O0 -fno-strict-aliasing -Wno-return-type -Wno-unused-label -fvisibility=hidden -Iruntime
+GENFLAGS := -O1 -g0 -fno-strict-aliasing -Wno-return-type -Wno-unused-label -fvisibility=hidden -Iruntime
 
 # The game code (made by `make gen` from your own game files) is its own library next to the app (runtime/gamelib.h);
 # the app itself holds none of it
@@ -89,7 +89,8 @@ EXE      := $(B)/skyrecomp.exe
 DEPINC   := $(if $(DEPS),-I$(DEPS)/include)
 OSFLAGS  := -D_FILE_OFFSET_BITS=64 -D_POSIX_THREAD_SAFE_FUNCTIONS -D_CRT_RAND_S -DWIN32_LEAN_AND_MEAN -DNOMINMAX
 GENARCH  ?= -march=x86-64-v3  # AVX2 + FMA for the lifted FP/SIMD code (simd.h); override for older CPUs
-GENFLAGS += -D_FILE_OFFSET_BITS=64 $(GENARCH) -fno-sanitize=all
+# -O0 here: the start screen's build has no -O1 budget on Windows (runtime/gamebuild.c), and full -O1 takes over an hour
+GENFLAGS := $(patsubst -O1,-O0,$(GENFLAGS)) -D_FILE_OFFSET_BITS=64 $(GENARCH) -fno-sanitize=all
 LDFLAGS  := -fuse-ld=lld -Wl,--stack,16777216 $(if $(DEPS),-L$(DEPS)/lib) -lavformat -lavcodec -lavutil -lswscale -lSDL3 \
             -lvulkan-1 -lwinmm -lole32 -lshell32 -lcomdlg32 -luuid -lshaderc_shared \
             $(if $(RELEASE),-Wl$(comma)--subsystem$(comma)windows)  # release: no console window (log -> skyrecomp.log)
