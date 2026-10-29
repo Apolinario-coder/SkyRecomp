@@ -698,6 +698,8 @@ static void fill_state(Cpu *c) {
     int32_t rx = clamp_axis((menu ? 0 : key_rx + pad_rx) + script_rx), ry = clamp_axis((menu ? 0 : key_ry + pad_ry) + script_ry);
     uint64_t now = SDL_GetTicks();
     bool mouse_sword = mouse_input(&b, &rx, &ry, now, menu);
+    input_stick_circle(&lx, &ly);
+    input_stick_circle(&rx, &ry);
 
     extern bool mirror_input(void);  // mirror mode, the world on screen (runtime/hle/mirror.c): left and right swap
     bool mirrored = !menu && mirror_input();
