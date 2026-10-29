@@ -7,17 +7,24 @@
 // the interval nowhere else). Shared by the macOS and Windows builds.
 // FINDING (2026-10-09): forcing 2 steps did NOT change Link's walking speed - gameplay is a true fixed step per
 // frame; this timer feeds something else. Kept for research, off by default.
+// FINDING (2026-10-25): when the game takes its own 30 fps mode (swap interval 2, seen here whenever its frame
+// timer runs), it does NOT wait two vsyncs per frame - it presents every frame and expects the compositor to hold
+// each one for two vsyncs. So the present pacer honors the interval (runtime/nvn/vulkan/exec.c); ignoring it made
+// the game advance its world (every animation) twice per presented frame - 2x speed - whenever the game had gone
+// to its 30 fps mode under GPU load, while Link's walking stayed normal (see runtime/frame_rate.c).
 //   LARECOMP_FRAMEPACE=1     hand the timer the vsyncs elapsed (default: the game's own value)
 //   LARECOMP_FRAME_STEPS_MAX maximum steps per frame (default 4: after a long stall the game doesn't jump ahead)
 //   LARECOMP_FORCE_STEPS=<n> (test) always n
 #include <stdlib.h>
 
 #include "../hle.h"
+#include "../frame_rate.h"
 
 extern volatile uint64_t g_vsync_count;  // runtime/hle/vi.c
 uint64_t g_frame_steps_late;             // (stats) frames that advanced more than one step
 
 uint32_t rt_frame_steps(uint32_t interval) {
+    rt_game_interval_seen(interval);  // the present pacer honors the game's own 30 fps mode (runtime/frame_rate.c)
     static int on = -1, max_steps, forced;
     if (on < 0) {
         const char *e = ENV("LARECOMP_FRAMEPACE");
@@ -36,7 +43,7 @@ uint32_t rt_frame_steps(uint32_t interval) {
     uint64_t steps = last ? now - last : 1;
     last = now;
     if (!on) return interval;
-    if (steps < interval) steps = interval;  // (the game's own 30 fps mode: it waits that many vsyncs anyway)
+    if (steps < interval) steps = interval;  // (in its 30 fps mode the game advances two steps per frame whatever it presents)
     if (steps < 1) steps = 1;
     if (steps > (uint64_t)max_steps) steps = (uint64_t)max_steps;
     if (steps > 1) g_frame_steps_late++;
