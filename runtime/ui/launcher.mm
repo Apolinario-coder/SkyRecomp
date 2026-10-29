@@ -520,7 +520,13 @@ static const char *const BUILD_DESC =
 
 // ------------------------------------------------------------------ folder dialog (SDL calls back on any thread)
 static void SDLCALL picked(void *, const char *const *files, int) {
-    if (!files || !files[0]) return;
+    if (!files) {  // (the dialog itself failed: no xdg-desktop-portal / zenity, e.g. Batocera - #87)
+        fprintf(stderr, "[launcher] folder dialog: %s\n", SDL_GetError());
+        set_job("This system has no folder dialog.", true,
+                "Start Sky Recomp with SKYRECOMP_GAME_FILES=<your game files folder> set, then choose Start.");
+        return;
+    }
+    if (!files[0]) return;
     pthread_mutex_lock(&g_lock);
     g_src = files[0];
     pthread_mutex_unlock(&g_lock);
@@ -1229,6 +1235,7 @@ extern "C" void launcher_run(const char *root) {
         if (pg && !strcmp(pg + 1, "aspect")) g_settings.aspect_asked = g_settings.menu_tip_seen = false, g_tip_test = true;
     }
 
+    if (const char *t = getenv("SKYRECOMP_GAME_FILES"); t && *t && g_src.empty()) g_src = t;  // (no folder dialog: #87)
     static int runs;  // (test: =once - only the first time, so a "Title screen" reboot lands on the start screen)
     const char *ap = getenv("LARECOMP_LAUNCHER_AUTOPLAY");
     if (ap && status.empty() && !(runs && !strcmp(ap, "once"))) play = true;  // (test: PLAY at once)
