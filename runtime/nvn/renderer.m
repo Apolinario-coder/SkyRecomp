@@ -1609,7 +1609,37 @@ static uint64_t pipeline_state_hash(Prog *pr) {
     return h ? h : 1;
 }
 
+// Linear render targets (NVN flag 0x10) are ones the CPU reads straight from memory: the save files' thumbnails - the
+// game draws the last presented frame into a 256x144 linear target and memcpy's it into save/<n>.screenshot, which was
+// saved black (the texels stayed in the Metal texture). So a draw into one is finished and blitted back into guest
+// memory before the submit returns. Only the thumbnails so far, so the wait costs nothing in play.
+// ponytail: a wait per draw - batch per pass if a game draws a lot into linear targets; 2D, guest-sized, in the heap.
+static uint64_t renderer_pixel_format_bytes(MTLPixelFormat pf, uint64_t nvn_bpb);
+void renderer_flush(void);
+static void draw_inner(CmdRec *r, bool indexed);
 static void draw(CmdRec *r, bool indexed) {
+    draw_inner(r, indexed);
+    bool wrote = false;
+    for (int i = 0; i < st.rt.ncolor && i < 8; i++) {
+        NvnTexture *t = st.rt.color[i];
+        if (!t || !(t->flags & 0x10) || !t->stride || t->addr < HEAP_BASE ||
+            t->addr + t->stride * t->height > HEAP_BASE + HEAP_MAX)
+            continue;
+        id<MTLTexture> tex = renderer_texture(t, nil, true);
+        const FormatInfo *fi = nvn_format_info(t->format);
+        if (!fi || tex.textureType != MTLTextureType2D || tex.width != t->width || tex.height != t->height ||
+            renderer_pixel_format_bytes(tex.pixelFormat, fi->bpb) != fi->bpb || t->stride < t->width * fi->bpb)
+            continue;
+        if (!wrote) end_pass(), wrote = true;
+        id<MTLBlitCommandEncoder> b = [cb() blitCommandEncoder];
+        [b copyFromTexture:tex sourceSlice:0 sourceLevel:0 sourceOrigin:MTLOriginMake(0, 0, 0)
+                sourceSize:MTLSizeMake(t->width, t->height, 1) toBuffer:g_guest_buffer destinationOffset:t->addr - HEAP_BASE
+        destinationBytesPerRow:t->stride destinationBytesPerImage:t->stride * t->height];
+        [b endEncoding];
+    }
+    if (wrote) renderer_flush();
+}
+static void draw_inner(CmdRec *r, bool indexed) {
     if (!st.program) { stat_skipped++; return; }
     // NVN's front-and-back cull (Face 3) drops every polygon while points and lines still draw; Metal has no such cull
     // mode, so a polygon draw goes here. (How the game hides a material: the Remlit's night face and claws by day,
