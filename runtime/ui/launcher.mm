@@ -1,6 +1,6 @@
 // Start screen, shown before the game boots: PLAY (with ‹ Vanilla / seed › picker), SETTINGS, QUIT, and game-files
 // status at the lower left. Nothing of the game ships with Sky Recomp: on first launch the player picks the folder
-// with their own game files (v1.0.0), we check the main module's build ID, copy the files, and build the game's data
+// with their own game files (v1.0.0 or v1.0.1), we check the main module's build ID, copy the files, and build the game's data
 // image and native code library; PLAY opens setup until that finishes.
 //
 // Skipped with --play, LARECOMP_NO_LAUNCHER=1, or any scripted test run (LARECOMP_INPUT): tests boot straight in.
@@ -83,7 +83,17 @@ static void save_png(id<MTLTexture> tex, const char *path) {
 }
 #endif
 
-static const uint8_t BUILD_ID[8] = {0xd8, 0x24, 0xd4, 0xb1, 0xbb, 0xd4, 0x5d, 0x03};  // Skyward Sword HD v1.0.0 main
+// The Skyward Sword HD main modules the game is set up from: the first 8 bytes of the build ID at offset 0x40 (loader.c
+// has the full 1.0.0 ID and the timing hooks of each build).
+static const uint8_t BUILD_IDS[][8] = {
+    {0xd8, 0x24, 0xd4, 0xb1, 0xbb, 0xd4, 0x5d, 0x03},  // v1.0.0
+    {0x54, 0x41, 0xaf, 0x3c, 0x89, 0xf9, 0x7e, 0x1d},  // v1.0.1
+};
+static bool known_build(const uint8_t *id) {
+    for (const auto &b : BUILD_IDS)
+        if (!memcmp(id, b, 8)) return true;
+    return false;
+}
 // The release tag this build is (also names the release files; Makefile / tools/bundle_macos.sh / make_dmg.sh read
 // it): beta_<n> until 1.0, then v<major>.<minor>.<patch>.
 #define LARECOMP_VERSION "v2.0.2"
@@ -227,7 +237,7 @@ static std::string check_copied_files(const std::string &root) {
     fseek(f, 0x40, SEEK_SET);
     size_t n = fread(id, 1, 8, f);
     fclose(f);
-    if (n != 8 || memcmp(id, BUILD_ID, 8)) return "Wrong game version (needs v1.0.0)";
+    if (n != 8 || !known_build(id)) return "Wrong game version (needs v1.0.0 or v1.0.1)";
     if (!file_exists(root + "/romfs.bin") && !file_exists(root + "/romfs/region_common") && !file_exists(root + "/romfs/Object")) return "Game data missing";
     return "";
 }
@@ -272,7 +282,7 @@ static void set_failure(int k) {
         "Select the folder that contains your unpacked game files and assets.",
         "Unpack your game files into a regular folder first, then select that folder.",
         "Check that your drive has at least 8 GB of free space and try again.",
-        "Sky Recomp requires the base 1.0.0 version of the game without update patches.",
+        "Sky Recomp requires the base game, v1.0.0 or v1.0.1, without update patches.",
         "Some required program or asset files are missing. Verify your source folder and try again.",
         "Make sure the skygen and zig folders are next to skyrecomp.exe, then try again."};
     if (k >= 1 && k <= 6) set_job(head[k], true, hint[k]);
@@ -312,7 +322,7 @@ static bool build_id_ok(const std::string &main_path) {
     fseek(f, 0x40, SEEK_SET);
     size_t n = fread(id, 1, 8, f);
     fclose(f);
-    return n == 8 && !memcmp(id, BUILD_ID, 8);
+    return n == 8 && known_build(id);
 }
 
 // progress (the overlay's bar): the romfs copy, then the image build - each about the size of romfs/
@@ -1525,7 +1535,7 @@ extern "C" void launcher_run(const char *root) {
                     dl->AddLine(ImVec2(x + u * 0.35f, cy + u * 0.35f), ImVec2(x + u, cy - u * 0.4f), g, fs * 0.11f);
                 };
 
-                std::string src_d = "Select the folder containing your unpacked game files (base version 1.0.0). "
+                std::string src_d = "Select the folder containing your unpacked game files (base version 1.0.0 or 1.0.1). "
                                     "Sky Recomp does not include any game assets or copyrighted data.";
                 if (!src.empty()) src_d += "\n\nSelected folder:\n" + src;
 
@@ -1690,7 +1700,7 @@ extern "C" void launcher_run(const char *root) {
                     }
                     ImGui::TextColored(ImVec4(0.45f, 0.94f, 0.78f, 1), "Game files ready");
                     ImGui::SetCursorPosX(x0 + 4 * s);
-                    std::string sub = "Base v1.0.0";
+                    std::string sub = "Base game v1.0.0 / v1.0.1";
 #ifndef __APPLE__
                     if (g_settings.hd_textures) sub += "  \xc2\xb7  4K Textures";
 #endif

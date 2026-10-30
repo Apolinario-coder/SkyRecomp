@@ -24,14 +24,15 @@
 #ifndef GAMELIB_ID
 #define GAMELIB_ID "5e5bafbb450f894b"
 #endif
-#define GAMELIB_ABI 2
+#define GAMELIB_ABI 4
 
 typedef struct {
     uint32_t abi;    // GAMELIB_ABI
     const char *id;  // GAMELIB_ID
-    const uint64_t *main_addrs, *sdk_addrs, *subsdk0_addrs, *subsdk1_addrs;
-    const GuestFn *main_fns, *sdk_fns, *subsdk0_fns, *subsdk1_fns;
-    const uint64_t *main_count, *sdk_count, *subsdk0_count, *subsdk1_count;
+    const uint64_t *main_addrs, *sdk_addrs, *subsdk0_addrs, *subsdk1_addrs, *subsdk8_addrs;
+    const GuestFn *main_fns, *sdk_fns, *subsdk0_fns, *subsdk1_fns, *subsdk8_fns;
+    const uint64_t *main_count, *sdk_count, *subsdk0_count, *subsdk1_count, *subsdk8_count;
+    const uint32_t *subsdk8_interior;  // subsdk8's functions can be entered at any instruction (gen.py --interior)
 } GameLibTables;
 
 // The library's one exported function (tools/gamelib_entry.c).

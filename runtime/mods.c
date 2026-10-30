@@ -1,4 +1,5 @@
 #include "mods.h"
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -244,6 +245,41 @@ int mods_get_active_romfs_dirs(char out_dirs[][1100], int max_dirs) {
         }
     }
     return count;
+}
+
+// The game's modules that a mod can replace (their files: exefs/<name>).
+static const char *const GAME_MODULES[] = {"main", "sdk", "subsdk0", "subsdk1", "subsdk8"};
+
+bool mods_exefs_override(const char *module, char *out_host, size_t cap) {
+    mods_init();
+    for (int i = 0; i < s_mod_count; i++) {
+        if (!s_mods[i].enabled) continue;
+        char candidate[1200];
+        snprintf(candidate, sizeof candidate, "%s/exefs/%s", s_mods[i].path, module);
+        if (file_exists(candidate)) {
+            strncpy(out_host, candidate, cap - 1);
+            out_host[cap - 1] = 0;
+            return true;
+        }
+    }
+    return false;
+}
+
+void mods_build_id(const char *base_id, char *out, size_t cap) {
+    uint64_t h = 0xcbf29ce484222325ull;
+    bool any = false;
+    for (size_t m = 0; m < sizeof GAME_MODULES / sizeof GAME_MODULES[0]; m++) {
+        char path[1200];
+        struct stat st;
+        if (!mods_exefs_override(GAME_MODULES[m], path, sizeof path) || stat(path, &st) != 0) continue;
+        any = true;
+        for (const char *p = GAME_MODULES[m]; *p; p++) h = (h ^ (unsigned char)*p) * 0x100000001b3ull;
+        for (const char *p = path; *p; p++) h = (h ^ (unsigned char)*p) * 0x100000001b3ull;
+        uint64_t v[2] = {(uint64_t)st.st_size, (uint64_t)st.st_mtime};
+        for (size_t k = 0; k < sizeof v; k++) h = (h ^ ((unsigned char *)v)[k]) * 0x100000001b3ull;
+    }
+    if (!any) snprintf(out, cap, "%s", base_id);
+    else snprintf(out, cap, "%s-%016llx", base_id, (unsigned long long)h);
 }
 
 void mods_settings_load(const char *key, const char *val) {

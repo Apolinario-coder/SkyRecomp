@@ -15,10 +15,14 @@
 // guest lives in a 12.5 GB window at 0x70_0000_0000 claimed at startup (see main.c).
 #define GUEST_LO     0x7000000000ull
 #define GUEST_HI     0x7320000000ull
-#define MAIN_BASE    0x7000000000ull
-#define SDK_BASE     0x7030000000ull
-#define SUBSDK0_BASE 0x7032000000ull
-#define SUBSDK1_BASE 0x7034000000ull
+// The modules are where the Switch (and Ryujinx) load them: the Archipelago mod's code uses these addresses
+// directly, so they stay put. Packed one after another; the sdk's place is inferred (after subsdk8) and needs
+// checking in a running game (see tools/gen.py and the notes in docs/ for the layout).
+#define MAIN_BASE    0x7100004000ull   // (the text: the module's offset 0)
+#define SUBSDK0_BASE 0x712D037000ull
+#define SUBSDK1_BASE 0x712D9FF000ull
+#define SUBSDK8_BASE 0x712E0A5000ull   // (only in the mods: the Archipelago mod's code)
+#define SDK_BASE     0x712E74B000ull
 #define HLE_BASE     0x7080000000ull   // fake addresses for host-implemented functions
 extern bool g_is_las;
 extern bool g_is_skyward;
@@ -27,7 +31,7 @@ extern bool g_is_skyward;
 #define TLS_SIZE     0x0000100000ull
 #define HLE_HEAP     0x7092000000ull   // guest-visible memory owned by host code
 #define HLE_HEAP_SIZE 0x000E000000ull
-#define ALIAS_BASE   0x7100000000ull   // alias region (svcMapMemory targets)
+#define ALIAS_BASE   0x7130000000ull   // alias region (svcMapMemory targets): above the modules (they end at 0x712F47F000)
 #define ALIAS_SIZE   0x0100000000ull
 #define HEAP_BASE    0x7240000000ull
 #define HEAP_MAX     0x00D0000000ull   // 3.25 GB
@@ -41,7 +45,7 @@ typedef struct Module {
     uint64_t symtab, strtab, nsyms;
 } Module;
 
-extern Module g_modules[4];
+extern Module g_modules[5];
 extern int g_nmodules;
 void loader_load(const char *exefs_dir);  // (again after a reboot: modules are reloaded into wiped memory)
 uint64_t loader_find_symbol(const char *name);

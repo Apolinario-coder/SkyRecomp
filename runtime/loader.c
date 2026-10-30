@@ -4,7 +4,9 @@
 
 #include "rt.h"
 
-Module g_modules[4];
+#include "mods.h"
+
+Module g_modules[5];
 int g_nmodules;
 
 enum { DT_NULL = 0, DT_PLTRELSZ = 2, DT_HASH = 4, DT_STRTAB = 5, DT_SYMTAB = 6, DT_RELA = 7, DT_RELASZ = 8,
@@ -52,19 +54,40 @@ static uint8_t *read_file(const char *path, size_t *len) {
 bool g_is_las;
 bool g_is_skyward;
 
+// The Skyward Sword HD main-module builds the runtime knows, by build ID at offset 0x40 (compared as far as it is given:
+// the start screen compares the first 8 bytes, which identify each build). Only these get the 120 FPS hooks (frame_rate.c,
+// tools/gen.py); any other build runs at 60 FPS.
+static bool skyward_build(const uint8_t *id) {
+    static const struct { uint8_t bytes[20]; size_t n; } builds[] = {
+        {{0xd8, 0x24, 0xd4, 0xb1, 0xbb, 0xd4, 0x5d, 0x03, 0x66, 0x83, 0x80, 0xd6, 0xd0, 0x41, 0xba, 0x4c, 0xa0, 0x0a, 0x64, 0xff}, 20},  // v1.0.0
+        {{0x54, 0x41, 0xaf, 0x3c, 0x89, 0xf9, 0x7e, 0x1d}, 8},  // v1.0.1
+    };
+    for (size_t i = 0; i < sizeof builds / sizeof builds[0]; i++)
+        if (!memcmp(id, builds[i].bytes, builds[i].n)) return true;
+    return false;
+}
+
+// Modules are packed (each starts where the last one ends), so each is rounded to a page only, not to 16 KB (Apple's
+// pages are 16 KB: there the packing doesn't hold, see docs/).
+#ifdef __APPLE__
+#define MODULE_PAGE 0x4000ull
+#else
+#define MODULE_PAGE 0x1000ull
+#endif
+
 static void load_nso(Module *m, const char *path, uint64_t base) {
     size_t len;
     uint8_t *raw = read_file(path, &len);
     if (!raw || memcmp(raw, "NSO0", 4)) FATAL("cannot load %s\n", path);
     if (!strcmp(m->name, "main")) {
         g_is_las = !memcmp(raw + 0x40, "\xae\x16\xf7\x1e\x00\x2a\xf8\xcb", 8);
-        g_is_skyward = !memcmp(raw + 0x40, "\xd8\x24\xd4\xb1\xbb\xd4\x5d\x03\x66\x83\x80\xd6\xd0\x41\xba\x4c\xa0\x0a\x64\xff", 20);
+        g_is_skyward = skyward_build(raw + 0x40);
     }
     uint32_t flags = *(uint32_t *)(raw + 0xC);
     uint32_t seg[3][3];  // file_off, mem_off, size
     for (int i = 0; i < 3; i++) memcpy(seg[i], raw + 0x10 + i * 0x10, 12);
     uint32_t bss = *(uint32_t *)(raw + 0x3C);
-    uint64_t size = (seg[2][1] + seg[2][2] + bss + 0x3FFF) & ~0x3FFFull;
+    uint64_t size = (seg[2][1] + seg[2][2] + bss + MODULE_PAGE - 1) & ~(MODULE_PAGE - 1);
     plat_commit(base, size);  // inside the guest window: zero-filled, read/write
     for (int i = 0; i < 3; i++) {
         uint32_t csize = *(uint32_t *)(raw + 0x60 + i * 4);
@@ -185,10 +208,13 @@ void loader_load(const char *exefs) {
         {"main", MAIN_BASE},
         {"sdk", SDK_BASE},
         {"subsdk0", SUBSDK0_BASE},
-        {"subsdk1", SUBSDK1_BASE}
+        {"subsdk1", SUBSDK1_BASE},
+        {"subsdk8", SUBSDK8_BASE}  // (only the mods have it)
     };
     for (unsigned i = 0; i < sizeof(mods) / sizeof(mods[0]); i++) {
-        snprintf(path, sizeof path, "%s/%s", exefs, mods[i].name);
+        // a mod's file of the same name replaces the game's (the first enabled mod that has it): the game's own code,
+        // data and symbols all come from the same files, so the mods' files are loaded here too
+        if (!mods_exefs_override(mods[i].name, path, sizeof path)) snprintf(path, sizeof path, "%s/%s", exefs, mods[i].name);
         FILE *f = fopen(path, "rb");
         if (f) {
             fclose(f);

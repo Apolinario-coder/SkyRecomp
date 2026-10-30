@@ -149,7 +149,7 @@ static void chamber_restore_rows(void) {
     while (g_nsaved > 0) { g_nsaved--; *(int32_t *)(uintptr_t)g_saved[g_nsaved].addr = g_saved[g_nsaved].old; }
 }
 
-static void set_event_flag(int i) { *(uint8_t *)(uintptr_t)(0x7001CBB220ull + 0x5DC0 + (i >> 3)) |= (uint8_t)(1 << (i & 7)); }
+static void set_event_flag(int i) { *(uint8_t *)(uintptr_t)(MAIN_BASE + 0x1CBB220ull + 0x5DC0 + (i >> 3)) |= (uint8_t)(1 << (i & 7)); }
 
 // Chamber-engine prototype: OFF unless a test asks for it (LARECOMP_CHAMBER_TAILCAVE=<layout file>). Generated
 // dungeons are being rebuilt as real dungeon levels (notes/PLAN.md); this stays only as reverse-engineering notes.

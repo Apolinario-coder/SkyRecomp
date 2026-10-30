@@ -10,7 +10,7 @@
 #include "../rando.h"
 #include "../settings.h"
 
-#define MAIN_BASE 0x7000000000ull
+// (MAIN_BASE: runtime/rt.h)
 
 // 360-degree movement: main+0xded9f0 (tools/patches.py SNAP_DIR_SITE) turns the stick vector (s1 = x, s2 = y) into
 // one of 8 directions, returned in w0 as an angle (full turn = 2^32, 0 = down, 2^30 = right). With the setting on
@@ -30,7 +30,7 @@ int rt_snap_dir(Cpu *c) {
         static Cpu tmp;
         tmp = *c;
         inner = true;
-        dispatch_lookup(0x7000ded9f0)(&tmp);
+        dispatch_lookup(MAIN_BASE + 0xded9f0ull)(&tmp);
         inner = false;
         LOG("[qol] snap (%.3f, %.3f): 8-way %#x, 360 %#x (%s)\n", x, y, (uint32_t)tmp.x[0], a, on ? "360" : "8-way");
     }

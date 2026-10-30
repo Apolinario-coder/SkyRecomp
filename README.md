@@ -7,7 +7,7 @@
 Source folders and local runtime files are described in [Repository layout](docs/repository-layout.md).
 
 > [!IMPORTANT]
-> **No game files are included.** Sky Recomp requires your own legally obtained copy of the game files for *The Legend of Zelda: Skyward Sword HD* (**v1.0.0**, without updates).
+> **No game files are included.** Sky Recomp requires your own legally obtained copy of the game files for *The Legend of Zelda: Skyward Sword HD* (**v1.0.0** or **v1.0.1**, without updates).
 > Instructions on how to obtain these files will **NOT** be provided.
 > This project consists exclusively of the open-source static recompiler tooling, compatibility layers, and the native runtime.
 
@@ -72,7 +72,7 @@ Source folders and local runtime files are described in [Repository layout](docs
    - **Windows**: `Sky Recomp-<version>-windows.zip`
    - **Linux**: `Sky Recomp-<version>-linux-x86_64.AppImage` (or `aarch64`)
    - **macOS**: `Sky Recomp-<version>-macOS.dmg`
-2. Prepare your legally obtained, uncompressed game files of *The Legend of Zelda: Skyward Sword HD* (v1.0.0).
+2. Prepare your legally obtained, uncompressed game files of *The Legend of Zelda: Skyward Sword HD* (v1.0.0 or v1.0.1).
 3. Start Sky Recomp:
    - **Windows**: Run `skyrecomp.exe`.
    - **Linux**: Make executable (`chmod +x *.AppImage`) and run.

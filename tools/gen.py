@@ -51,7 +51,10 @@ class Module:
         self.stats = Counter()
         self.mu = None
         self.is_las = self.nso.build_id.lower().startswith('ae16f71e')
-        self.is_skyward = name == 'main' and self.nso.build_id.lower() == 'd824d4b1bbd45d03668380d6d041ba4ca00a64ff'
+        stores = sky_stores_for(self.nso.build_id) if name == 'main' else None
+        # (the table's addresses are offsets from the module's base, so they follow the base the module is at)
+        self.sky_stores = None if stores is None else {self.base + off: v for off, v in stores.items()}
+        self.is_skyward = self.sky_stores is not None
 
     def in_text(self, a):
         return self.lo <= a < self.hi and a % 4 == 0
@@ -168,7 +171,8 @@ class Module:
                     return None
                 t = mu.reg_read(A.UC_ARM64_REG_X0 + rn if rn < 29 else
                                 (A.UC_ARM64_REG_X29 if rn == 29 else A.UC_ARM64_REG_X30))
-                if not (entry <= t < end) or t % 4:
+                # (a target may lie past the function's end: the compiler moves cases out of line)
+                if not self.in_text(t):
                     return None
                 targets.append(t)
         except uc.UcError:
@@ -271,7 +275,7 @@ class Module:
                     return None
                 t = mu.reg_read(A.UC_ARM64_REG_X0 + rn if rn < 29 else
                                 (A.UC_ARM64_REG_X29 if rn == 29 else A.UC_ARM64_REG_X30))
-                if not (entry <= t < end) or t % 4:
+                if not self.in_text(t):
                     return None
                 targets.append(t)
         except uc.UcError:
@@ -327,8 +331,14 @@ class Module:
             elif ins.kind == 'br':
                 jt = self.jump_table(a, entry, end)
                 if jt:
-                    tables[a] = jt
-                    labels.update(jt)
+                    # A target past this function's end is another function (the compiler moved a case out of
+                    # line): it becomes a boundary of its own, and the branch goes through the runtime dispatch
+                    # (the 'all' form), which finds that function.
+                    inside = {t for t in jt if entry <= t < end}
+                    outside = set(jt) - inside
+                    labels.update(inside)
+                    ext.update(outside)
+                    tables[a] = 'all' if outside else jt
                     self.stats['jumptables'] += 1
                 elif self.computed_target(a, entry):
                     # unresolved table jump: allow jumping to any instruction of the function
@@ -373,6 +383,8 @@ class Module:
             out.append('}')
             return out
         out.append(f'    FN_ENTER({hx(entry)});')
+        if getattr(self, 'interior', False):  # entered at an instruction (runtime/dispatch.c: c->x[31] = target)
+            out.append('    if (__builtin_expect(c->x[31] != 0, 0)) { c->pc = c->x[31]; c->x[31] = 0; goto L_dispatch; }')
         batch = []
         refs = set()
 
@@ -391,7 +403,7 @@ class Module:
 
         # Functions with jump tables also get the all-instruction fallback: a table whose emulation
         # missed some cases then still reaches the right instruction instead of aborting.
-        all_labels = bool(tables)
+        all_labels = bool(tables) or getattr(self, 'interior', False)
         if all_labels:
             labels = set(range(entry, end, 4))
         rando_here = [a for a in range(entry, end, 4) if a - self.base in RANDO_CODE]
@@ -424,9 +436,9 @@ class Module:
                 out.append('    ' + PATCHES[a](self, a))
                 last = 'op'
                 continue
-            if self.is_skyward and a in SKY_TIMING_STORES:
+            if self.sky_stores and a in self.sky_stores:
                 flush()
-                reg, offset, word = SKY_TIMING_STORES[a]
+                reg, offset, word = self.sky_stores[a]
                 assert self.word(a) == word, (hex(a), hex(self.word(a)))
                 # Scale the register too: the following accumulator derives the original 30 Hz integer ticks from it.
                 hook = 'rt_sky_frame_step' if reg == 0 else 'rt_sky_frame_ms'
@@ -495,11 +507,30 @@ class Module:
 
 from patches import PATCHES
 
-# Skyward Sword HD 1.0.0: shared step in original 30 Hz units, and the matching duration in milliseconds.
-SKY_TIMING_STORES = {
-    0x700104a1ac: (0, 0xd38, 0xbd0d3900),
-    0x700104a1d0: (1, 0xd3c, 0xbd0d3d01),
+# The Skyward Sword HD builds the 120 FPS timing hooks are known for, by build ID prefix (hex; the launcher and the
+# runtime compare the same bytes). Each lists the timing stores of that build: address -> (register, offset, word).
+# Register 0 is the shared step in original 30 Hz units; register 1 is the matching duration in milliseconds. The words
+# are checked against the binary when generating, so a wrong address stops the build instead of patching the wrong code.
+SKY_BUILDS = {
+    'd824d4b1bbd45d03668380d6d041ba4ca00a64ff': {  # 1.0.0
+        0x104a1ac: (0, 0xd38, 0xbd0d3900),
+        0x104a1d0: (1, 0xd3c, 0xbd0d3d01),
+    },
+    '5441af3c89f97e1d': {  # 1.0.1
+        0x104a4fc: (0, 0xd38, 0xbd0d3900),
+        0x104a520: (1, 0xd3c, 0xbd0d3d01),
+    },
 }
+SKY_TIMING_STORES = SKY_BUILDS['d824d4b1bbd45d03668380d6d041ba4ca00a64ff']  # (1.0.0; kept for older imports)
+
+
+def sky_stores_for(build_id):
+    """The timing stores of a Skyward Sword HD main module with this build ID (hex), or None."""
+    build_id = (build_id or '').lower()
+    for prefix, stores in SKY_BUILDS.items():
+        if build_id.startswith(prefix):
+            return stores
+    return None
 
 import json as _json
 import os as _os
@@ -529,6 +560,8 @@ def main():
     ap.add_argument('base', type=lambda s: int(s, 0))
     ap.add_argument('outdir')
     ap.add_argument('--hle')
+    ap.add_argument('--interior', action='store_true',
+                    help='every function can be entered at any instruction (for modules that get code from mods)')
     ap.add_argument('--chunk', type=int, default=1500)  # functions per file at most
     ap.add_argument('--chunk-bytes', type=int, default=1500000)  # and about this much C (even compile times)
     ap.add_argument('--big-fn', type=int, default=100000)  # bytes of C from which a function gets its own file
@@ -540,6 +573,7 @@ def main():
 
     t0 = time.time()
     m = Module(args.name, args.nso, args.base, args.simd)
+    m.interior = args.interior
     starts = m.boundaries()
     hle = {}
     if args.hle and os.path.exists(args.hle):
@@ -661,6 +695,7 @@ def main():
         f.write(',\n'.join(fname(a) for a in order))
         f.write('};\n')
         f.write(f'const uint64_t {args.name}_fn_count = {len(order)};\n')
+        f.write(f'const uint32_t {args.name}_interior_flag = {1 if args.interior else 0};\n')
         write_if_changed(os.path.join(args.outdir, f'{args.name}_table.c'), f.getvalue())
     print(f'{args.name}: wrote {nchunks} chunks, {time.time() - t0:.0f}s total', file=sys.stderr)
 

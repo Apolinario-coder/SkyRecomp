@@ -32,6 +32,15 @@ bool mods_romfs_override(const char *rel_path, char *out_host, size_t cap);
 // Returns paths of active mod romfs directories for new-file injection
 int mods_get_active_romfs_dirs(char out_dirs[][1100], int max_dirs);
 
+// The same for the game's modules (main, sdk, subsdk0, subsdk1, subsdk8): a mod's exefs/<module> replaces the game's
+// file, the first enabled mod that has it wins. false: no mod has it, use the game's.
+bool mods_exefs_override(const char *module, char *out_host, size_t cap);
+// GAMELIB_ID with a fingerprint of the mod files that replace game modules (base_id itself when none do, so the
+// game's own library stays valid). A library is only loaded when built from these same files.
+void mods_build_id(const char *base_id, char *out, size_t cap);
+// The library's full GAMELIB_ID: base_id, with the mods (above) and the generator's identity (runtime/gamebuild.c).
+void gamebuild_expected_id(const char *base_id, char *out, size_t cap);
+
 void mods_settings_load(const char *key, const char *val);
 void mods_settings_save(FILE *f);
 

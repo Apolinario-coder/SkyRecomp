@@ -18,8 +18,11 @@
 #include "hle.h"
 #include "settings.h"
 
-#define MAIN_BASE 0x7000000000ull
+// (MAIN_BASE: runtime/rt.h)
 #define WORD_TAB 256
+
+extern bool g_is_skyward;  // runtime/loader.c: the main module is a build the seeds' offsets are known for
+extern int g_nmodules;
 
 static struct { uint64_t addr; uint32_t word; } words[WORD_TAB];
 static int nwords;
@@ -96,6 +99,9 @@ static void init(void) {
     snprintf(g_seed_dir, sizeof g_seed_dir, "rando/%s", seed);
     struct stat sb;
     if (stat(g_seed_dir, &sb) || !S_ISDIR(sb.st_mode)) { LOG("[rando] seed folder %s missing; playing vanilla\n", g_seed_dir); return; }
+    // A seed's patches are offsets into the code and data of the build it was made for: with the game loaded from
+    // another build, they would write to the wrong memory, so that game plays vanilla.
+    if (g_nmodules > 0 && !g_is_skyward) { LOG("[rando] seed \"%s\" is not for this game build; playing vanilla\n", seed); return; }
     g_active = true;
     char p[600];
     snprintf(p, sizeof p, "%s/exefs/1.0.0.pchtxt", g_seed_dir);

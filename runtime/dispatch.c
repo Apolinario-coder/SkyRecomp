@@ -8,8 +8,8 @@
 #include "gamelib.h"
 #include "hle.h"
 
-typedef struct { const uint64_t *addrs; const GuestFn *fns; uint64_t count, lo, hi; } FnTable;
-static FnTable tables[4];
+typedef struct { const uint64_t *addrs; const GuestFn *fns; uint64_t count, lo, hi; bool interior; } FnTable;
+static FnTable tables[5];
 
 // HLE stubs live at fake addresses HLE_BASE + 16*i
 #define MAX_HLE 4096
@@ -110,14 +110,17 @@ void dispatch_init(void) {  // (after gamelib_load)
     uint64_t nm = *g->main_count, ns = *g->sdk_count;
     uint64_t n0 = g->subsdk0_count ? *g->subsdk0_count : 0;
     uint64_t n1 = g->subsdk1_count ? *g->subsdk1_count : 0;
+    uint64_t n8 = g->subsdk8_count ? *g->subsdk8_count : 0;
     tables[0] = (FnTable){g->main_addrs, g->main_fns, nm, nm ? g->main_addrs[0] : 0, nm ? g->main_addrs[nm - 1] : 0};
     tables[1] = (FnTable){g->sdk_addrs, g->sdk_fns, ns, ns ? g->sdk_addrs[0] : 0, ns ? g->sdk_addrs[ns - 1] : 0};
     if (n0) tables[2] = (FnTable){g->subsdk0_addrs, g->subsdk0_fns, n0, g->subsdk0_addrs[0], g->subsdk0_addrs[n0 - 1]};
     if (n1) tables[3] = (FnTable){g->subsdk1_addrs, g->subsdk1_fns, n1, g->subsdk1_addrs[0], g->subsdk1_addrs[n1 - 1]};
+    if (n8) tables[4] = (FnTable){g->subsdk8_addrs, g->subsdk8_fns, n8, g->subsdk8_addrs[0], g->subsdk8_addrs[n8 - 1]};
+    tables[4].interior = g->subsdk8_interior && *g->subsdk8_interior;  // (gen.py --interior: entered at any instruction)
 }
 
 GuestFn dispatch_lookup(uint64_t addr) {
-    for (int t = 0; t < 4; t++) {
+    for (int t = 0; t < 5; t++) {
         FnTable *ft = &tables[t];
         if (!ft->count || addr < ft->lo || addr > ft->hi) continue;
         uint64_t lo = 0, hi = ft->count;
@@ -129,11 +132,11 @@ GuestFn dispatch_lookup(uint64_t addr) {
         if (lo < ft->count && ft->addrs[lo] == addr) return ft->fns[lo];
         if (lo > 0) {
             uint64_t base = ft->addrs[lo - 1];
-            if ((base == 0x7000ef6f28ull && addr <= 0x7000ef7194ull) ||
-                (base == 0x7000ef7324ull && addr <= 0x7000ef7538ull) ||
-                (base == 0x7000ef76b4ull && addr <= 0x7000ef784cull) ||
-                (base == 0x7000ef7b80ull && addr <= 0x7000ef7e38ull) ||
-                (base == 0x7000ef7fb8ull && addr <= 0x7000ef8078ull)) {
+            if ((base == MAIN_BASE + 0xef6f28ull && addr <= MAIN_BASE + 0xef7194ull) ||
+                (base == MAIN_BASE + 0xef7324ull && addr <= MAIN_BASE + 0xef7538ull) ||
+                (base == MAIN_BASE + 0xef76b4ull && addr <= MAIN_BASE + 0xef784cull) ||
+                (base == MAIN_BASE + 0xef7b80ull && addr <= MAIN_BASE + 0xef7e38ull) ||
+                (base == MAIN_BASE + 0xef7fb8ull && addr <= MAIN_BASE + 0xef8078ull)) {
                 return ft->fns[lo - 1];
             }
         }
@@ -160,6 +163,22 @@ static GuestFn dispatch_slow(Cpu *c) {
         if (overrides[i].addr == pc) return overrides[i].fn;
     GuestFn f = dispatch_lookup(pc);
     if (!f) {
+        // A target inside a function of an interior module (the Archipelago mod's code, gen.py --interior): that
+        // function is entered there. It sees c->x[31] (unused by the guest) and jumps to the instruction. Not cached:
+        // the flag belongs to this one call.
+        FnTable *ft = &tables[4];
+        if (ft->interior && ft->count && pc >= ft->lo && pc <= ft->hi) {
+            uint64_t lo = 0, hi = ft->count;
+            while (lo < hi) {
+                uint64_t mid = (lo + hi) / 2;
+                if (ft->addrs[mid] <= pc) lo = mid + 1;
+                else hi = mid;
+            }
+            if (lo > 0) {
+                c->x[31] = pc;
+                return ft->fns[lo - 1];
+            }
+        }
         uint64_t off;
         const char *s = loader_symbol_at(c->x[30], &off);
         FATAL("no function at %llx (lr=%llx %s+%llx)\n", pc, c->x[30], s ? s : "?", off);

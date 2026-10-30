@@ -1,6 +1,6 @@
 # Game file setup
 
-The launcher imports a **prepared game-files folder** for Skyward Sword HD v1.0.0. Select the folder containing `exefs/` and either `romfs.bin` or `romfs/`, then choose **Set up game files**.
+The launcher imports a **prepared game-files folder** for Skyward Sword HD v1.0.0 or v1.0.1. Select the folder containing `exefs/` and either `romfs.bin` or `romfs/`, then choose **Set up game files**.
 
 The ExeFS folder must contain `main`, `sdk`, `subsdk0` and `subsdk1`. These are supplied by the player, along with the game's data. The launcher builds the native game code from those files.
 
