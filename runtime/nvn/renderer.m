@@ -14,6 +14,8 @@
 #include "maxwell/shader.h"
 #include "nvn.h"
 #include "renderer.h"
+#include "../settings.h"
+#include "paint_filter.h"
 
 static id<MTLDevice> dev;
 static id<MTLCommandBuffer> cmdbuf;
@@ -1316,7 +1318,18 @@ static void bind_cbufs(int stage, ShaderInfo *si) {
         if ((si->cbuf_dynamic & (1u << k)) && r.size) size = r.size > 0x10000 ? 0x10000 : r.size;  // indexed: whole buffer
         if (size > r.size && r.size) size = r.size;
         if (size < 16) size = 16;
-        uint64_t off = ring_alloc((void *)(uintptr_t)r.addr, size);  // snapshot, as later CPU writes must not leak in
+        const void *data = (const void *)(uintptr_t)r.addr;
+        float local[SKY_PAINT_PARAMS_MAX / sizeof(float)];
+        if (g_settings.watercolor_filter != WATERCOLOR_ORIGINAL && stage == 1 && idx == 2) {
+            NvnTexture *t = si->ntex ? shader_texture_object(1, &si->tex[0]) : NULL;
+            if (t) {
+                float sx, sy;
+                renderer_texture_scale(t, &sx, &sy);
+                if (sky_paint_filter_parameters(local, data, size, g_cur_fs_hash, g_settings.watercolor_filter,
+                        t->width, t->height, (uint32_t)lroundf(t->width * sx), (uint32_t)lroundf(t->height * sy))) data = local;
+            }
+        }
+        uint64_t off = ring_alloc(data, size);  // snapshot, as later CPU writes must not leak in
         if (stage == 0) [enc setVertexBuffer:ring offset:off atIndex:k];
         else [enc setFragmentBuffer:ring offset:off atIndex:k];
     }
