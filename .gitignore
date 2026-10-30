@@ -30,6 +30,7 @@ extracted/*.id
 
 # Locally generated recompiled source code
 ssh_generated/
+generated/
 
 # Build artifacts, caches, and local saves
 /skyrecomp.exe

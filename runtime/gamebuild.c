@@ -283,6 +283,73 @@ static void add_cflags(Args *a, const Tools *t) {
 // A stopped or failed build keeps its work folder. Each object gets a stamp: FNV-1a of the compiler, its flags, the
 // header contents, GAMELIB_ID and the C it was compiled from. The generator writes the same C again on the next run,
 // so a unit whose stamp still matches (and whose object is there) isn't compiled again.
+#include "mods.h"
+
+// GAMELIB_ID with the mods' fingerprint (set at the start of gamebuild_run): the stamps, the compile flags and the .id
+// file all use it, so a library built from other mod files is rebuilt.
+#include <dirent.h>
+
+static uint64_t fnv(uint64_t h, const void *p, size_t n);
+
+// The identity of the generator the game code is built with: the prebuilt helper when there is one (it is what runs),
+// else tools/gen.py with every .py beside it (the modules it imports). Changing the generator changes it, so a library
+// built by the old one is rebuilt. Read once per run.
+static uint64_t file_fingerprint(uint64_t h, const char *path) {
+    FILE *f = fopen(path, "rb");
+    if (!f) return h;
+    static char buf[65536];
+    size_t n;
+    while ((n = fread(buf, 1, sizeof buf, f)) > 0) h = fnv(h, buf, n);
+    fclose(f);
+    return h;
+}
+
+static uint64_t generator_hash(void) {
+    static uint64_t value;
+    static bool done;
+    if (done) return value;
+    done = true;
+    uint64_t total = 0xcbf29ce484222325ull;
+    char path[1100];
+    if (rt_resource("skygen" SEP "skygen" PLAT_EXE_SUFFIX, "build" SEP "helper" SEP "skygen" SEP "skygen" PLAT_EXE_SUFFIX, path, sizeof path)) {
+        total = file_fingerprint(total, path);
+    } else if (rt_resource(NULL, "tools/gen.py", path, sizeof path)) {
+        char dir[1100];
+        snprintf(dir, sizeof dir, "%s", path);
+        char *s1 = strrchr(dir, '/'), *s2 = strrchr(dir, '\\');
+        char *slash = s1 > s2 ? s1 : s2;
+        DIR *d = NULL;
+        if (slash) {
+            slash[1] = 0;
+            d = opendir(dir);
+        }
+        if (d) {
+            struct dirent *e;
+            while ((e = readdir(d))) {
+                size_t len = strlen(e->d_name);
+                if (len < 4 || strcmp(e->d_name + len - 3, ".py") != 0) continue;
+                char file[1200];
+                snprintf(file, sizeof file, "%s%s", dir, e->d_name);
+                uint64_t fh = file_fingerprint(fnv(0xcbf29ce484222325ull, e->d_name, len), file);
+                total += fh;  // (a sum: the order the files are listed in doesn't matter)
+            }
+            closedir(d);
+        }
+    }
+    value = total;
+    return value;
+}
+
+// GAMELIB_ID as this app's library has to be built and checked: base, with the mod files that replace game modules
+// (runtime/mods.c) and the generator (above) in it.
+void gamebuild_expected_id(const char *base, char *out, size_t cap) {
+    char with_mods[256];
+    mods_build_id(base, with_mods, sizeof with_mods);
+    snprintf(out, cap, "%s-g%016llx", with_mods, (unsigned long long)generator_hash());
+}
+
+static char g_lib_id[256];
+
 static uint64_t fnv(uint64_t h, const void *p, size_t n) {
     for (const unsigned char *b = (const unsigned char *)p; n--; b++) h = (h ^ *b) * 0x100000001b3ull;
     return h;
@@ -301,7 +368,7 @@ static bool hash_file(uint64_t *hash, const char *path) {
 
 static bool build_stamp(Tools *t) {
     uint64_t h = 0xcbf29ce484222325ull;
-    const char *seed[] = {t->cc, GAMELIB_CFLAGS, t->inc, GAMELIB_ID};
+    const char *seed[] = {t->cc, GAMELIB_CFLAGS, t->inc, g_lib_id};
     for (size_t i = 0; i < sizeof seed / sizeof *seed; i++) h = fnv(h, seed[i], strlen(seed[i]) + 1);
     if (!hash_file(&h, t->cc)) return false;
     const char *headers[] = {"cpu.h", "simd.h", "simd_fp.h", "gamelib.h"};
@@ -348,7 +415,9 @@ static PlatProc start_compile(const Tools *t, const Unit *u) {
     char inc[1200];
     snprintf(inc, sizeof inc, "-I%s", t->inc);
     add(&a, inc);
-    add(&a, "-DGAMELIB_ID=\"" GAMELIB_ID "\"");
+    char def[400];
+    snprintf(def, sizeof def, "-DGAMELIB_ID=\"%s\"", g_lib_id);
+    add(&a, def);
     add(&a, "-c");
     add(&a, u->src);
     add(&a, "-o");
@@ -359,10 +428,25 @@ static PlatProc start_compile(const Tools *t, const Unit *u) {
 }
 
 // ------------------------------------------------------------------ the build
+// The subsdk8 table when the game files have no subsdk8 (the same as tools/subsdk8_empty.c): empty.
+static const char STUB_SUBSDK8_TABLE[] =
+    "#include \"gamelib.h\"\n"
+    "const uint64_t subsdk8_fn_addrs[1] = {0};\n"
+    "const GuestFn subsdk8_fn_ptrs[1] = {0};\n"
+    "const uint64_t subsdk8_fn_count = 0;\n"
+    "const uint32_t subsdk8_interior_flag = 0;\n";
+
+static bool gb_file_exists(const char *p) {
+    FILE *f = fopen(p, "rb");
+    if (f) fclose(f);
+    return f != NULL;
+}
+
 bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size_t why_size) {
     uint64_t t0 = plat_now_ns();
     static bool registered;
     if (!registered) registered = true, atexit(end_all);
+    gamebuild_expected_id(GAMELIB_ID, g_lib_id, sizeof g_lib_id);
     Tools t;
     if (!find_tools(&t)) {
         snprintf(why, why_size, "the game code builder is missing from this copy of Sky Recomp");
@@ -395,18 +479,31 @@ bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size
         t.cc, t.zig ? " cc" : "", o->jobs);
 
     // 1. Generate all four Skyward Sword modules, compiling finished files as they arrive.
-    enum { NMODULES = 4 };
-    Gen gens[NMODULES] = {{.name = "main"}, {.name = "sdk"}, {.name = "subsdk0"}, {.name = "subsdk1"}};
-    static const char *const base[NMODULES] = {"0x7000000000", "0x7030000000", "0x7032000000", "0x7034000000"};
+    enum { NMODULES = 5 };
+    Gen gens[NMODULES] = {{.name = "main"}, {.name = "sdk"}, {.name = "subsdk0"}, {.name = "subsdk1"}, {.name = "subsdk8"}};
+    static const char *const base[NMODULES] = {"0x7100004000", "0x712E74B000", "0x712D037000", "0x712D9FF000", "0x712E0A5000"};
     bool ok = true;
     for (int i = 0; i < NMODULES && ok; i++) {
         Gen *g = &gens[i];
-        g->exit = -1;
         snprintf(g->log, sizeof g->log, "%s" SEP "gen_%s.log", work, g->name);
         snprintf(g->out, sizeof g->out, "%s" SEP "%s", work, g->name);
         mkdir(g->out, 0755);
         char nso[1100];
-        snprintf(nso, sizeof nso, "%s" SEP "exefs" SEP "%s", game_dir, g->name);
+        // a mod's file replaces the game's (runtime/mods.c); the game's files are the fallback
+        if (!mods_exefs_override(g->name, nso, sizeof nso)) snprintf(nso, sizeof nso, "%s" SEP "exefs" SEP "%s", game_dir, g->name);
+        if (strcmp(g->name, "subsdk8") == 0 && !gb_file_exists(nso)) {  // (only the mods have subsdk8: an empty table stands in)
+            g->exit = 0;
+            char path[1200];
+            snprintf(path, sizeof path, "%s" SEP "subsdk8_table.c", g->out);
+            FILE *f = fopen(path, "wb");
+            if (!f || fputs(STUB_SUBSDK8_TABLE, f) < 0) {
+                snprintf(why, why_size, "the game code couldn't be prepared");
+                ok = false;
+            }
+            if (f) fclose(f);
+            continue;
+        }
+        g->exit = -1;
         Args a = {0};
         add(&a, t.gen);
         if (t.gen_script[0]) add(&a, t.gen_script);
@@ -415,6 +512,7 @@ bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size
         add(&a, base[i]);
         add(&a, g->out);
         if (i == 1) { add(&a, "--hle"); add(&a, t.hle); }
+        if (!strcmp(g->name, "subsdk8")) add(&a, "--interior");  // (the mod's code: every instruction can be a target)
         g->p = spawn(a.v, g->log);
         args_free(&a);
         if (!g->p) { snprintf(why, why_size, "the game code builder didn't start"); ok = false; }
@@ -582,7 +680,7 @@ bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size
         char idp[1100];
         snprintf(idp, sizeof idp, "%s.id", lib);
         FILE *f = NULL;
-        if (rename(tmp, lib) != 0 || !(f = fopen(idp, "wb")) || fprintf(f, "%s\n", GAMELIB_ID) < 0) {
+        if (rename(tmp, lib) != 0 || !(f = fopen(idp, "wb")) || fprintf(f, "%s\n", g_lib_id) < 0) {
             snprintf(why, why_size, "the game code couldn't be saved");
             ok = false;
         }

@@ -163,7 +163,7 @@ void warp_frame(uint64_t frame) {
     if (ENV("LARECOMP_LOG_KEYITEMS") && frame % 120 == 0) {  // PlayerStatus key items vs the save buffer copy
         uint64_t ps = LD64(MAIN_BASE + 0x1cc1368);
         LOG("[keyitems] frame %llu ps %llx ps+ac %08x save+556c %08x\n", (unsigned long long)frame, (unsigned long long)ps,
-            ps ? *(uint32_t *)(uintptr_t)(ps + 0xac) : 0, *(uint32_t *)(uintptr_t)(0x7001CBB220ull + 0x556c));
+            ps ? *(uint32_t *)(uintptr_t)(ps + 0xac) : 0, *(uint32_t *)(uintptr_t)(MAIN_BASE + 0x1CBB220ull + 0x556c));
     }
 }
 

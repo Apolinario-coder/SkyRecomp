@@ -11,7 +11,7 @@
 
 #include "../hle.h"
 
-#define LIVE_SAVE 0x7001CBB220ull
+#define LIVE_SAVE (MAIN_BASE + 0x1CBB220ull)
 // item ids as AddItem gets them: Items.gsheet `itemID` (not the row number; rows 41+ differ)
 enum { IT_COMPASS = 44, IT_MAP = 45, IT_BEAK = 47, IT_SMALL_KEY = 48, IT_NIGHTMARE_KEY = 49 };
 

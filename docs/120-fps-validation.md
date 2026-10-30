@@ -2,11 +2,11 @@
 
 Enable **Video > Frame rate > 120 FPS (Experimental)**. New installations default to 60 FPS.
 
-The hooks apply only to Skyward Sword HD 1.0.0, build ID `d824d4b1bbd45d03668380d6d041ba4ca00a64ff`. Unknown builds retain 60 Hz. The new game-library identity forces regeneration of older libraries.
+The hooks apply only to Skyward Sword HD 1.0.0 (build ID `d824d4b1bbd45d03668380d6d041ba4ca00a64ff`) and 1.0.1 (build ID starting `5441af3c89f97e1d`), each with the timing store addresses listed in `SKY_BUILDS` in `tools/gen.py`. Unknown builds retain 60 Hz. The new game-library identity forces regeneration of older libraries.
 
 ## Timing
 
-The stores at `0x700104a1ac` and `0x700104a1d0` publish the shared simulation step (in original 30 Hz units) and its duration in milliseconds. Both registers are updated before their stores: the subsequent fractional accumulator therefore continues producing 30 integer ticks per second.
+The stores at `0x700104a1ac` and `0x700104a1d0` (1.0.0; 1.0.1 has them at `0x700104a4fc` and `0x700104a520`) publish the shared simulation step (in original 30 Hz units) and its duration in milliseconds. Both registers are updated before their stores: the subsequent fractional accumulator therefore continues producing 30 integer ticks per second.
 
 At either target the step follows monotonic elapsed time, including when the target cannot be sustained (and when the game takes its own 30 Hz mode: its 1.0-per-frame step at a 60 FPS present rate ran the world at 2x speed). Steps are capped at 33.3 ms; stalls of 100 ms or longer restart the clock instead of advancing through loading time. The display timer, Vulkan limiter, neutral motion-sensor period and dynamic-resolution budget follow the selected target. The audio renderer retains its independent sample clock.
 

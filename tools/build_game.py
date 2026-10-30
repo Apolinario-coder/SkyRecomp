@@ -112,10 +112,10 @@ def main():
         hle_file = os.path.abspath("runtime/hle/hle_symbols.txt")
 
         mod_configs = {
-            "main": ("0x7000000000", []),
-            "sdk": ("0x7030000000", ["--hle", hle_file]),
-            "subsdk0": ("0x7032000000", []),
-            "subsdk1": ("0x7034000000", []),
+            "main": ("0x7100004000", []),
+            "sdk": ("0x712E74B000", ["--hle", hle_file]),
+            "subsdk0": ("0x712D037000", []),
+            "subsdk1": ("0x712D9FF000", []),
         }
 
         def run_gen(mod):

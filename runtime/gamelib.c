@@ -16,6 +16,26 @@
 static const GameLibTables *g_tables;
 static char g_error[256];
 
+#include "mods.h"
+
+// The GAMELIB_ID the library has to be built with now: with the mod files that replace game modules, their
+// fingerprint is part of it (runtime/mods.c). Recomputed, so turning a mod on or off is seen at once.
+static const char *expected_id(void) {
+    static char id[256];
+    gamebuild_expected_id(GAMELIB_ID, id, sizeof id);
+    return id;
+}
+
+// Is a library with this id one this app can load? Its own (expected) id, or, when no mod changes the game code, the
+// plain GAMELIB_ID that `make` gives the library it builds in the source tree. With a mod, the plain library lacks the
+// mod's code, so it is refused.
+static bool id_acceptable(const char *id) {
+    if (!strcmp(id, expected_id())) return true;
+    char with_mods[256];
+    mods_build_id(GAMELIB_ID, with_mods, sizeof with_mods);
+    return !strcmp(id, GAMELIB_ID) && !strcmp(with_mods, GAMELIB_ID);
+}
+
 // The library's id file (<library>.id, written next to it by the build): its GAMELIB_ID, read without loading it.
 static bool id_matches(const char *lib) {
     char path[1100], id[128] = {0};
@@ -25,7 +45,7 @@ static bool id_matches(const char *lib) {
     size_t n = fread(id, 1, sizeof id - 1, f);
     fclose(f);
     while (n && (id[n - 1] == '\n' || id[n - 1] == '\r')) id[--n] = 0;
-    return !strcmp(id, GAMELIB_ID);
+    return id_acceptable(id);
 }
 
 static bool exists(const char *p) {
@@ -67,8 +87,8 @@ static const GameLibTables *open_lib(const char *path) {
 #endif
     if (!entry) { snprintf(g_error, sizeof g_error, "%s: not game code", path); return NULL; }
     const GameLibTables *t = entry();
-    if (!t || t->abi != GAMELIB_ABI || !t->id || strcmp(t->id, GAMELIB_ID)) {
-        snprintf(g_error, sizeof g_error, "%s was built for another version", path);
+    if (!t || t->abi != GAMELIB_ABI || !t->id || !id_acceptable(t->id)) {
+        snprintf(g_error, sizeof g_error, "%s was built for another version (with mods, or after a generator change, build the game code from the start screen: run without --play and press PLAY)", path);
         return NULL;  // (left loaded: nothing of it runs)
     }
     return t;

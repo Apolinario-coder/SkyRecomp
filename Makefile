@@ -40,8 +40,12 @@ GENFLAGS := -O0 -g0 -DNDEBUG -fno-strict-aliasing -Wno-return-type -Wno-unused-l
 
 # The game code (made by `make gen` from your own game files) is its own library next to the app (runtime/gamelib.h);
 # the app itself holds none of it
-GEN_SRC  := $(wildcard $(GEN)/main/*.c) $(wildcard $(GEN)/sdk/*.c)
-GEN_OBJ  := $(patsubst %.c,$(B)/obj/%.o,$(patsubst $(GEN)/%,%,$(GEN_SRC))) $(B)/obj/tools/gamelib_entry.o
+GEN_MODULES := main sdk subsdk0 subsdk1
+GEN_TABLES  := $(foreach m,$(GEN_MODULES),$(GEN)/$(m)/$(m)_table.c)
+GEN_SRC  := $(foreach m,$(GEN_MODULES),$(wildcard $(GEN)/$(m)/*.c))
+# all four modules must be generated (make gen) before the game code library can be linked
+GEN_READY := $(if $(strip $(filter-out $(wildcard $(GEN_TABLES)),$(GEN_TABLES))),,yes)
+GEN_OBJ  := $(patsubst %.c,$(B)/obj/%.o,$(patsubst $(GEN)/%,%,$(GEN_SRC))) $(B)/obj/tools/gamelib_entry.o $(B)/obj/tools/subsdk8_empty.o
 RT_SRC   := $(wildcard runtime/*.c) $(wildcard runtime/hle/*.c) $(wildcard runtime/services/*.c) \
             $(wildcard runtime/nvn/*.c) $(wildcard runtime/nvn/maxwell/*.c) runtime/platform/$(PLATFORM).c
 RT_HDRS  := $(wildcard runtime/*.h) $(wildcard runtime/hle/*.h) $(wildcard runtime/platform/*.h) $(wildcard runtime/nvn/*.h) \
@@ -117,11 +121,19 @@ RT_OBJ   := $(patsubst runtime/%.c,$(B)/rt/%.o,$(RT_SRC))
 RTFLAGS  := -O2 -g -fno-strict-aliasing -Wall -Wno-unused-function -Iruntime -Iruntime/nvn -DGAMELIB_ID='"$(GAMELIB_ID)"' $(DEPINC) $(OSFLAGS)
 CXXFLAGS := -O2 -g -std=c++17 -I$(IMGUI) -I$(IMGUI)/backends -Iruntime -Iruntime/nvn -DGAMELIB_ID='"$(GAMELIB_ID)"' $(DEPINC)
 
-all: $(EXE) $(if $(GEN_SRC),$(GAMELIB))
+all: $(EXE) $(if $(GEN_READY),$(GAMELIB),gen-missing)
+
+gen-missing:
+	@echo "The game code isn't generated yet (or only partly): run 'make gen' with extracted/exefs in place (docs/game-files.md)."
+	@exit 1
 
 $(B)/obj/%.o: $(GEN)/%.c runtime/cpu.h
 	@mkdir -p $(dir $@)
 	@$(CC) $(GENFLAGS) -c $< -o $@
+
+$(B)/obj/tools/subsdk8_empty.o: tools/subsdk8_empty.c runtime/gamelib.h
+	@mkdir -p $(dir $@)
+	$(CC) $(GENFLAGS) -c $< -o $@
 
 $(B)/obj/tools/gamelib_entry.o: tools/gamelib_entry.c $(GAMELIB_SRCS)
 	@mkdir -p $(dir $@)
@@ -167,7 +179,9 @@ $(EXE): $(RT_OBJ) $(BACKEND_OBJ) $(UI_OBJ) $(IMGUI_OBJ)
 
 # its id file (<library>.id) says what it was built from without loading it (runtime/gamelib.c)
 $(GAMELIB): $(GEN_OBJ) | $(EXE)
-	$(CC) $(GAMELIB_LDFLAGS) -o $@.tmp $^
+	$(file >$@.rsp)
+	$(foreach o,$(GEN_OBJ),$(file >>$@.rsp,$o))
+	$(CC) $(GAMELIB_LDFLAGS) -o $@.tmp @$@.rsp
 	mv -f $@.tmp $@
 	echo $(GAMELIB_ID) > $@.id
 
@@ -190,9 +204,12 @@ $(B)/imgui/imgui_impl_metal.o: $(IMGUI)/backends/imgui_impl_metal.mm
 # Python: tools/venv (macOS, Linux: bin/python, Windows: Scripts/python.exe)
 PY := $(firstword $(wildcard tools/venv/bin/python) $(wildcard tools/venv/Scripts/python.exe))
 
+# the module bases are the ones the start screen's build uses (runtime/gamebuild.c, tools/build_game.py)
 gen:
-	cd tools && ../$(PY) gen.py sdk ../extracted/exefs/sdk 0x7004000000 ../$(GEN)/sdk --hle ../runtime/hle/hle_symbols.txt $(GENSIMD)
-	cd tools && ../$(PY) gen.py main ../extracted/exefs/main 0x7000000000 ../$(GEN)/main $(GENSIMD)
+	cd tools && ../$(PY) gen.py main ../extracted/exefs/main 0x7100004000 ../$(GEN)/main $(GENSIMD)
+	cd tools && ../$(PY) gen.py sdk ../extracted/exefs/sdk 0x712E74B000 ../$(GEN)/sdk --hle ../runtime/hle/hle_symbols.txt $(GENSIMD)
+	cd tools && ../$(PY) gen.py subsdk0 ../extracted/exefs/subsdk0 0x712D037000 ../$(GEN)/subsdk0 $(GENSIMD)
+	cd tools && ../$(PY) gen.py subsdk1 ../extracted/exefs/subsdk1 0x712D9FF000 ../$(GEN)/subsdk1 $(GENSIMD)
 
 gen-objs: $(GEN_OBJ)
 
@@ -321,7 +338,7 @@ appimages:
 smoketest:
 	tools/linux/smoketest.sh
 
-.PHONY: dmg all gen gen-helper gen-objs runtime-objs deps deps-windows app dist rando-helper appimage appimages smoketest
+.PHONY: dmg all gen gen-missing gen-helper gen-objs runtime-objs deps deps-windows app dist rando-helper appimage appimages smoketest
 
 build/test_shaders: tools/test_shaders.m runtime/nvn/maxwell/translate.c runtime/nvn/maxwell/shader.h
 	clang -O1 -fobjc-arc -framework Metal -framework Foundation -o $@ tools/test_shaders.m runtime/nvn/maxwell/translate.c

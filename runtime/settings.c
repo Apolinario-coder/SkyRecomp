@@ -23,7 +23,7 @@ static const char *settings_file(void) {
 
 Settings g_settings = {
     .aspect = ASPECT_ORIGINAL,
-    .fullscreen = true,
+    .fullscreen = false,
     .aspect_asked = true,
     .menu_tip_seen = true,
     .volume = 1.0f,
