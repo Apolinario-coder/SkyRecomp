@@ -40,8 +40,9 @@
 
 enum { K_BC5, K_BC3, K_ASTC4, K_RGBA8, K_BC1, K_RG8, K_GR8 /* RG8, alpha in red */, K_R8 /* intensity = alpha */ };
 // roles: the prompt glyphs' R_A..R_MINUS / L_* (prompt_icons.h), then these
-enum { R_HERO = R_MINUS + 1, R_SHEET, R_SHEET_1, R_SHEET_3, R_SHEET_4, R_BOTTLE, R_BOTTLE_MODEL, R_FAIRY_MODEL,
+enum { R_HERO = R_MINUS + 1, R_SHEET, R_PICTURE, R_BOTTLE, R_BOTTLE_MODEL, R_FAIRY_MODEL,
        R_ITEM_CURSOR, R_TUNIC, R_TUNIC_RED, R_TUNIC_BLUE, R_HEART, R_POWDER_MODEL, R_BASICINFO_BG };
+enum { L_LS_CLICK = L_ARM_RIGHT + 1, L_RS_CLICK };  // (the picture font's stick presses: the click's own key on a keyboard)
 
 typedef struct {
     uint8_t role, kind, srgb;
@@ -92,7 +93,8 @@ static int role_of(const char *name) {
         {"tr_plusBtn_", R_PLUS}, {"tr_minusBtn_", R_MINUS}, {"tr_minusBtnSmall_", R_MINUS},
         {"tr_crossBtnBasicD_", L_DDOWN}, {"tr_crossBtnBasicL_", L_DLEFT},
         {"tr_crossBtnBasicR_", L_DRIGHT}, {"tr_crossBtnBasicT_", L_DUP},
-        {"tr_crossBtnBasic_", L_DPAD},
+        // (not tr_crossBtnBasic_, the HUD d-pad's base: its lit arms above are drawn on their own, and a redrawn base
+        // doesn't line up with them)
         {"tr_lStick_", L_LS}, {"tr_rStick_", L_RS},
         {"th_zBtn_", R_ZL}, {"th_nunchakuBtn_", L_LS}, {"tr_nunchakuBtn_", L_LS}, {"tr_cBtn_", R_L},
         {"tr_basicInfoWinLT_", R_BASICINFO_BG},
@@ -301,8 +303,8 @@ static void scan_u8(const char *rel) {
 }
 
 // The picture font's glyph cells (Font/picture_00.brfnt: the icons inside message text): g_cell_w x g_cell_h, every
-// g_pitch_x / g_pitch_y pixels of a sheet
-static int g_cell_w = 80, g_cell_h = 80, g_pitch_x = 80, g_pitch_y = 80;
+// g_pitch_x / g_pitch_y pixels of a g_sheet_h tall sheet. The game uploads its sheets as one texture, one under another.
+static int g_cell_w = 80, g_cell_h = 80, g_pitch_x = 80, g_pitch_y = 80, g_sheet_h = 256;
 
 static void scan_brfnt(const char *rel) {
     size_t len;
@@ -322,19 +324,21 @@ static void scan_brfnt(const char *rel) {
         LOG("[texpatch] %s: %u sheets of %ux%u, gx format %u, cells %ux%u (%u per row, %u rows), images at %#x\n", rel,
             ns, sw, sh, fmt, g[8], g[9], rd16_be(g + 0x14), rd16_be(g + 0x16), img);
         if (picture && g[8] && g[9] && 3 * (g[8] + 1) <= (int)sw && 3 * (g[9] + 1) <= (int)sh)
-            g_cell_w = g[8], g_cell_h = g[9], g_pitch_x = g[8] + 1, g_pitch_y = g[9] + 1;
+            g_cell_w = g[8], g_cell_h = g[9], g_pitch_x = g[8] + 1, g_pitch_y = g[9] + 1, g_sheet_h = (int)sh;
         // the images' offset: from the file's start, or (as this was first read) from the block's. (Format bit 15:
         // compressed sheets, not read.)
         for (int from = 0; picture && fmt < 0x8000 && from < 2; from++) {
             size_t at = img + (from ? o : 0);
-            for (uint32_t i = 0; i < ns && at + (size_t)(i + 1) * ss <= len; i++) {
-                int role = i == 1 ? R_SHEET_1 : i == 3 ? R_SHEET_3 : i == 4 ? R_SHEET_4 : 0;
-                uint8_t *rgba = role ? gx_decode(fmt, f + at + (size_t)i * ss, ss, sw, sh) : NULL;
-                char nm[32];
-                snprintf(nm, sizeof nm, "picture_00 sheet %u", i);
-                if (rgba) add_gx_ref(role, rgba, sw, sh, nm);
+            if (!ns || ns > 8 || at + (size_t)ns * ss > len) continue;
+            uint8_t *all = malloc((size_t)sw * sh * 4 * ns);
+            bool ok = true;
+            for (uint32_t i = 0; i < ns && ok; i++) {
+                uint8_t *rgba = gx_decode(fmt, f + at + (size_t)i * ss, ss, sw, sh);
+                if ((ok = rgba != NULL)) memcpy(all + (size_t)i * sw * sh * 4, rgba, (size_t)sw * sh * 4);
                 free(rgba);
             }
+            if (ok) add_gx_ref(R_PICTURE, all, sw, sh * ns, "picture_00");
+            free(all);
         }
         break;
     }
@@ -444,14 +448,15 @@ static void texel(const uint8_t *lin, int kind, size_t i, uint8_t p[4]) {
 }
 
 // How many of the upload's pixels differ from a decoded GX image (counting stops at `stop`): alpha by more than the
-// conversions' rounding anywhere, colour where it's opaque (a conversion may premultiply, or drop clear pixels' colour)
+// conversions' rounding anywhere (RGB5A3's 3-bit alpha: the game's widening is up to 31 under x3's, tr_lStick_01),
+// colour where it's opaque (a conversion may premultiply, or drop clear pixels' colour)
 static size_t gx_mismatch(const uint8_t *lin, int kind, const uint8_t *rgba, size_t n, size_t stop) {
     size_t bad = 0;
     for (size_t i = 0; i < n && bad < stop; i++) {
         uint8_t p[4];
         texel(lin, kind, i, p);
         const uint8_t *q = rgba + 4 * i;
-        bool off = abs(p[3] - q[3]) > 20;
+        bool off = abs(p[3] - q[3]) > 32;
         for (int k = 0; k < 3 && !off && q[3] >= 250; k++) off = abs(p[k] - q[k]) > 20;
         bad += off;
     }
@@ -483,7 +488,7 @@ int texpatch_identify(const NvnTexture *t) {
     pthread_once(&g_once, load_refs);
     if (!t->addr || t->depth > 1) return -1;
     uint64_t total = tegra_total_size(&t->layout);
-    if (!g_is_las && t->width <= 256 && t->height <= 256 && t->layout.fmt) {
+    if (!g_is_las && t->width <= 256 && t->height <= 256 * 5 && t->layout.fmt) {  // (5 x 256: the picture font)
         uint32_t f = t->format;
         int kinds[2] = {-1, -1};
         if ((f >= 0x25 && f <= 0x28) || f == 0x38) kinds[0] = K_RGBA8;
@@ -491,8 +496,8 @@ int texpatch_identify(const NvnTexture *t) {
         else if (f >= 0x01 && f <= 0x04) kinds[0] = K_R8;
         if (kinds[0] >= 0) {
             uint32_t bpb = t->layout.fmt->bpb;
-            uint8_t lin[256 * 256 * 4];
             LevelLayout l = tegra_level(&t->layout, 0);
+            uint8_t *lin = malloc((size_t)l.wb * l.hb * bpb);
             if (t->flags & 0x10) {
                 uint32_t row = l.wb * bpb;
                 for (uint32_t y = 0; y < l.hb; y++)
@@ -513,13 +518,22 @@ int texpatch_identify(const NvnTexture *t) {
                         int id = ref_as(i, kinds[k]);
                         static int nlog;
                         if (nlog++ < 96) LOG("[texpatch] %s (%ux%u role %d kind %d) identified\n", r->name, r->w, r->h, r->role, kinds[k]);
+                        free(lin);
                         return id;
                     }
                 }
             static int nmiss;
-            if (closest >= 0 && nmiss++ < 64)
+            if (closest >= 0 && nmiss++ < 64) {
                 LOG("[texpatch] unmatched %ux%u fmt %#x (%u layers): closest %s, %.1f%% of its pixels off\n", t->width,
                     t->height, f, t->layout.layers, g_refs[closest].name, 100.0 * best / n);
+                if (getenv("LARECOMP_TEXPATCH_DUMP")) {  // its level 0 as uploaded (linear), to compare with the refs offline
+                    char p[64];
+                    snprintf(p, sizeof p, "build/unmatched_%ux%u_fmt%x.raw", t->width, t->height, f);
+                    FILE *o = fopen(p, "wb");
+                    if (o) fwrite(lin, bpb, (size_t)l.wb * l.hb, o), fclose(o);
+                }
+            }
+            free(lin);
         }
     }
     for (int i = 0; i < g_nrefs; i++) {
@@ -568,6 +582,8 @@ static int prompt_style(void) {
     if (p == PROMPTS_KEYBOARD) return STYLE_KEYBOARD;
     if (p == PROMPTS_NINTENDO) return STYLE_NINTENDO;
     extern int input_pad_family(void);  // runtime/hle/input.c: the controller SDL reports
+    extern bool input_pad_connected(void);
+    if (!input_pad_connected()) return STYLE_KEYBOARD;  // (none: the keyboard's keys, as a Mac player plays)
     int f = input_pad_family();
     return f == 1 ? STYLE_XBOX : f == 2 ? STYLE_PS : STYLE_NINTENDO;
 }
@@ -856,7 +872,10 @@ static void redraw(uint8_t *img, int W, int x0, int y0, int w, int h, int ach, b
     int keys[4] = {0}, k = role == L_LS ? 0 : role == L_RS ? 1 : role == L_DPAD ? 2 : -1;
     for (int i = 0; i < 4 && k >= 0; i++) keys[i] = g_bind_key[four[k][i]];
     if (k < 0 && role_to_slot(role) >= 0) keys[0] = g_bind_key[role_to_slot(role)];
-    int label = style == STYLE_KEYBOARD ? role : prompt_label(role);
+    bool click = role == L_LS_CLICK || role == L_RS_CLICK;  // (one key; a controller's stick otherwise)
+    if (click) keys[0] = g_bind_key[role == L_LS_CLICK ? BIND_LSTICK : BIND_RSTICK];
+    int label = click ? (style == STYLE_KEYBOARD ? L_OTHER : role == L_LS_CLICK ? L_LS : L_RS)
+                      : style == STYLE_KEYBOARD ? role : prompt_label(role);
     if (style != STYLE_KEYBOARD && role >= L_DUP && role <= L_DRIGHT) label = L_ARM_UP + role - L_DUP;  // (a HUD pane)
     float *cv = calloc((size_t)w * h * 4, sizeof(float));
     prompt_icon(cv, w, h, (float)bx0, (float)by0, (float)(bx1 - bx0 + 1), (float)(by1 - by0 + 1), style, label, keys,
@@ -1095,16 +1114,22 @@ void texpatch_apply(int id, uint32_t lv, uint8_t *blocks, uint32_t w, uint32_t h
     decode_image(r, blocks, row, img);
     int ach = r->kind == K_BC5 ? 1 : 3;
     bool mono = r->kind == K_BC5 || r->kind == K_RG8 || r->kind == K_GR8 || r->kind == K_R8;
-    // the picture font's sheets: which glyph cell (column, row) is which button
+    // the picture font: which glyph cell (sheet, column, row) is which button. Sheet 0 also has the Wii remote's 1, 2
+    // and the nunchuk's C (kept); the stick tilts are drawn as the plain stick; the rest of sheet 2 (arrows,
+    // the pointer, marks) isn't a button.
     static const struct { uint8_t sheet, col, row, role; } cells[] = {
-        {R_SHEET_1, 2, 0, R_B}, {R_SHEET_1, 0, 1, R_A},
-        {R_SHEET_3, 0, 0, R_L}, {R_SHEET_3, 1, 0, R_R}, {R_SHEET_3, 2, 0, R_ZL}, {R_SHEET_3, 0, 1, R_ZR},
-        {R_SHEET_3, 1, 1, R_X}, {R_SHEET_3, 2, 1, R_Y}, {R_SHEET_3, 0, 2, R_PLUS}, {R_SHEET_3, 1, 2, R_MINUS},
-        {R_SHEET_4, 0, 1, L_LS}, {R_SHEET_4, 1, 1, L_RS}};
-    if (r->role == R_SHEET_1 || r->role == R_SHEET_3 || r->role == R_SHEET_4) {
+        {0, 0, 0, R_A}, {0, 1, 0, R_B}, {0, 2, 0, R_MINUS}, {0, 0, 1, R_PLUS}, {0, 1, 2, R_ZL}, {0, 2, 2, L_LS},
+        {1, 0, 0, L_LS}, {1, 1, 0, L_LS}, {1, 2, 0, L_LS}, {1, 0, 1, L_LS}, {1, 1, 1, L_DPAD}, {1, 2, 1, L_DPAD},
+        {1, 0, 2, L_DUP}, {1, 1, 2, L_DDOWN}, {1, 2, 2, L_DLEFT},
+        {2, 0, 0, L_DRIGHT},
+        {3, 0, 0, R_X}, {3, 1, 0, R_Y}, {3, 2, 0, R_L}, {3, 0, 1, R_R}, {3, 1, 1, R_ZR}, {3, 2, 1, L_RS},
+        {3, 0, 2, L_RS}, {3, 1, 2, L_RS}, {3, 2, 2, L_RS},
+        {4, 0, 0, L_RS}, {4, 1, 0, L_LS_CLICK}, {4, 2, 0, L_RS_CLICK}, {4, 0, 1, L_DDOWN}, {4, 1, 1, L_DLEFT},
+        {4, 2, 1, L_DRIGHT}, {4, 0, 2, L_DUP}};
+    if (r->role == R_PICTURE) {
         for (unsigned i = 0; i < sizeof cells / sizeof *cells; i++) {
-            int x0 = cells[i].col * g_pitch_x, y0 = cells[i].row * g_pitch_y;
-            if (cells[i].sheet == r->role && x0 + g_cell_w <= (int)w && y0 + g_cell_h <= (int)h && restyled(cells[i].role, style))
+            int x0 = cells[i].col * g_pitch_x, y0 = cells[i].sheet * g_sheet_h + cells[i].row * g_pitch_y;
+            if (x0 + g_cell_w <= (int)w && y0 + g_cell_h <= (int)h && restyled(cells[i].role, style))
                 redraw(img, (int)w, x0, y0, g_cell_w, g_cell_h, ach, false, mono, cells[i].role, style, dirty, bw);
         }
     } else if (r->role == R_SHEET) {

@@ -445,6 +445,7 @@ static bool slider(const char *label, float *value, float min, float max, const 
 
 extern "C" void renderer_get_scale(float *sx, float *sy);
 extern "C" int input_pad_family(void);  // runtime/hle/input.c
+extern "C" bool input_pad_connected(void);
 extern "C" double output_scale_dynamic_factor(void);
 
 static void tab_display(void) {
@@ -649,7 +650,7 @@ static void tab_about(void) {
     {
         static const char *const fam[] = {"Nintendo", "Xbox", "PlayStation"};
         char autol[64];
-        snprintf(autol, sizeof autol, "Auto (%s)", fam[input_pad_family() % 3]);
+        snprintf(autol, sizeof autol, "Auto (%s)", input_pad_connected() ? fam[input_pad_family() % 3] : "Keyboard");
         const char *names[] = {autol, "Nintendo", "Xbox", "PlayStation", "Keyboard"};
         choice("Button icons", &g_settings.prompts, names, 5);
         static const char *const looks[] = {"Light (the game's own)", "Dark"};

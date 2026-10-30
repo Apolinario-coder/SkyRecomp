@@ -211,6 +211,8 @@ int input_pad_family(void) {
     }
     return env >= 0 ? env : pad_family;
 }
+// A controller is open (or LARECOMP_PAD_TYPE pretends one): Auto prompts follow it, else the keyboard's
+bool input_pad_connected(void) { return pad || getenv("LARECOMP_PAD_TYPE"); }
 
 // The controller's motion, for the game's six-axis sensor (gyro aiming and the motion camera, which the game offers
 // with a Pro Controller): written by sensor events on the main thread, read by GetSixAxisSensorState on the game's.

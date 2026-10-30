@@ -13,6 +13,7 @@ bool g_is_las;
 const char *g_romfs_dir = "";
 int16_t g_bind_key[BIND_KEY_COUNT];
 int input_pad_family(void) { return 2; }
+bool input_pad_connected(void) { return true; }
 uint64_t renderer_present_count(void) { return 0; }
 const char *rando_seed_dir(void) { return NULL; }
 void astc_decode_ldr(const uint8_t *b, uint32_t w, uint32_t h, uint32_t bw, uint32_t bh, bool srgb, uint8_t *out) {
@@ -134,7 +135,7 @@ int main(void) {
     enum { W = 48, S = 256 };
     static uint8_t img[W * W * 4], sheet[S * S * 4];
     glyph(img, W, 24, 24, 19);
-    glyph(sheet, S, 80 + 40, 80 + 40, 30);  // sheet 3, cell (1, 1): X
+    glyph(sheet, S, 40, 40, 30);  // sheet 2, cell (0, 0): the d-pad, right lit
     for (int y = 175; y < 220; y++) for (int x = 175; x < 220; x++) sheet[(y * S + x) * 4] = 200, sheet[(y * S + x) * 4 + 3] = 255;
     static uint8_t rom[1 << 20];
     size_t n = 0;
@@ -158,7 +159,7 @@ int main(void) {
     memcpy(f + 0x10, "TGLP", 4), be32(f + 0x14, 0x30 + 5 * S * S);
     f[0x18] = 79, f[0x19] = 79, be32(f + 0x1C, S * S), be16(f + 0x20, 5), be16(f + 0x22, 2);
     be16(f + 0x24, 3), be16(f + 0x26, 3), be16(f + 0x28, S), be16(f + 0x2A, S), be32(f + 0x2C, 0x40);
-    enc_ia4(sheet, S, S, f + 0x40 + 3 * S * S);
+    enc_ia4(sheet, S, S, f + 0x40 + 2 * S * S);
     g_files[1].path = "Font/picture_00.brfnt", g_files[1].off = n, g_files[1].size = 0x40 + 5 * S * S;
     n += g_files[1].size;
     FILE *tmp = tmpfile();
@@ -199,21 +200,25 @@ int main(void) {
     free(lin);
     free((void *)(uintptr_t)t.addr);
 
-    // 4. the font sheet: found from its TGLP, its X cell (1, 1) redrawn, a cell with no button in it (2, 2) kept
-    static uint8_t font[S * S * 4];
-    px = gx_decode(2, f + 0x40 + 3 * S * S, S * S, S, S);
-    memcpy(font, px, sizeof font);
-    free(px);
-    t = upload(font, S, S, K_RG8, &lin);
+    // 4. the font, uploaded as one texture (its 5 sheets one under another): found from its TGLP, sheet 2's d-pad cell
+    // (0, 0) redrawn, a cell with no button in it (2, 2) kept
+    static uint8_t font[5 * S * S * 4];
+    for (int i = 0; i < 5; i++) {
+        px = gx_decode(2, f + 0x40 + (size_t)i * S * S, S * S, S, S);
+        memcpy(font + (size_t)i * S * S * 4, px, (size_t)S * S * 4);
+        free(px);
+    }
+    t = upload(font, S, 5 * S, K_RG8, &lin);
     int id = texpatch_identify(&t);
-    assert(id >= 0 && g_refs[id].role == R_SHEET_3 && g_cell_w == 79 && g_pitch_x == 80);
-    uint8_t *before = malloc((size_t)S * S * 2);
-    memcpy(before, lin, (size_t)S * S * 2);
-    texpatch_apply(id, 0, lin, S, S, S * 2);
+    assert(id >= 0 && g_refs[id].role == R_PICTURE && g_cell_w == 79 && g_pitch_x == 80 && g_sheet_h == S);
+    uint8_t *before = malloc((size_t)5 * S * S * 2);
+    memcpy(before, lin, (size_t)5 * S * S * 2);
+    texpatch_apply(id, 0, lin, S, 5 * S, S * 2);
     int changed = 0;
-    for (int y = 80; y < 159; y++) for (int x = 80; x < 159; x++) changed += lin[(y * S + x) * 2] != before[(y * S + x) * 2];
+    for (int y = 2 * S; y < 2 * S + 79; y++) for (int x = 0; x < 79; x++) changed += lin[(y * S + x) * 2] != before[(y * S + x) * 2];
     assert(changed > 1000);
-    for (int y = 160; y < 239; y++) for (int x = 160; x < 239; x++) assert(!memcmp(lin + (y * S + x) * 2, before + (y * S + x) * 2, 2));
-    printf("texpatch GX: formats decode, the TPL matches as RGBA8 / RG8 / GR8 and is redrawn, the font's X cell too\n");
+    for (int y = 2 * S + 160; y < 2 * S + 239; y++)
+        for (int x = 160; x < 239; x++) assert(!memcmp(lin + (y * S + x) * 2, before + (y * S + x) * 2, 2));
+    printf("texpatch GX: formats decode, the TPL matches as RGBA8 / RG8 / GR8 and is redrawn, the font's d-pad cell too\n");
     return 0;
 }
