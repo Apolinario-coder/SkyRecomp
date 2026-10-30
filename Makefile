@@ -36,7 +36,7 @@ MINFLAG  := $(if $(MACOS_MIN),-mmacosx-version-min=$(MACOS_MIN))
 CC       := clang $(MINFLAG) $(CROSS)
 CXX      := clang++ $(MINFLAG) $(CROSS)
 IMGUI    := third_party/imgui
-GENFLAGS := -O1 -fno-strict-aliasing -Wno-return-type -Wno-unused-label -fvisibility=hidden -Iruntime
+GENFLAGS := -O0 -g0 -DNDEBUG -fno-strict-aliasing -Wno-return-type -Wno-unused-label -fvisibility=hidden -Iruntime
 
 # The game code (made by `make gen` from your own game files) is its own library next to the app (runtime/gamelib.h);
 # the app itself holds none of it
@@ -89,8 +89,8 @@ EXE      := $(B)/skyrecomp.exe
 DEPINC   := $(if $(DEPS),-I$(DEPS)/include)
 OSFLAGS  := -D_FILE_OFFSET_BITS=64 -D_POSIX_THREAD_SAFE_FUNCTIONS -D_CRT_RAND_S -DWIN32_LEAN_AND_MEAN -DNOMINMAX
 GENARCH  ?= -march=x86-64-v3  # AVX2 + FMA for the lifted FP/SIMD code (simd.h); override for older CPUs
-GENFLAGS += -D_FILE_OFFSET_BITS=64 $(GENARCH)
-LDFLAGS  := -fuse-ld=lld -Wl,--stack,16777216 $(if $(DEPS),-L$(DEPS)/lib) -lSDL3 -lavformat -lavcodec -lavutil -lswscale \
+GENFLAGS += -D_FILE_OFFSET_BITS=64 $(GENARCH) -fno-sanitize=all
+LDFLAGS  := -fuse-ld=lld -Wl,--stack,16777216 $(if $(DEPS),-L$(DEPS)/lib) -lavformat -lavcodec -lavutil -lswscale -lSDL3 \
             -lvulkan-1 -lwinmm -lole32 -lshell32 -lcomdlg32 -luuid -lshaderc_shared \
             $(if $(RELEASE),-Wl$(comma)--subsystem$(comma)windows)  # release: no console window (log -> skyrecomp.log)
 BACKEND_SRC := $(wildcard runtime/nvn/vulkan/*.c) $(wildcard runtime/nvn/vulkan/*.cpp)
@@ -127,6 +127,7 @@ $(B)/obj/tools/gamelib_entry.o: tools/gamelib_entry.c $(GAMELIB_SRCS)
 	@mkdir -p $(dir $@)
 	$(CC) $(GENFLAGS) -DGAMELIB_ID='"$(GAMELIB_ID)"' -c $< -o $@
 $(B)/rt/gamelib.o: $(GAMELIB_SRCS)
+$(B)/rt/nvn/custom_tex.o: third_party/xxhash/xxhash.h
 $(B)/rt/gamelib.o: RTFLAGS += -DGAMELIB_ID='"$(GAMELIB_ID)"'
 # the start screen's build of it (runtime/gamebuild.c) uses the same flags
 $(B)/rt/gamebuild.o: $(GAMELIB_SRCS) Makefile
@@ -149,6 +150,8 @@ $(B)/rt/nvn/smaa_data.o: RTFLAGS += -I$(B)/inc -Ithird_party/smaa/Textures
 $(B)/rt/%.o: runtime/%.cpp $(RT_HDRS)
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(OSFLAGS) -c $< -o $@
+
+$(B)/rt/nvn/vulkan/imgui_glue.o: $(wildcard third_party/reshade/include/*.hpp)
 
 $(B)/rt/%.o: runtime/%.m $(RT_HDRS)
 	@mkdir -p $(dir $@)
@@ -229,30 +232,37 @@ dmg: app
 # Needs: Windows 10+ x64, a Vulkan 1.3 driver, an AVX2 CPU (GENARCH x86-64-v3; checked at startup).
 DIST     := build/dist/Sky Recomp
 WIN_B    := build/win-release
+VISUAL_PACK ?= build/visual-pack
+PACK_PY ?= python3
 deps-windows:
 	tools/build_deps_windows.sh
 dist:
+	@[ -d "$(VISUAL_PACK)/reshade-shaders" ] || { echo "Set VISUAL_PACK to the complete 4K pack directory (including reshade-shaders and presets)"; exit 1; }
 	@[ -f build/deps-win/lib/libavcodec.dll.a ] || { echo "make deps-windows first (LGPL FFmpeg)"; exit 1; }
 	@[ -d build/helper/rando-gen ] || { echo "make rando-helper first (the seed generator)"; exit 1; }
-	@[ -d build/helper/lasgen ] || { echo "make gen-helper first (the game code generator)"; exit 1; }
+	@[ -d build/helper/skygen ] || [ -d build/helper/lasgen ] || { echo "make gen-helper first (the game code generator)"; exit 1; }
 	@[ -x build/zig/zig.exe ] || { echo "tools/fetch_zig.sh first (the compiler)"; exit 1; }
 	$(MAKE) B=$(WIN_B) DEPS=$(CURDIR)/build/deps-win RELEASE=1 $(WIN_B)/skyrecomp.exe
 	! nm $(WIN_B)/skyrecomp.exe | grep ' f_70' >/dev/null  # (no game code inside)
 	rm -rf build/dist && mkdir -p "$(DIST)/gamelib-src"
 	cp $(WIN_B)/skyrecomp.exe $(WIN_B)/skyrecomp.dll.a "$(DIST)/"
 	tools/zig_slim.sh $(strip $(filter-out -Iruntime,$(GENFLAGS)))  # (zig with its runtime built ahead of time)
-	cp -R build/helper/lasgen "$(DIST)/"
+	[ -d build/helper/skygen ] && cp -R build/helper/skygen "$(DIST)/" || cp -R build/helper/lasgen "$(DIST)/skygen"
 	cp -R build/zig-slim "$(DIST)/zig"
 	cp runtime/cpu.h runtime/simd.h runtime/simd_fp.h runtime/gamelib.h tools/gamelib_entry.c runtime/hle/hle_symbols.txt \
 	    "$(DIST)/gamelib-src/"
 	cp docs/icon/icon_1024.png "$(DIST)/icon.png"
-	cp third_party/fonts/Baloo2/Baloo2-SemiBold.ttf "$(DIST)/"  # (start screen font, OFL)
-	cp third_party/fonts/Baloo2/OFL.txt "$(DIST)/Baloo2-OFL.txt"
-	cp README.md LICENSE "$(DIST)/"  # (licenses and source links of the bundled components: README "License")
+	cp fonts/Baloo2-SemiBold.ttf fonts/Baloo2-OFL.txt "$(DIST)/"
+	cp README.md LICENSE LICENSE-LASRecomp "$(DIST)/"
+	cp third_party/imgui/LICENSE.txt "$(DIST)/LICENSE-ImGui.txt"
+	cp third_party/smaa/LICENSE.txt "$(DIST)/LICENSE-SMAA.txt"
+	cp third_party/xxhash/LICENSE "$(DIST)/LICENSE-xxHash"
 	cp -R build/helper/rando-gen "$(DIST)/"
 	PATH="$(CURDIR)/build/deps-win/bin:$$PATH" ldd $(WIN_B)/skyrecomp.exe | awk '(/ucrt64/ || /deps-win/) && !/vulkan-1/ {print $$3}' | sort -u | \
 	    xargs -I{} cp -u {} "$(DIST)/"
 	! ls "$(DIST)" | grep -iE 'x264|x265|xvid|postproc'  # (no GPL codec libraries in the release)
+	$(PACK_PY) tools/fetch_reshade.py --output "$(DIST)/reshade"
+	$(PACK_PY) tools/package_visuals.py --source "$(VISUAL_PACK)" --output "$(DIST)"
 	cd build/dist && if command -v zip >/dev/null; then zip -qr "Sky Recomp-$(VERSION)-windows.zip" "Sky Recomp"; \
 	    else /c/Windows/System32/tar.exe -a -cf "Sky Recomp-$(VERSION)-windows.zip" "Sky Recomp"; fi
 	@echo "build/dist/Sky Recomp-$(VERSION)-windows.zip"
@@ -281,14 +291,14 @@ rando-helper: build/rando-venv/.ok
 	    tools/rando/rando_gen.spec
 	@du -sh build/helper/rando-gen
 
-# The game code generator, the same way (tools/lasgen.spec): build/helper/lasgen/, shipped as lasgen/ next to the exe or
+# The game code generator, the same way (tools/skygen.spec): build/helper/skygen/, shipped as skygen/ next to the exe or
 # in Contents/Resources. The start screen's setup runs it on the player's own game files (runtime/gamebuild.c).
 gen-helper: build/rando-venv/.ok build/rando-venv/.gen-ok
 	$(if $(filter windows,$(PLATFORM)),USERPROFILE="$$(cygpath -w ~ 2>/dev/null || echo $$HOME)") \
 	$(RANDO_VPY) -m PyInstaller --noconfirm --clean --log-level WARN --distpath build/helper --workpath build/pyinstaller \
-	    tools/lasgen.spec
-	$(if $(filter windows,$(PLATFORM)),$(RANDO_VPY) tools/pe_no_cfg.py build/helper/lasgen/lasgen.exe)
-	@du -sh build/helper/lasgen
+	    tools/skygen.spec
+	$(if $(filter windows,$(PLATFORM)),$(RANDO_VPY) tools/pe_no_cfg.py build/helper/skygen/skygen.exe)
+	@du -sh build/helper/skygen
 
 build/rando-venv/.gen-ok: build/rando-venv/.ok
 	$(RANDO_VPY) -m pip install -q capstone==5.0.9 unicorn==2.1.4 lz4==4.4.5
@@ -303,10 +313,10 @@ build/rando-venv/.ok: third_party/LAS-Randomizer/requirements.txt
 # FFmpeg, shaderc and the seed generator helper inside; the Vulkan loader and GPU drivers are the system's.
 # `make appimage` (ARCH: this machine's, or aarch64 cross-compiled), `make appimages` both. See docs/linux.md.
 appimage:
-	tools/linux/appimage.sh $(ARCH)
+	bash tools/linux/appimage.sh $(ARCH)
 appimages:
-	tools/linux/appimage.sh x86_64
-	tools/linux/appimage.sh aarch64
+	bash tools/linux/appimage.sh x86_64
+	bash tools/linux/appimage.sh aarch64
 # release check of the x86-64 AppImage: start screen, into the game, warps to the overworld and every dungeon
 smoketest:
 	tools/linux/smoketest.sh

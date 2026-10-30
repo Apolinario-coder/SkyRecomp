@@ -148,7 +148,8 @@ int kernel_data_regions(uint64_t *addr, uint64_t *size, int max) {
 
 static void region_add(uint64_t addr, uint64_t size, uint32_t type, uint32_t perm) {
     if (nregions == 1024) FATAL("too many regions\n");
-    plat_commit(addr, size);  // back it before the OS writes there (Windows: file reads into the heap)
+    // The heap is backed on access; Windows file I/O commits its destination before entering the OS.
+    if (type != 5) plat_commit(addr, size);
     int i = nregions++;
     while (i > 0 && regions[i - 1].addr > addr) { regions[i] = regions[i - 1]; i--; }
     regions[i] = (Region){addr, size, type, perm};
@@ -247,13 +248,19 @@ static KThread *thread_new(uint64_t entry, uint64_t arg, uint64_t stack_top, int
     return t;
 }
 
-static void thread_start(KThread *t) {
+static bool thread_start(KThread *t) {
     pthread_attr_t attr;
-    pthread_attr_init(&attr);
-    pthread_attr_setstacksize(&attr, 256ull << 20);  // guest recursion runs on the host stack
+    int error = pthread_attr_init(&attr);
+    if (error) return false;
+    error = pthread_attr_setstacksize(&attr, 256ull << 20);  // guest recursion runs on the host stack
     t->started = true;
-    pthread_create(&t->host, &attr, thread_main, t);
+    if (!error) error = pthread_create(&t->host, &attr, thread_main, t);
     pthread_attr_destroy(&attr);
+    if (error) {
+        t->started = false;
+        LOG("[kernel] cannot start thread %x: %s\n", t->handle, strerror(error));
+    }
+    return error == 0;
 }
 
 KThread *kernel_create_main_thread(uint64_t entry, uint64_t stack_size, int prio) {
@@ -266,7 +273,7 @@ KThread *kernel_create_main_thread(uint64_t entry, uint64_t stack_size, int prio
 
 void kernel_run_main(KThread *t, uint64_t x0, uint64_t x1, uint64_t x2, uint64_t x3) {
     t->cpu.x[0] = x0; t->cpu.x[1] = x1; t->cpu.x[2] = x2; t->cpu.x[3] = x3;
-    thread_start(t);  // the host main thread goes on to run the window event loop
+    if (!thread_start(t)) FATAL("cannot start the main game thread\n");
 }
 
 uint32_t kernel_current_thread_handle(void) { return t_cur ? t_cur->handle : 0; }
@@ -339,7 +346,42 @@ static uint32_t block_current(int64_t timeout_ns) {
             t->wait_result = R_CANCELLED;
             break;
         }
-        if (!kwait(timeout_ns, &ts)) {
+        // Safety check for WAIT_MUTEX: if user-space unlocked the mutex (word == 0)
+        // without calling svcArbitrateUnlock (race on WAITERS_BIT), claim it now.
+        if (t->wait_kind == WAIT_MUTEX && t->wait_addr) {
+            if (mutex_acquire_or_mark(t->wait_addr, t->wait_tag)) {
+                t->wait_kind = WAIT_NONE;
+                t->wait_result = R_OK;
+                break;
+            }
+        }
+        // Use a 20ms safety slice for infinite waits (-1) on CONDVAR/MUTEX to recover from lost wakeups
+        int64_t wait_slice = timeout_ns;
+        struct timespec slice_ts;
+        const struct timespec *pts = &ts;
+        if (timeout_ns < 0 && (t->wait_kind == WAIT_CONDVAR || t->wait_kind == WAIT_MUTEX)) {
+            wait_slice = 20000000ll; // 20 ms
+            deadline(&slice_ts, wait_slice);
+            pts = &slice_ts;
+        }
+        // A waker may have run between the timeout and reacquiring g_klock; its result (and any
+        // mutex ownership it handed over) wins over the timeout.
+        if (!kwait(wait_slice, pts) && t->wait_kind != WAIT_NONE) {
+            if (timeout_ns < 0) {
+                // Spurious wakeup for infinite condvar wait: reacquire the guest mutex and let
+                // guest user-space (nn::os::WaitEvent / AcquireSemaphore) re-evaluate its predicate!
+                if (t->wait_kind == WAIT_CONDVAR && t->wait_mutex) {
+                    if (mutex_acquire_or_mark(t->wait_mutex, t->wait_tag)) {
+                        t->wait_kind = WAIT_NONE;
+                        t->wait_result = R_OK;
+                        break;
+                    } else {
+                        t->wait_kind = WAIT_MUTEX;
+                        t->wait_addr = t->wait_mutex;
+                    }
+                }
+                continue;
+            }
             t->wait_kind = WAIT_NONE;
             t->wait_result = R_TIMEOUT;
             break;
@@ -351,10 +393,21 @@ static uint32_t block_current(int64_t timeout_ns) {
 
 static uint32_t svc_arbitrate_lock(uint32_t owner, uint64_t addr, uint32_t tag) {
     pthread_mutex_lock(&g_klock);
-    uint32_t v = __atomic_load_n(u32p(addr), __ATOMIC_SEQ_CST);
-    if (v != (owner | WAITERS_BIT)) {
-        pthread_mutex_unlock(&g_klock);
-        return R_OK;
+    // Ensure WAITERS_BIT is set atomically; if the mutex was freed concurrently, acquire it immediately.
+    for (;;) {
+        uint32_t v = __atomic_load_n(u32p(addr), __ATOMIC_SEQ_CST);
+        if (v == 0) {
+            if (__atomic_compare_exchange_n(u32p(addr), &v, tag, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)) {
+                pthread_mutex_unlock(&g_klock);
+                return R_OK;
+            }
+            continue;
+        }
+        if (v != (owner | WAITERS_BIT)) {
+            pthread_mutex_unlock(&g_klock);
+            return R_OK;
+        }
+        break;
     }
     KThread *t = t_cur;
     t->wait_kind = WAIT_MUTEX;
@@ -375,21 +428,20 @@ static uint32_t svc_arbitrate_unlock(uint64_t addr) {
 static uint32_t svc_wait_process_wide_key(uint64_t mutex, uint64_t key, uint32_t tag, int64_t timeout) {
     pthread_mutex_lock(&g_klock);
     KThread *t = t_cur;
+    // Publish the has-waiter flag before releasing the mutex (as Horizon does): nn::os skips
+    // svcSignalProcessWideKey while the key reads 0, so a signaler that takes the freed mutex
+    // before the flag is set would never wake this thread.
+    __atomic_store_n(u32p(key), 1, __ATOMIC_SEQ_CST);
     mutex_release(mutex);
     t->wait_kind = WAIT_CONDVAR;
     t->wait_addr = key;
     t->wait_mutex = mutex;
     t->wait_tag = tag;
-    __atomic_store_n(u32p(key), 1, __ATOMIC_SEQ_CST);
     uint32_t r = block_current(timeout);
-    if (r != R_OK) {
-        // On Horizon, svcWaitProcessWideKeyAtomic does NOT reacquire the mutex on R_TIMEOUT;
-        // nn::os TimedWait calls InternalCriticalSection::Enter(mutex) in user space when r == R_TIMEOUT.
-        bool any_left = false;
-        for (KThread *w = g_waitlist; w; w = w->wnext)
-            if (w->wait_kind == WAIT_CONDVAR && w->wait_addr == key) any_left = true;
-        if (!any_left) __atomic_store_n(u32p(key), 0, __ATOMIC_SEQ_CST);
-    }
+    bool any_left = false;
+    for (KThread *w = g_waitlist; w; w = w->wnext)
+        if (w->wait_kind == WAIT_CONDVAR && w->wait_addr == key) any_left = true;
+    if (!any_left) __atomic_store_n(u32p(key), 0, __ATOMIC_SEQ_CST);
     pthread_mutex_unlock(&g_klock);
     return r;
 }
@@ -633,8 +685,7 @@ static void svc_impl(Cpu *c, uint32_t imm, uint64_t pc) {
     case 0x09: {  // StartThread
         KObject *o = handle_get((uint32_t)x[0]);
         if (!o || o->type != KOBJ_THREAD) { x[0] = R_INVALID_HANDLE; break; }
-        thread_start((KThread *)o);
-        x[0] = R_OK;
+        x[0] = thread_start((KThread *)o) ? R_OK : R_OUT_OF_RESOURCE;
         break;
     }
     case 0x0A: longjmp(t_cur->unwind, 1);  // ExitThread: back to thread_main, which signals the thread object
@@ -905,8 +956,7 @@ KSharedMem *kernel_create_shared_memory(uint64_t size, void (*on_map)(KSharedMem
     return s;
 }
 
-void kernel_dump_threads(void) {
-    pthread_mutex_lock(&g_klock);
+static void dump_threads_locked(void) {
     LOG("=== [threads dump] ===\n");
     for (KThread *t = g_threads; t; t = t->anext) {
         if (!t->started || t->finished) continue;
@@ -951,6 +1001,18 @@ void kernel_dump_threads(void) {
             LOG("    arbiter word at %llx = %#x\n", (unsigned long long)t->wait_addr, av);
         }
     }
+}
+
+void kernel_dump_threads(void) {
+    pthread_mutex_lock(&g_klock);
+    dump_threads_locked();
     pthread_mutex_unlock(&g_klock);
+}
+
+bool kernel_try_dump_threads(void) {
+    if (pthread_mutex_trylock(&g_klock)) return false;
+    dump_threads_locked();
+    pthread_mutex_unlock(&g_klock);
+    return true;
 }
 

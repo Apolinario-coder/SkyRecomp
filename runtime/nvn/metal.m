@@ -944,6 +944,11 @@ void renderer_save_texture(id<MTLTexture> tex, const char *path) {
 
 static double last_fps_time;
 
+static int g_window_crop[4];
+void backend_set_window_crop(const int crop[4]) {
+    if (crop) memcpy(g_window_crop, crop, sizeof g_window_crop);
+}
+
 void backend_present(NvnTexture *t);
 // Present the last frame again (the game thread waits in a host dialog, e.g. the software keyboard): the overlay
 // keeps drawing and taking input.
@@ -994,6 +999,16 @@ void backend_present(NvnTexture *t) {
         extern void widescreen_present_crop(uint64_t, double, float *, double *, double *, double *, double *);
         float crop[4];  // uv origin and size
         widescreen_present_crop(total_frames, shape, crop, &vx, &vy, &vw, &vh);
+        if (g_window_crop[2] > 0 && g_window_crop[3] > 0 && t->width > 0 && t->height > 0) {
+            float u0 = (float)g_window_crop[0] / t->width;
+            float v0 = (float)g_window_crop[1] / t->height;
+            float uw = (float)g_window_crop[2] / t->width;
+            float vh = (float)g_window_crop[3] / t->height;
+            crop[0] = u0 + crop[0] * uw;
+            crop[1] = v0 + crop[1] * vh;
+            crop[2] *= uw;
+            crop[3] *= vh;
+        }
         widescreen_set_factor((float)shape);
         {   // (diagnostics) log output scale / drawable changes
             static double psx, psy, pdw, pdh;
@@ -1175,12 +1190,15 @@ int ui_run(void) {
     ui_window_init();
     atomic_store(&ui_ready, true);
     for (;;) {
-        if (rt_reboot_requested()) return rt_reboot_requested();  // (runtime/main.c tears the game down)
+        if (rt_reboot_requested()) { input_mouse_update(window, false); return rt_reboot_requested(); }
         SDL_Event e;
         while (SDL_WaitEventTimeout(&e, 16)) {
+            if (rt_reboot_requested()) break;
             if (e.type == SDL_EVENT_QUIT) { LOG("window closed\n"); exit(0); }
             if (input_user_blocked(&e)) continue;  // scripted test runs: the real keyboard / mouse / pads do nothing
-            if (menu_handle_event(&e)) continue;
+            bool consumed = menu_handle_event(&e);
+            input_mouse_update(window, true);
+            if (consumed) continue;
             input_handle_event(&e);
         }
         menu_apply_window_requests(window);

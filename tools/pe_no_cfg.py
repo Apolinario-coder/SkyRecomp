@@ -1,7 +1,7 @@
 # pe_no_cfg.py <exe>: clear Control Flow Guard (IMAGE_DLLCHARACTERISTICS_GUARD_CF) in a Windows exe's header.
 # PyInstaller's bootloader is built with CFG, which then applies to the whole process: unicorn's code generator
 # (tools/gen.py, jump tables) longjmps out of the code it generated, CFG takes that for an attack and ends the process
-# (0xC0000409 in VCRUNTIME140.dll) before anything is written. python.exe has no CFG; nor has lasgen after this.
+# (0xC0000409 in VCRUNTIME140.dll) before anything is written. python.exe has no CFG; nor has skygen after this.
 import struct
 import sys
 

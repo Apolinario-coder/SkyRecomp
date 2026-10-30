@@ -12,6 +12,14 @@ int main(void) {
     ((uint32_t *)blob)[0x78 / 4] = 0xff; // two RGBA outputs: MRT or dual source
     blob[17] = 0xe30000000007000full; // EXIT, always
     blob[18] = 0xe2400fffff87000full; // BRA self: end of shader
+    for (int dual = 0; dual < 2; dual++) {
+        ShaderKey key = {.dual_source = dual};
+        ShaderInfo *s = maxwell_translate((const uint8_t *)blob, sizeof blob, STAGE_FRAGMENT, &key);
+        assert(s && s->msl);
+        assert((strstr(s->msl, "color(0), index(1)") != NULL) == (bool)dual);
+        assert((strstr(s->msl, "color(1)") != NULL) != (bool)dual);
+        maxwell_free(s);
+    }
     shaderc_compiler_t compiler = shaderc_compiler_initialize();
     shaderc_compile_options_t options = shaderc_compile_options_initialize();
     shaderc_compile_options_set_target_env(options, shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_3);
@@ -53,5 +61,5 @@ int main(void) {
     }
     shaderc_compile_options_release(options);
     shaderc_compiler_release(compiler);
-    puts("fragment outputs: 36 variants compiled; alpha discard and MRT/dual-source SPIR-V mapping verified");
+    puts("fragment outputs: Metal MRT/dual-source output mapping and 36 compiled SPIR-V variants passed");
 }

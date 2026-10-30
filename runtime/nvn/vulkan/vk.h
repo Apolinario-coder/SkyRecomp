@@ -20,7 +20,9 @@
 #include "../maxwell/shader.h"
 
 void vk_device_fault_report(void);
+void vk_memory_report(void);
 #define VK_CHECK(x) do { VkResult r_ = (x); if (r_ != VK_SUCCESS) { if (r_ == VK_ERROR_DEVICE_LOST) vk_device_fault_report(); \
+    if (r_ == VK_ERROR_OUT_OF_DEVICE_MEMORY || r_ == VK_ERROR_OUT_OF_HOST_MEMORY) vk_memory_report(); \
     FATAL("%s failed: %d (%s:%d)\n", #x, r_, __FILE__, __LINE__); } } while (0)
 
 typedef struct {
@@ -72,9 +74,10 @@ typedef struct TexBackend {
     VkImageViewType base_type;
     uint32_t width, height, depth, layers, levels, samples;
     VkImageAspectFlags aspect;
-    bool gpu_owned, uploaded, dynamic;
+    bool gpu_owned, uploaded, dynamic, custom, custom_enabled;
     uint64_t data_hash, sample_hash, checked_frame, full_frame;
     uint32_t wgen;  // page write tracking generation at the last upload check (textures.c)
+    uint32_t unchanged_frames;
     bool scalable, presented;
     uint64_t touched_frame, frame_cleared;
     uint32_t level_gen;

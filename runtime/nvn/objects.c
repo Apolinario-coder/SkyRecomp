@@ -160,7 +160,8 @@ NVN(nvnEventBuilderGetMemoryOffset) { RET(G(uint64_t, A(0), 8)); }
 static uint64_t event_addr(uint64_t ev) { return G(uint64_t, ev, 0); }
 NVN(nvnEventInitialize) {
     uint64_t pool = G(uint64_t, A(1), 0), off = G(uint64_t, A(1), 8);
-    G(uint64_t, A(0), 0) = HOST(NvnPool, pool)->storage + off;
+    NvnPool *p = pool ? HOST(NvnPool, pool) : NULL;
+    G(uint64_t, A(0), 0) = p ? p->storage + off : 0;
     G(uint64_t, A(0), 8) = pool;
     G(uint64_t, A(0), 16) = off;
     RET(1);
@@ -192,13 +193,13 @@ NVN(nvnMemoryPoolInitialize) {
 }
 NVN(nvnMemoryPoolFinalize) { free(HOST(NvnPool, A(0))); SET_HOST(A(0), 0); }
 NVN(nvnMemoryPoolSetDebugLabel) { (void)c; }
-NVN(nvnMemoryPoolMap) { RET(HOST(NvnPool, A(0))->storage); }
-NVN(nvnMemoryPoolGetBufferAddress) { RET(HOST(NvnPool, A(0))->storage); }  // GPU address == CPU address
-NVN(nvnMemoryPoolGetSize) { RET(HOST(NvnPool, A(0))->size); }
-NVN(nvnMemoryPoolGetFlags) { RET(HOST(NvnPool, A(0))->flags); }
+NVN(nvnMemoryPoolMap) { NvnPool *p = A(0) ? HOST(NvnPool, A(0)) : NULL; RET(p ? p->storage : 0); }
+NVN(nvnMemoryPoolGetBufferAddress) { NvnPool *p = A(0) ? HOST(NvnPool, A(0)) : NULL; RET(p ? p->storage : 0); }  // GPU address == CPU address
+NVN(nvnMemoryPoolGetSize) { NvnPool *p = A(0) ? HOST(NvnPool, A(0)) : NULL; RET(p ? p->size : 0); }
+NVN(nvnMemoryPoolGetFlags) { NvnPool *p = A(0) ? HOST(NvnPool, A(0)) : NULL; RET(p ? p->flags : 0); }
 NVN(nvnMemoryPoolFlushMappedRange) {
-    NvnPool *p = HOST(NvnPool, A(0));
-    backend_pool_written(p->storage + A(1), A(2));
+    NvnPool *p = A(0) ? HOST(NvnPool, A(0)) : NULL;
+    if (p) backend_pool_written(p->storage + A(1), A(2));
 }
 NVN(nvnMemoryPoolInvalidateMappedRange) { (void)c; }
 NVN(nvnMemoryPoolMapVirtual) { RET(1); }
@@ -216,7 +217,8 @@ NVN(nvnBufferBuilderGetMemoryOffset) { RET(G(uint64_t, A(0), 0x10)); }
 NVN(nvnBufferBuilderGetSize) { RET(G(uint64_t, A(0), 0x18)); }
 NVN(nvnBufferInitialize) {
     uint64_t pool = G(uint64_t, A(1), 8), off = G(uint64_t, A(1), 0x10);
-    G(uint64_t, A(0), 0) = HOST(NvnPool, pool)->storage + off;
+    NvnPool *p = pool ? HOST(NvnPool, pool) : NULL;
+    G(uint64_t, A(0), 0) = p ? p->storage + off : 0;
     G(uint64_t, A(0), 8) = pool;
     G(uint64_t, A(0), 0x10) = off;
     G(uint64_t, A(0), 0x18) = G(uint64_t, A(1), 0x18);
@@ -520,7 +522,8 @@ RT_ON_RESET(desc_pools_reset) { memset(g_texture_pools, 0, sizeof g_texture_pool
 
 static NvnDescPool *desc_pool_init(uint64_t guest, uint64_t pool, uint64_t off, int count, size_t entry, NvnDescPool **reg) {
     NvnDescPool *d = calloc(1, sizeof *d);
-    d->addr = HOST(NvnPool, pool)->storage + off;
+    NvnPool *p = pool ? HOST(NvnPool, pool) : NULL;
+    d->addr = p ? p->storage + off : 0;
     d->count = count;
     d->entries = calloc(count, entry);
     SET_HOST(guest, d);
@@ -607,8 +610,8 @@ static void set_shaders(Cpu *c, int stride) {
         p->stages[stage].stage = stage;
         p->stages[stage].code_addr = code;
         p->stages[stage].control = control;
-        p->stages[stage].const_offset = *(const uint32_t *)(control + 0x700);
-        p->stages[stage].const_size = *(const uint32_t *)(control + 0x6FC);
+        p->stages[stage].const_offset = control ? *(const uint32_t *)(control + 0x700) : 0;
+        p->stages[stage].const_size = control ? *(const uint32_t *)(control + 0x6FC) : 0;
         p->stage_mask |= 1u << stage;
     }
     RET(1);
@@ -673,7 +676,7 @@ NVN(nvnQueueAcquireTexture) {
 NVN(nvnQueuePresentTexture) {
     NvnWindow *w = HOST(NvnWindow, A(1));
     int i = (int)A(2);
-    if (i >= 0 && i < w->num) backend_present(HOST(NvnTexture, w->textures[i]));
+    if (i >= 0 && i < w->num) { backend_set_window_crop(w->crop); backend_present(HOST(NvnTexture, w->textures[i])); }
 }
 
 // ================================================================== small state objects

@@ -6,6 +6,7 @@
 #include <SDL3/SDL.h>
 #include <ctype.h>
 #include <math.h>
+#include <pthread.h>
 #include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,6 +17,7 @@
 #include "../settings.h"
 #include "../input_bind.h"
 #include "stick.h"
+#include "motion.h"
 #include "../frame_rate.h"
 
 extern bool menu_input_captured(void);  // runtime/ui/menu.mm: overlay menu or name entry up
@@ -33,6 +35,34 @@ static _Atomic bool mouse_btn_left, mouse_btn_right, mouse_btn_middle, mouse_btn
 static uint8_t keys_down[SDL_SCANCODE_COUNT];
 static SDL_Gamepad *pad;
 static _Atomic int64_t sampling;
+static _Atomic bool mouse_captured;
+static bool mouse_skip_motion;
+static _Atomic int32_t mouse_dx, mouse_dy, mouse_rx, mouse_ry;
+static _Atomic int32_t mouse_slash_x, mouse_slash_y;
+static _Atomic uint64_t mouse_slash_until, mouse_shield_until;
+static uint64_t mouse_frame_ns;
+
+static bool mouse_unbound(int button) {
+    for (int i = 0; i < BIND_KEY_COUNT; i++) if (g_bind_key[i] == 512 + button) return false;
+    return true;
+}
+
+static void mouse_add_motion(_Atomic int32_t *axis, float delta) {
+    if (!isfinite(delta)) return;
+    int32_t add = (int32_t)(fmaxf(-8192, fminf(8192, delta)) * 256), old = atomic_load(axis), next;
+    do { next = old + add; next = next < -8388352 ? -8388352 : next > 8388352 ? 8388352 : next; }
+    while (!atomic_compare_exchange_weak(axis, &old, next));
+}
+
+static void mouse_frame(uint64_t now) {
+    double dt = mouse_frame_ns && now > mouse_frame_ns ? (now - mouse_frame_ns) * 1e-9 : 1.0 / 60;
+    mouse_frame_ns = now;
+    dt = fmax(1.0 / 240, fmin(.1, dt));
+    double gain = 1400.0 / (60 * dt * 256) * g_settings.mouse_sens;
+    int32_t dx = atomic_exchange(&mouse_dx, 0), dy = atomic_exchange(&mouse_dy, 0);
+    mouse_rx = (int32_t)fmax(-32767, fmin(32767, dx * gain));
+    mouse_ry = (int32_t)fmax(-32767, fmin(32767, -dy * gain));
+}
 
 // Host keys / buttons held by a test script (LARECOMP_HOST_INPUT, input_frame): they go through the bindings
 static uint8_t test_keys[SDL_SCANCODE_COUNT];
@@ -51,6 +81,10 @@ static int held_key(int sc) {
         return 0;
     }
     return sc > 0 && sc < SDL_SCANCODE_COUNT && (keys_down[sc] || test_keys[sc]);
+}
+
+static bool mouse_item_mode(void) {
+    return held_key(SDL_SCANCODE_LALT) || (mouse_btn_x1 && mouse_unbound(SDL_BUTTON_X1));
 }
 
 // Through the bindings (runtime/hle/bindings.c: g_bind_key), read on every key event, so a rebind applies at once.
@@ -97,7 +131,23 @@ void input_reset(void) {
     atomic_store(&mouse_btn_middle, false);
     atomic_store(&mouse_btn_x1, false);
     atomic_store(&mouse_btn_x2, false);
+    mouse_dx = mouse_dy = mouse_rx = mouse_ry = 0;
+    mouse_slash_until = mouse_shield_until = 0;
     recompute_keyboard();
+}
+
+void input_mouse_update(void *win, bool playing) {
+    SDL_Window *w = win;
+    bool want = playing && g_is_skyward && g_settings.free_cam && g_settings.mouse_controls &&
+                !menu_input_captured() && (SDL_GetWindowFlags(w) & SDL_WINDOW_INPUT_FOCUS);
+    if (want == atomic_load(&mouse_captured)) return;
+    if (!SDL_SetWindowRelativeMouseMode(w, want)) {
+        LOG("[input] relative mouse mode: %s\n", SDL_GetError());
+        return;
+    }
+    mouse_captured = want;
+    mouse_skip_motion = want;  // The event that recaptured the cursor may still contain an absolute-mode delta.
+    input_reset();
 }
 
 volatile int g_debug_frame_request;  // F9: dump the next frame's passes (build/pass_*.png) + draw log
@@ -131,7 +181,8 @@ bool input_user_blocked(const SDL_Event *e) {
     case SDL_EVENT_MOUSE_MOTION: case SDL_EVENT_MOUSE_BUTTON_DOWN: case SDL_EVENT_MOUSE_BUTTON_UP:
     case SDL_EVENT_MOUSE_WHEEL:
     case SDL_EVENT_GAMEPAD_ADDED: case SDL_EVENT_GAMEPAD_AXIS_MOTION: case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
-    case SDL_EVENT_GAMEPAD_BUTTON_UP: case SDL_EVENT_JOYSTICK_ADDED: case SDL_EVENT_JOYSTICK_AXIS_MOTION:
+    case SDL_EVENT_GAMEPAD_BUTTON_UP: case SDL_EVENT_GAMEPAD_SENSOR_UPDATE: case SDL_EVENT_JOYSTICK_ADDED:
+    case SDL_EVENT_JOYSTICK_AXIS_MOTION:
     case SDL_EVENT_JOYSTICK_BUTTON_DOWN: case SDL_EVENT_JOYSTICK_BUTTON_UP:
         return true;
     default:
@@ -161,16 +212,84 @@ int input_pad_family(void) {
     return env >= 0 ? env : pad_family;
 }
 
+// The controller's motion, for the game's six-axis sensor (gyro aiming and the motion camera, which the game offers
+// with a Pro Controller): written by sensor events on the main thread, read by GetSixAxisSensorState on the game's.
+// Switch units and axes (runtime/hle/motion.h): acceleration in g, angular velocity in rotations / s, angle in
+// rotations, q the controller's orientation since it was connected.
+static pthread_mutex_t motion_lock = PTHREAD_MUTEX_INITIALIZER;
+static struct { bool on; float acc[3], vel[3], angle[3], q[4]; uint64_t t; } motion = {.q = {0, 0, 0, 1}};
+
+static void motion_reset(bool on) {
+    pthread_mutex_lock(&motion_lock);
+    memset(&motion, 0, sizeof motion);
+    motion.q[3] = 1;
+    motion.on = on;
+    pthread_mutex_unlock(&motion_lock);
+}
+
+static const MotionMap *motion_axes(void) {  // (main thread only)
+    static MotionMap m;
+    static bool done;
+    if (!done) {
+        done = true;
+        const char *e = getenv("LARECOMP_GYRO_MAP");
+        if (!e || !motion_parse_map(e, &m)) {
+            if (e) LOG("[input] LARECOMP_GYRO_MAP=%s: not like \"x,-z,y\", ignored\n", e);
+            motion_parse_map("x,-z,y", &m);
+        }
+    }
+    return &m;
+}
+
+static void motion_sample(const SDL_GamepadSensorEvent *s) {
+    float v[3];
+    motion_map(motion_axes(), s->data, v);
+    bool menu = menu_input_captured();  // (the overlay has the controls: the aim stays where it was, no jump after)
+    uint64_t t = s->sensor_timestamp ? s->sensor_timestamp : s->timestamp;
+    pthread_mutex_lock(&motion_lock);
+    if (s->sensor == SDL_SENSOR_ACCEL) {
+        for (int i = 0; i < 3; i++) motion.acc[i] = -v[i] / SDL_STANDARD_GRAVITY;  // (SDL: the push against gravity)
+    } else if (s->sensor == SDL_SENSOR_GYRO) {
+        float dt = motion.t && t > motion.t ? (float)((double)(t - motion.t) * 1e-9) : 0;
+        if (dt > 0.1f) dt = 0;  // (a gap: the controller slept, or events were held up)
+        motion.t = t;
+        // (gyro_sens scales the turn, so the angle and orientation below follow it too; a third-party pad in
+        // Switch mode can report a much faster gyro than a Pro Controller)
+        for (int i = 0; i < 3; i++) motion.vel[i] = menu ? 0 : v[i] / (2 * (float)M_PI) * g_settings.gyro_sens;
+        for (int i = 0; i < 3; i++) motion.angle[i] += motion.vel[i] * dt;
+        motion_integrate(motion.q, motion.vel, dt);
+    }
+    pthread_mutex_unlock(&motion_lock);
+}
+
+static void pad_opened(void) {  // its name, its button prompts, its gyro (DualSense, DualShock 4, Switch controllers)
+    bool gyro = SDL_GamepadHasSensor(pad, SDL_SENSOR_GYRO) && SDL_SetGamepadSensorEnabled(pad, SDL_SENSOR_GYRO, true);
+    if (gyro && SDL_GamepadHasSensor(pad, SDL_SENSOR_ACCEL)) SDL_SetGamepadSensorEnabled(pad, SDL_SENSOR_ACCEL, true);
+    LOG("[input] gamepad: %s (%s)\n", SDL_GetGamepadName(pad), gyro ? "gyro" : "no gyro");
+    note_family();
+    motion_reset(gyro);
+}
+
 void input_handle_event(const SDL_Event *e) {
     static bool scanned;  // pads present at startup: their ADDED event may have gone to the start screen's loop
     if (!scanned) {
         scanned = true;
         int n = 0;
         SDL_JoystickID *ids = SDL_GetGamepads(&n);
-        if (n > 0 && !pad) { pad = SDL_OpenGamepad(ids[0]); LOG("[input] gamepad: %s\n", SDL_GetGamepadName(pad)); note_family(); }
+        if (n > 0 && !pad && (pad = SDL_OpenGamepad(ids[0]))) pad_opened();
         SDL_free(ids);
     }
     switch (e->type) {
+    case SDL_EVENT_WINDOW_FOCUS_LOST:
+        input_reset();
+        break;
+    case SDL_EVENT_MOUSE_MOTION:
+        if (mouse_captured && !menu_input_captured()) {
+            if (mouse_skip_motion) { mouse_skip_motion = false; break; }
+            mouse_add_motion(&mouse_dx, e->motion.xrel);
+            mouse_add_motion(&mouse_dy, e->motion.yrel);
+        }
+        break;
     case SDL_EVENT_KEY_DOWN: case SDL_EVENT_KEY_UP:
         if (e->type == SDL_EVENT_KEY_DOWN && e->key.scancode == SDL_SCANCODE_F9 && !e->key.repeat) g_debug_frame_request = 1;
         if (e->key.scancode < SDL_SCANCODE_COUNT) keys_down[e->key.scancode] = e->type == SDL_EVENT_KEY_DOWN;
@@ -186,17 +305,31 @@ void input_handle_event(const SDL_Event *e) {
             else if (btn == SDL_BUTTON_X1) atomic_store(&mouse_btn_x1, down);
             else if (btn == SDL_BUTTON_X2) atomic_store(&mouse_btn_x2, down);
             recompute_keyboard();
+            if (down && mouse_captured && mouse_unbound(btn)) {
+                uint64_t now = SDL_GetTicks();
+                if (btn == SDL_BUTTON_LEFT && !((key_buttons | pad_buttons) & (1ull << BTN_ZR)) && !mouse_item_mode()) {
+                    int32_t x = mouse_rx, y = mouse_ry;
+                    if (abs(x) + abs(y) < 4000) x = 32767, y = 0;
+                    mouse_slash_x = x < -4000 ? -32767 : x > 4000 ? 32767 : 0;
+                    mouse_slash_y = y < -4000 ? -32767 : y > 4000 ? 32767 : 0;
+                    mouse_slash_until = now + 100;
+                }
+                if (btn == SDL_BUTTON_RIGHT && !mouse_item_mode()) mouse_shield_until = now + 80;
+            }
         }
         break;
     case SDL_EVENT_GAMEPAD_ADDED:
-        if (!pad) { pad = SDL_OpenGamepad(e->gdevice.which); LOG("[input] gamepad: %s\n", SDL_GetGamepadName(pad)); note_family(); }
+        if (!pad && (pad = SDL_OpenGamepad(e->gdevice.which))) pad_opened();
         break;
     case SDL_EVENT_GAMEPAD_REMOVED:
-        if (pad && SDL_GetGamepadID(pad) == e->gdevice.which) { SDL_CloseGamepad(pad); pad = NULL; note_family(); }
+        if (pad && SDL_GetGamepadID(pad) == e->gdevice.which) { SDL_CloseGamepad(pad); pad = NULL; note_family(); motion_reset(false); }
         recompute_pad();
         break;
     case SDL_EVENT_GAMEPAD_AXIS_MOTION: case SDL_EVENT_GAMEPAD_BUTTON_DOWN: case SDL_EVENT_GAMEPAD_BUTTON_UP:
         recompute_pad();
+        break;
+    case SDL_EVENT_GAMEPAD_SENSOR_UPDATE:
+        if (pad && !host_test && SDL_GetGamepadID(pad) == e->gsensor.which) motion_sample(&e->gsensor);
         break;
     }
 }
@@ -352,8 +485,9 @@ static void host_test_frame(uint64_t frame) {
 
 static uint64_t g_pad_obj;
 volatile int g_inject_plus;  // frames to hold Plus for the game (movie.c: A/B skip the opening on rando seeds)
-RT_ON_RESET(input_reboot_reset) { g_pad_obj = 0; g_inject_plus = 0; }  // (reboot: the controller object was guest memory)
+RT_ON_RESET(input_reboot_reset) { g_pad_obj = 0; g_inject_plus = 0; input_reset(); mouse_frame_ns = 0; }
 void input_frame(uint64_t frame) {
+    mouse_frame(SDL_GetTicksNS());
     if (g_pad_obj && getenv("LARECOMP_DUMP_PAD") && frame % 600 == 0) {
         const uint8_t *m = (const uint8_t *)(uintptr_t)(g_pad_obj - 0x98);
         LOG("[pad] mgr %llx 4e0=%u 4e4=%u 4e8=%u 548=%#x 54c..=%02x %02x %02x 56c=%02x\n", g_pad_obj - 0x98,
@@ -429,13 +563,104 @@ uint64_t input_buttons_now(void) { return (menu_input_captured() ? 0 : key_butto
 
 static int32_t clamp_axis(int32_t v) { return v > 32767 ? 32767 : v < -32767 ? -32767 : v; }
 
+// Free camera look, session toggle: a short L press switches it off/on without touching the setting
+// (the setting itself is g_settings.free_cam). Holding L longer than FREE_CAM_TAP_MS does nothing, so a
+// held L keeps its game function. free_cam_l_down / free_cam_l_ms are the press edge and its time.
+enum { FREE_CAM_TAP_MS = 300 };
+static bool free_cam_on = true;
+static bool free_cam_active;
+static bool free_cam_l_down;
+static uint64_t free_cam_l_ms;
+
+// For the on-screen indicator (runtime/ui/menu.mm).
+bool input_free_cam_active(void) { return free_cam_active; }
+RT_ON_RESET(free_camera_reset) { free_cam_on = true; free_cam_l_down = false; free_cam_active = false; }
+
+static uint64_t free_camera_input(uint64_t b, int32_t *right_x, int32_t *right_y, uint64_t now, bool captured) {
+    if (!g_is_skyward || captured) { free_cam_l_down = false; free_cam_active = false; return b; }
+    int32_t rx = *right_x, ry = *right_y;
+    // Free camera look: moving the right stick acts as if L were held too, so the camera turns without
+    // needing to hold L first. rx/ry already have the deadzone applied above.
+    //  - A short L press is a session toggle (off/on, the setting stays as it is).
+    //  - Holding L while it is on turns the free camera off for the hold and withholds L itself, so the right
+    //    stick swings the sword; releasing L brings the free camera back (the setting is not changed).
+    //  - While using items (ZR), targeting (ZL) or holding the pouch wheel (R) it is off anyway: the
+    //    stick keeps its game action there.
+    //  - free_cam_sens scales the stick for the camera only (1.00x = the game's own speed).
+    if (g_settings.free_cam) {
+        const bool l_now = (b & (1ull << BTN_L)) != 0;
+        if (l_now && !free_cam_l_down) {   // press: remember when it started
+            free_cam_l_down = true;
+            free_cam_l_ms = now;
+        } else if (!l_now && free_cam_l_down) {   // release: a short tap toggles, a hold does not
+            free_cam_l_down = false;
+            if (now - free_cam_l_ms <= FREE_CAM_TAP_MS) {
+                free_cam_on = !free_cam_on;
+                LOG("[freecam] free camera %s (short L press)\n", free_cam_on ? "on" : "off");
+            }
+        }
+        const bool hold_off = l_now && free_cam_on;   // L held while the eye is on: the stick fights
+        if (hold_off) b &= ~(1ull << BTN_L);          // ...without the game seeing L+stick (its camera)
+        const bool r_held = (b & (1ull << BTN_R)) != 0;
+        const bool zl_held = (b & (1ull << BTN_ZL)) != 0, zr_held = (b & (1ull << BTN_ZR)) != 0;
+        if (!free_cam_on || hold_off || r_held || zl_held || zr_held) {
+            // no free camera: the stick keeps its own game action (sword, aim, item wheel)
+        } else if (rx || ry) {
+            const float sens = g_settings.free_cam_sens;
+            if (sens > 0.0f && sens != 1.0f) {
+                rx = clamp_axis((int32_t)((float)rx * sens));
+                ry = clamp_axis((int32_t)((float)ry * sens));
+            }
+            b |= 1ull << BTN_L;
+        }
+    } else {
+        free_cam_on = true;   // switching the setting back on starts with the free camera active
+        free_cam_l_down = false;
+    }
+    free_cam_active = g_settings.free_cam && free_cam_on && !(b & ((1ull << BTN_R) | (1ull << BTN_ZL) | (1ull << BTN_ZR))) && !free_cam_l_down;
+    *right_x = rx; *right_y = ry;
+    b &= ~(0xfull << 20);
+    if (rx < -16000) b |= 1ull << 20;
+    if (ry > 16000) b |= 1ull << 21;
+    if (rx > 16000) b |= 1ull << 22;
+    if (ry < -16000) b |= 1ull << 23;
+    return b;
+}
+
+static bool mouse_input(uint64_t *buttons, int32_t *rx, int32_t *ry, uint64_t now, bool captured) {
+    if (!mouse_captured || captured || !g_is_skyward || !g_settings.free_cam || !g_settings.mouse_controls) return false;
+    uint64_t b = *buttons;
+    bool item_mode = mouse_item_mode();
+    if (item_mode) mouse_slash_until = 0;
+    if (mouse_btn_right && mouse_unbound(SDL_BUTTON_RIGHT)) b |= 1ull << BTN_ZL;
+    if (!item_mode && now < mouse_shield_until && mouse_unbound(SDL_BUTTON_RIGHT)) b |= 1ull << BTN_LSTICK;
+    if (mouse_btn_x2 && mouse_unbound(SDL_BUTTON_X2)) b |= 1ull << BTN_R;
+    bool thrust = !item_mode && mouse_btn_middle && mouse_unbound(SDL_BUTTON_MIDDLE);
+    if (thrust) b |= 1ull << BTN_RSTICK;
+    bool item = item_mode || (b & (1ull << BTN_ZR)) != 0;
+    if (item_mode && mouse_btn_left && mouse_unbound(SDL_BUTTON_LEFT)) b |= 1ull << BTN_ZR;
+    bool slash = !item && now < mouse_slash_until && mouse_unbound(SDL_BUTTON_LEFT);
+    // A click starts at neutral, then flicks the stick; time-based pulses work at both 60 and 120 FPS.
+    if (slash) {
+        bool neutral = mouse_slash_until - now > 80;
+        *rx = neutral ? 0 : mouse_slash_x;
+        *ry = neutral ? 0 : mouse_slash_y;
+    } else if (item || (b & (1ull << BTN_R)) || (free_cam_on && !(b & (1ull << BTN_ZL)))) {
+        *rx = clamp_axis(*rx + mouse_rx); *ry = clamp_axis(*ry + mouse_ry);
+    }
+    if (slash || thrust || item_mode) b &= ~(1ull << BTN_L);
+    *buttons = b;
+    return slash || thrust || item_mode;
+}
+
 // NpadFullKeyState / NpadHandheldState / NpadJoy*State share this layout (0x28 bytes):
 // {int64 sampling, u64 buttons, AnalogStick L {x,y}, AnalogStick R {x,y}, u32 attributes}
 static void fill_state(Cpu *c) {
     uint8_t *s = (uint8_t *)(uintptr_t)c->x[0];
     uint32_t id = *(uint32_t *)(uintptr_t)c->x[1];
     memset(s, 0, 0x28);
-    *(int64_t *)s = ++sampling;
+    // Samples advance on a steady input clock, including while rendering/loading is stalled.
+    *(int64_t *)s = sampling = (int64_t)(plat_now_ns() / 4000000ull) + 1;
     if (id != 0) return;
 
     if (g_is_las) {
@@ -471,7 +696,8 @@ static void fill_state(Cpu *c) {
     }
     int32_t lx = clamp_axis((menu ? 0 : key_lx + pad_lx) + script_lx), ly = clamp_axis((menu ? 0 : key_ly + pad_ly) + script_ly);
     int32_t rx = clamp_axis((menu ? 0 : key_rx + pad_rx) + script_rx), ry = clamp_axis((menu ? 0 : key_ry + pad_ry) + script_ry);
-
+    uint64_t now = SDL_GetTicks();
+    bool mouse_sword = mouse_input(&b, &rx, &ry, now, menu);
 
     extern bool mirror_input(void);  // mirror mode, the world on screen (runtime/hle/mirror.c): left and right swap
     bool mirrored = !menu && mirror_input();
@@ -515,6 +741,12 @@ static void fill_state(Cpu *c) {
         b = pets_menu_input(b, st);
         lx = st[0], ly = st[1], rx = st[2], ry = st[3];
     }
+    b = free_camera_input(b, &rx, &ry, now, menu || mouse_sword);
+    b &= ~(0xfull << 20);
+    if (rx < -16000) b |= 1ull << 20;
+    if (ry > 16000) b |= 1ull << 21;
+    if (rx > 16000) b |= 1ull << 22;
+    if (ry < -16000) b |= 1ull << 23;
     *(uint64_t *)(s + 8) = b;
     static uint64_t last_b;
     if (b != last_b && getenv("LARECOMP_INPUT")) LOG("[input] id %#x buttons %#llx (sampling %lld, lr %llx)\n", id, (unsigned long long)b, (long long)sampling, c->x[30]);
@@ -562,16 +794,26 @@ HLE_FUNC("_ZN2nn3hid21GetSixAxisSensorStateEPNS0_18SixAxisSensorStateERKNS0_19Si
     memset(s, 0, 0x60);
     *(int64_t *)(s + 0x00) = (int64_t)rt_frame_period_ns();  // deltaTimeNanoSeconds
     *(int64_t *)(s + 0x08) = ++sixaxis_samp; // samplingNumber
-    *(float *)(s + 0x14) = -1.0f;            // acceleration.y = -1g
-    *(float *)(s + 0x34) = 1.0f;             // direction[0][0]
-    *(float *)(s + 0x44) = 1.0f;             // direction[1][1]
-    *(float *)(s + 0x54) = 1.0f;             // direction[2][2]
+    pthread_mutex_lock(&motion_lock);
+    if (motion.on) {  // a controller with a gyro (the motion state above)
+        memcpy(s + 0x10, motion.acc, 12);    // acceleration
+        memcpy(s + 0x1C, motion.vel, 12);    // angularVelocity
+        memcpy(s + 0x28, motion.angle, 12);  // angle
+        motion_dir_from_q(motion.q, (float *)(s + 0x34));  // direction
+    } else {  // none: a controller at rest
+        *(float *)(s + 0x14) = -1.0f;            // acceleration.y = -1g
+        *(float *)(s + 0x34) = 1.0f;             // direction[0][0]
+        *(float *)(s + 0x44) = 1.0f;             // direction[1][1]
+        *(float *)(s + 0x54) = 1.0f;             // direction[2][2]
+    }
+    pthread_mutex_unlock(&motion_lock);
     *(uint32_t *)(s + 0x58) = 1;             // attributes = IsConnected
     c->x[0] = 0;
 }
+// (this, out): the quaternion of that state's own direction (identity for one at rest)
 HLE_FUNC("_ZNK2nn3hid18SixAxisSensorState13GetQuaternionEPNS_4util4neon12Vector4fTypeE", hid_sixaxis_quat) {
     float *q = (float *)(uintptr_t)c->x[1];
-    if (q) { q[0] = 0.0f; q[1] = 0.0f; q[2] = 0.0f; q[3] = 1.0f; }
+    if (q) motion_q_from_dir((const float *)(uintptr_t)(c->x[0] + 0x34), q);
     c->x[0] = 0;
 }
 

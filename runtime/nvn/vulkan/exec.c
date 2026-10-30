@@ -9,6 +9,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 #include "../../kernel.h"
 #include "shaders.h"
@@ -43,7 +46,7 @@ typedef struct {
     VkCommandBuffer main, upload;
     bool main_begun, upload_begun, ts;  // ts: GPU timestamps written (profiling)
     uint64_t seq;
-    VkDescriptorPool pools[16];
+    VkDescriptorPool pools[64];
     int npools, cur_pool;
 } Sub;
 static Sub subs[SUBS];
@@ -145,8 +148,17 @@ void vk_pace_frame(void) {
     static int cap_fps = -1;
     if (cap_fps < 0) { const char *e = getenv("LARECOMP_UNLOCK_FPS"); cap_fps = !e || atoi(e) == 0; }
     if (cap_fps) {
-        const uint64_t period_ns = rt_frame_period_ns();
+        // The game's own swap interval (1 = 60 Hz, 2 = its 30 fps mode): on a console the compositor holds each
+        // present that many vsyncs - here the pacer does, so the game's 30 fps mode presents at 30 and plays at
+        // full speed instead of advancing the world twice per presented frame.
+        const uint32_t interval = rt_game_interval();
+        const uint64_t period_ns = rt_frame_period_ns() * interval;
         static uint64_t next_present_ns;
+        static uint32_t interval_seen = 1;
+        if (interval_seen != interval) {  // (the game changed its frame mode: re-anchor the present grid)
+            interval_seen = interval;
+            next_present_ns = 0;
+        }
         uint64_t t0 = plat_now_ns();
         if (!next_present_ns) next_present_ns = t0;
         next_present_ns += period_ns;
@@ -450,7 +462,7 @@ VkDescriptorSet vk_alloc_set(VkDescriptorSetLayout layout) {
     Sub *s = sub();
     for (;;) {
         if (s->cur_pool == s->npools) {
-            if (s->npools == 16) FATAL("descriptor pools exhausted\n");
+            if (s->npools == 64) FATAL("descriptor pools exhausted (64 pools)\n");
             VkDescriptorPoolSize sizes[] = {{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 32768}, {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 4096},
                                             {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 32768},
                                             {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1024}, {VK_DESCRIPTOR_TYPE_SAMPLER, 1024}};
@@ -487,7 +499,11 @@ static int new_chunk(uint64_t size) {
                                   .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT};
     if (getenv("LARECOMP_VK_RING_SYSMEM")) ai.usage = VMA_MEMORY_USAGE_AUTO_PREFER_HOST;  // (test: a GPU without resizable BAR)
     VmaAllocationInfo info;
-    VK_CHECK(vmaCreateBuffer(g_vk.vma, &bi, &ai, &c->buf, &c->mem, &info));
+    VkResult vr = vmaCreateBuffer(g_vk.vma, &bi, &ai, &c->buf, &c->mem, &info);
+    if (vr != VK_SUCCESS) {
+        ai.usage = VMA_MEMORY_USAGE_AUTO_PREFER_HOST;
+        VK_CHECK(vmaCreateBuffer(g_vk.vma, &bi, &ai, &c->buf, &c->mem, &info));
+    }
     c->ptr = info.pMappedData;
     c->size = size;
     if (!nchunks) {  // where the ring lives: device-local (resizable BAR) or system memory read across PCIe
@@ -1607,7 +1623,11 @@ static TexBackend *snapshot_image(NvnTexture *t, TexBackend *src) {
                                 .samples = (VkSampleCountFlagBits)src->samples, .tiling = VK_IMAGE_TILING_OPTIMAL,
                                 .usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT};
         VmaAllocationCreateInfo ai = {.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE};
-        VK_CHECK(vmaCreateImage(g_vk.vma, &ci, &ai, &d->image, &d->mem, NULL));
+        VkResult vr = vmaCreateImage(g_vk.vma, &ci, &ai, &d->image, &d->mem, NULL);
+        if (vr != VK_SUCCESS) {
+            ai.usage = VMA_MEMORY_USAGE_AUTO;
+            VK_CHECK(vmaCreateImage(g_vk.vma, &ci, &ai, &d->image, &d->mem, NULL));
+        }
         d->format = src->format; d->width = src->width; d->height = src->height; d->depth = 1; d->layers = 1; d->levels = 1;
         d->samples = src->samples; d->aspect = src->aspect; d->base_type = VK_IMAGE_VIEW_TYPE_2D;
         vk_image_init_layout(vk_cmd(), d->image, d->aspect);
@@ -1936,6 +1956,7 @@ static VkDeviceMemory gmem_mem;
 static uint64_t gmem_size;
 
 static bool gmem_import(uint64_t size) {
+    plat_commit(HEAP_BASE, size);  // An external host-memory import must cover committed pages.
     PFN_vkGetMemoryHostPointerPropertiesEXT props =
         (PFN_vkGetMemoryHostPointerPropertiesEXT)vkGetDeviceProcAddr(g_vk.dev, "vkGetMemoryHostPointerPropertiesEXT");
     VkMemoryHostPointerPropertiesEXT mp = {.sType = VK_STRUCTURE_TYPE_MEMORY_HOST_POINTER_PROPERTIES_EXT};
@@ -2288,7 +2309,17 @@ void vc_flush(void) {
 // forces copies.
 static bool guest_direct(uint64_t addr, uint64_t size, VkBuffer *buf, VkDeviceSize *off) {
     static int copy = -1;
-    if (copy < 0) copy = getenv("LARECOMP_VK_COPY_VERTICES") != NULL;
+    if (copy < 0) {
+        copy = getenv("LARECOMP_VK_COPY_VERTICES") != NULL;
+#ifdef _WIN32
+        MEMORYSTATUSEX memory = {.dwLength = sizeof memory};
+        // WDDM charges another heap-sized commitment for this optional zero-copy import.
+        if (!copy && GlobalMemoryStatusEx(&memory) && memory.ullAvailPageFile < kernel_heap_size() * 2 + (4ull << 30)) {
+            copy = 1;
+            LOG("[vk] using copied vertices to preserve Windows memory headroom\n");
+        }
+#endif
+    }
     if (copy || addr < HEAP_BASE) return false;
     if (addr + size > HEAP_BASE + gmem_size && kernel_heap_size() != gmem_tried) { gmem_tried = kernel_heap_size(); gmem_info(); }
     if (!gmem_buf || addr + size > HEAP_BASE + gmem_size) return false;
@@ -3402,7 +3433,11 @@ static TexBackend *post_image(int i, uint32_t w, uint32_t h) {
                                 .samples = VK_SAMPLE_COUNT_1_BIT, .tiling = VK_IMAGE_TILING_OPTIMAL,
                                 .usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT};
         VmaAllocationCreateInfo ai = {.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE};
-        VK_CHECK(vmaCreateImage(g_vk.vma, &ci, &ai, &d->image, &d->mem, NULL));
+        VkResult vr = vmaCreateImage(g_vk.vma, &ci, &ai, &d->image, &d->mem, NULL);
+        if (vr != VK_SUCCESS) {
+            ai.usage = VMA_MEMORY_USAGE_AUTO;
+            VK_CHECK(vmaCreateImage(g_vk.vma, &ci, &ai, &d->image, &d->mem, NULL));
+        }
         d->format = VK_FORMAT_R8G8B8A8_UNORM; d->width = w; d->height = h; d->depth = 1; d->layers = 1; d->levels = 1;
         d->samples = 1; d->aspect = VK_IMAGE_ASPECT_COLOR_BIT; d->base_type = VK_IMAGE_VIEW_TYPE_2D;
         vk_image_init_layout(vk_cmd(), d->image, d->aspect);
@@ -3428,7 +3463,11 @@ static VkImageView smaa_lut(int i) {
                                 .extent = {w, h, 1}, .mipLevels = 1, .arrayLayers = 1, .samples = VK_SAMPLE_COUNT_1_BIT,
                                 .tiling = VK_IMAGE_TILING_OPTIMAL, .usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT};
         VmaAllocationCreateInfo ai = {.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE};
-        VK_CHECK(vmaCreateImage(g_vk.vma, &ci, &ai, &d->image, &d->mem, NULL));
+        VkResult vr = vmaCreateImage(g_vk.vma, &ci, &ai, &d->image, &d->mem, NULL);
+        if (vr != VK_SUCCESS) {
+            ai.usage = VMA_MEMORY_USAGE_AUTO;
+            VK_CHECK(vmaCreateImage(g_vk.vma, &ci, &ai, &d->image, &d->mem, NULL));
+        }
         d->format = f; d->width = w; d->height = h; d->depth = 1; d->layers = 1; d->levels = 1;
         d->samples = 1; d->aspect = VK_IMAGE_ASPECT_COLOR_BIT; d->base_type = VK_IMAGE_VIEW_TYPE_2D;
         VkCommandBuffer cb = vk_cmd();

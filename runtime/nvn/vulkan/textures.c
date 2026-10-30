@@ -8,7 +8,9 @@
 #include <string.h>
 
 #include "vk.h"
+#include "../../settings.h"
 #include "../astc.h"
+#include "../custom_tex.h"
 #include "../renderer.h"
 #include "../texpatch.h"
 
@@ -487,11 +489,65 @@ static void upload_pending(NvnTexture *t, TexBackend *b) {
 }
 
 uint64_t prof_tex_checks, prof_tex_samples, prof_tex_full, prof_tex_full_bytes, prof_tex_dyn, prof_tex_watch_skips;
+static bool upload_custom(NvnTexture *t, TexBackend *b) {
+    SDL_Surface *s = custom_tex_load(t);
+    if (!s) return false;
+    bool srgb = (t->format >= 0x87 && t->format <= 0x94) ||
+                (t->format >= 0x45 && t->format <= 0x48) || t->format == 0x4e || t->format == 0x9b;
+    VkFormat format = srgb ? VK_FORMAT_R8G8B8A8_SRGB : VK_FORMAT_R8G8B8A8_UNORM;
+    uint32_t levels = 1;
+    if (t->levels > 1) for (uint32_t n = s->w > s->h ? s->w : s->h; n > 1; n >>= 1) levels++;
+    VkImageCreateInfo ci = {.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, .flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT, .imageType = VK_IMAGE_TYPE_2D,
+        .format = format, .extent = {(uint32_t)s->w, (uint32_t)s->h, 1}, .mipLevels = levels, .arrayLayers = 1,
+        .samples = VK_SAMPLE_COUNT_1_BIT, .tiling = VK_IMAGE_TILING_OPTIMAL,
+        .usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT};
+    VmaAllocationCreateInfo ai = {.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE};
+    VkImage image; VmaAllocation mem;
+    VkResult result = vmaCreateImage(g_vk.vma, &ci, &ai, &image, &mem, NULL);
+    if (result != VK_SUCCESS) {
+        ai.usage = VMA_MEMORY_USAGE_AUTO;
+        result = vmaCreateImage(g_vk.vma, &ci, &ai, &image, &mem, NULL);
+    }
+    if (result != VK_SUCCESS) {
+        LOG("[custom_tex] GPU allocation failed (%d), keeping original %ux%u texture\n", result, t->width, t->height);
+        SDL_DestroySurface(s); return false;
+    }
+    VkSpan span = vk_transient((uint64_t)s->w * s->h * 4, 16);
+    for (int y = 0; y < s->h; y++) memcpy((uint8_t *)span.ptr + (size_t)y * s->w * 4, (uint8_t *)s->pixels + (size_t)y * s->pitch, (size_t)s->w * 4);
+    destroy_image(b);
+    b->image = image; b->mem = mem; b->format = format;
+    b->width = s->w; b->height = s->h; b->depth = b->layers = b->samples = 1; b->levels = levels;
+    b->base_type = VK_IMAGE_VIEW_TYPE_2D; b->aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+    b->astc_bw = b->astc_bh = 0; b->custom = true;
+    VkCommandBuffer cb = vk_upload_cmd();
+    vk_image_init_layout(cb, image, b->aspect);
+    VkBufferImageCopy copy = {.bufferOffset = span.off, .imageSubresource = {b->aspect, 0, 0, 1},
+                             .imageExtent = {b->width, b->height, 1}};
+    vkCmdCopyBufferToImage(cb, span.buf, image, VK_IMAGE_LAYOUT_GENERAL, 1, &copy);
+    VkMemoryBarrier2 barrier = {.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2,
+        .srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT, .srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT,
+        .dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT, .dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT};
+    VkDependencyInfo dep = {.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO, .memoryBarrierCount = 1, .pMemoryBarriers = &barrier};
+    for (uint32_t lv = 1; lv < levels; lv++) {
+        vkCmdPipelineBarrier2(cb, &dep);
+        uint32_t w = b->width >> (lv - 1), h = b->height >> (lv - 1);
+        if (!w) w = 1;
+        if (!h) h = 1;
+        VkImageBlit blit = {.srcSubresource = {b->aspect, lv - 1, 0, 1}, .srcOffsets = {{0, 0, 0}, {w, h, 1}},
+                           .dstSubresource = {b->aspect, lv, 0, 1}, .dstOffsets = {{0, 0, 0}, {w > 1 ? w / 2 : 1, h > 1 ? h / 2 : 1, 1}}};
+        vkCmdBlitImage(cb, image, VK_IMAGE_LAYOUT_GENERAL, image, VK_IMAGE_LAYOUT_GENERAL, 1, &blit, VK_FILTER_LINEAR);
+    }
+    vkCmdPipelineBarrier2(cb, &dep);
+    SDL_DestroySurface(s);
+    return true;
+}
+
 static void upload_texture(NvnTexture *t, TexBackend *b) {
     if (!t->addr || t->target == 10) return;
     uint64_t frame = vk_frame_counter();
-    if (b->uploaded && b->checked_frame == frame) return;
-    if (b->uploaded && !b->dynamic && ((frame + ((uintptr_t)b >> 6)) & 7)) return;
+    bool pack_changed = b->uploaded && b->custom_enabled != g_settings.hd_textures;
+    if (!pack_changed && b->uploaded && b->checked_frame == frame) return;
+    if (!pack_changed && b->uploaded && !b->dynamic && ((frame + ((uintptr_t)b >> 6)) & 7)) return;
     const FormatInfo *fi = t->layout.fmt;
     if (!fi || !fi->bpb) return;
     VkFmt mf = fmt_of(t->format);
@@ -507,7 +563,7 @@ static void upload_texture(NvnTexture *t, TexBackend *b) {
     bool periodic = frame - b->full_frame >= 120 && full_hash_budget >= total;  // (safety net: a full hash now and then)
     if (!full && periodic) { full = true; full_hash_budget -= total; }
     if (!b->tp) b->tp = texpatch_identify(t) + 1;  // (button prompts / Hero Mode icon: re-uploaded when their look changes)
-    bool restyle = b->tp > 0 && b->uploaded && b->tp_gen != texpatch_generation();
+    bool restyle = pack_changed || (b->tp > 0 && b->uploaded && b->tp_gen != texpatch_generation());
     // The OS's page write tracking (exec.c vk_pages_changed, shared with the vertex cache): texture memory the CPU
     // hasn't written since the last check is not hashed at all (dynamic textures were fully hashed every frame,
     // ~2.4 MB a frame in the overworld). The periodic full hash stays as a safety net. LARECOMP_VK_TEX_WATCH=0: off.
@@ -525,20 +581,31 @@ static void upload_texture(NvnTexture *t, TexBackend *b) {
             }
         }
     }
-    if (!full && !restyle) {
+    if (!restyle && b->uploaded) {
         prof_tex_samples++;
         uint64_t sh = fnv_sample(mem, total);
-        if (sh == b->sample_hash) return;
+        if (sh == b->sample_hash && !periodic && !always_full) {
+            if (b->dynamic && ++b->unchanged_frames > 300) b->dynamic = false;
+            return;
+        }
     }
     prof_tex_full++; prof_tex_full_bytes += total; if (b->dynamic) prof_tex_dyn++;
     uint64_t h = hash_full(mem, total);
     b->full_frame = frame;
     b->sample_hash = fnv_sample(mem, total);
-    if (b->uploaded && h == b->data_hash && !restyle) return;
+    if (b->uploaded && h == b->data_hash && !restyle) {
+        if (b->dynamic && ++b->unchanged_frames > 300) b->dynamic = false;
+        return;
+    }
+    b->unchanged_frames = 0;
     if (b->uploaded && h != b->data_hash) b->dynamic = true;
     if (b->tp > 0) b->tp_gen = texpatch_generation();
     b->data_hash = h;
+    b->custom_enabled = g_settings.hd_textures;
     b->uploaded = true;
+    if (b->custom) { destroy_image(b); b->custom = false; create_image(t, b); }
+    // Button-prompt edits take priority over external packs.
+    if (b->tp <= 0 && upload_custom(t, b)) return;
     if (b->format != mf.vf && !b->astc_bw) return;  // unsupported format: nothing sensible to copy
     VkCommandBuffer cb = vk_upload_cmd();
     uint32_t layers = t->layout.layers ? t->layout.layers : 1;

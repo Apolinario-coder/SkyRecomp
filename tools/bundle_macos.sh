@@ -3,7 +3,7 @@
 # Contents/Frameworks: every non-system dylib it loads (SDL3, FFmpeg; from build/deps, else Homebrew), load
 # paths rewritten to @rpath; Contents/Resources: the icon, the seed generator helper (build/helper/rando-gen, when
 # built: runtime/ui/rando_tab.mm generator_cmd) and what the start screen builds the game code with on the player's
-# machine (runtime/gamebuild.c): the generator helper (build/helper/lasgen), the compiler (build/zig, tools/fetch_zig.sh)
+# machine (runtime/gamebuild.c): the generator helper (build/helper/skygen), the compiler (build/zig, tools/fetch_zig.sh)
 # and the headers the code is compiled against (gamelib-src/). Ad-hoc signed. No game files, game code or fonts: the
 # app keeps those in ~/Library/Application Support/<bundle id> (runtime/paths.h).
 # MACOS_MIN=<x.y>: LSMinimumSystemVersion, and every Mach-O inside must be built for it or older (else it fails and
@@ -21,10 +21,10 @@ case "$VERSION" in
     v*) VERSION="${VERSION#v}" ;;
 esac
 HELPER=build/helper/rando-gen
-GEN_HELPER=build/helper/lasgen
+GEN_HELPER=build/helper/skygen
 ZIG=build/zig
 [ -x "$EXE" ] || { echo "no $EXE"; exit 1; }
-[ -x "$GEN_HELPER/lasgen" ] || { echo "no $GEN_HELPER (make gen-helper)"; exit 1; }
+[ -x "$GEN_HELPER/skygen" ] || { echo "no $GEN_HELPER (make gen-helper)"; exit 1; }
 [ -x "$ZIG/zig" ] || { echo "no $ZIG (tools/fetch_zig.sh)"; exit 1; }
 # the app must hold no game code: that's built on the player's machine (grep without -q: with pipefail, nm cut off
 # early would hide a match)
@@ -36,15 +36,18 @@ mkdir -p "$C/MacOS" "$C/Frameworks" "$C/Resources"
 cp "$EXE" "$C/MacOS/skyrecomp"
 strip -S "$C/MacOS/skyrecomp"  # (debug-map entries only: the symbols crash reports name functions by stay)
 if [ -x "$HELPER/rando-gen" ]; then cp -R "$HELPER" "$C/Resources/rando-gen"; else echo "note: no $HELPER (make rando-helper)"; fi
-cp -R "$GEN_HELPER" "$C/Resources/lasgen"
+cp -R "$GEN_HELPER" "$C/Resources/skygen"
 cp -R "$ZIG" "$C/Resources/zig"
 mkdir "$C/Resources/gamelib-src"
 cp runtime/cpu.h runtime/simd.h runtime/simd_fp.h runtime/gamelib.h tools/gamelib_entry.c runtime/hle/hle_symbols.txt \
    "$C/Resources/gamelib-src/"
 cp docs/icon/icon.icns "$C/Resources/icon.icns"
 cp docs/icon/icon_1024.png "$C/Resources/icon.png"  # (window / Dock icon at run time)
-cp third_party/fonts/Baloo2/Baloo2-SemiBold.ttf "$C/Resources/Baloo2-SemiBold.ttf"  # (start screen; OFL, README "License")
-cp third_party/fonts/Baloo2/OFL.txt "$C/Resources/Baloo2-OFL.txt"
+cp fonts/Baloo2-SemiBold.ttf fonts/Baloo2-OFL.txt "$C/Resources/"
+cp README.md LICENSE LICENSE-LASRecomp "$C/Resources/"
+cp third_party/imgui/LICENSE.txt "$C/Resources/LICENSE-ImGui.txt"
+cp third_party/smaa/LICENSE.txt "$C/Resources/LICENSE-SMAA.txt"
+cp third_party/xxhash/LICENSE "$C/Resources/LICENSE-xxHash"
 
 # ---- dylibs: copy every non-system dependency, recursively; point all references at @rpath/<name>
 is_system() { case "$1" in /usr/lib/*|/System/*) return 0;; esac; return 1; }

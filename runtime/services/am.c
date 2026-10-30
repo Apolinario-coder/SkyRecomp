@@ -163,7 +163,8 @@ static void application_functions(Service *s, IpcReq *req, IpcResp *resp) {
     case 20: OUT(uint64_t, 0) = 0; resp_size(resp, 8); break;  // EnsureSaveData
     case 21: {  // GetDesiredLanguage: the game's text language (settings: runtime/settings.c, "language")
         char lang[8] = {0};
-        snprintf(lang, sizeof lang, "%s", settings_language());
+        snprintf(lang, sizeof lang, "%s", settings_language_code());
+        LOG("[language] am cmd 21 GetDesiredLanguage -> %s\n", lang);
         memcpy(resp->data, lang, 8);
         resp_size(resp, 8);
         break;
@@ -238,6 +239,38 @@ HLE_FUNC("_ZN2nn3apm34GetCurrentPerformanceConfigurationEv", apm_get_cur_conf) {
 
 HLE_FUNC("_ZN2nn3apm27GetPerformanceConfigurationENS0_15PerformanceModeE", apm_get_perf_conf) {
     c->x[0] = 0x00020004;
+}
+
+HLE_FUNC("_ZN2nn2oe18GetDesiredLanguageEv", oe_get_desired_language) {
+    uint64_t code = 0;
+    const char *s = settings_language_code();
+    size_t len = strlen(s);
+    if (len > 8) len = 8;
+    memcpy(&code, s, len);
+    LOG("[language] nn::oe::GetDesiredLanguage() -> %s (0x%llx)\n", s, (unsigned long long)code);
+    c->x[0] = code;
+}
+
+HLE_FUNC("_ZN2nn8settings15GetLanguageCodeEPNS0_12LanguageCodeE", settings_get_language_code) {
+    uint64_t code = 0;
+    const char *s = settings_language_code();
+    size_t len = strlen(s);
+    if (len > 8) len = 8;
+    memcpy(&code, s, len);
+    LOG("[language] nn::settings::GetLanguageCode() -> %s (0x%llx)\n", s, (unsigned long long)code);
+    if (c->x[0]) *(uint64_t *)(uintptr_t)c->x[0] = code;
+    c->x[0] = 0;
+}
+
+HLE_FUNC("_ZN2nn8settings6detail15GetLanguageCodeEPNS0_12LanguageCodeE", settings_detail_get_language_code) {
+    uint64_t code = 0;
+    const char *s = settings_language_code();
+    size_t len = strlen(s);
+    if (len > 8) len = 8;
+    memcpy(&code, s, len);
+    LOG("[language] nn::settings::detail::GetLanguageCode() -> %s (0x%llx)\n", s, (unsigned long long)code);
+    if (c->x[0]) *(uint64_t *)(uintptr_t)c->x[0] = code;
+    c->x[0] = 0;
 }
 
 // ------------------------------------------------------------------ lm (guest log output)
