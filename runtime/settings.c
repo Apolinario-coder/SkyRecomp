@@ -35,6 +35,7 @@ Settings g_settings = {
     .movie_audio = true,
     .show_fps = false,
     .hd_textures = true,
+    .watercolor_filter = WATERCOLOR_ORIGINAL,
     .reshade = true,
     .frame_rate = 60,
     .inv_keys = true,
@@ -200,6 +201,9 @@ void settings_load(void) {
         if (!strcmp(key, "aspect")) g_settings.aspect = !strcmp(val, "original") ? ASPECT_ORIGINAL : ASPECT_UNLOCKED;
         else if (!strcmp(key, "fullscreen")) g_settings.fullscreen = atoi(val) != 0;
         else if (!strcmp(key, "hd_textures")) g_settings.hd_textures = atoi(val) != 0;
+        else if (!strcmp(key, "watercolor_filter"))
+            g_settings.watercolor_filter = !strcmp(val, "off") || !strcmp(val, "0") ? WATERCOLOR_OFF :
+                                           !strcmp(val, "resolution_aware") ? WATERCOLOR_RESOLUTION : WATERCOLOR_ORIGINAL;
         else if (!strcmp(key, "reshade")) g_settings.reshade = atoi(val) != 0;
         else if (!strcmp(key, "volume")) g_settings.volume = (float)atof(val);
         else if (!strcmp(key, "reverb")) g_settings.reverb = atoi(val) != 0;
@@ -279,6 +283,8 @@ void settings_save(void) {
     fprintf(f, "aspect = %s\n", g_settings.aspect == ASPECT_ORIGINAL ? "original" : "unlocked");
     fprintf(f, "fullscreen = %d\n", g_settings.fullscreen);
     fprintf(f, "hd_textures = %d\nreshade = %d\n", g_settings.hd_textures, g_settings.reshade);
+    fprintf(f, "watercolor_filter = %s\n", g_settings.watercolor_filter == WATERCOLOR_OFF ? "off" :
+            g_settings.watercolor_filter == WATERCOLOR_RESOLUTION ? "resolution_aware" : "original");
     fprintf(f, "volume = %.2f\n", g_settings.volume);
     fprintf(f, "reverb = %d\n", g_settings.reverb);
     fprintf(f, "movie_audio = %d\n", g_settings.movie_audio);

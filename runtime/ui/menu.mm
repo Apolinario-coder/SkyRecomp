@@ -530,6 +530,15 @@ static void tab_display(void) {
                "Smooths jagged edges of the game image before it is scaled to the window. SMAA: finds the edges and "
                "blends only along them, so textures stay sharp. Most useful at a lower internal resolution.");
 
+    if (g_is_skyward) {
+        static const char *paint[] = {"Original", "Resolution-aware", "Off"};
+        if (opt_choice("Watercolor filter", &g_settings.watercolor_filter, paint, 3, WATERCOLOR_ORIGINAL,
+                       "Original keeps the game's painted filter. Resolution-aware adjusts its sampling to the actual "
+                       "render size. Off preserves fine details such as ladder rungs and fence rails and can reduce "
+                       "shimmer. Applies immediately in VR and non-VR."))
+            settings_save();
+    }
+
     opt_section("Game");
     opt_toggle("Remove blur", &g_settings.blur_removal, false,
                "Turns off the tilt-shift blur at the top and bottom of the screen.");

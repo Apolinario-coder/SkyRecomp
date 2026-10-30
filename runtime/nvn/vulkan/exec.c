@@ -17,6 +17,7 @@
 #include "shaders.h"
 #include "vk.h"
 #include "../renderer.h"
+#include "../paint_filter.h"
 #include "../../settings.h"
 #include "../../frame_rate.h"
 
@@ -1941,6 +1942,14 @@ static VkDescriptorBufferInfo cbuf_info(int stage, ShaderInfo *si, int k, uint32
     if ((si->cbuf_dynamic & (1u << k)) && r.size) size = r.size > 0x10000 ? 0x10000 : r.size;
     if (size > r.size && r.size) size = r.size;
     if (size < 16) size = 16;
+    if (g_settings.watercolor_filter != WATERCOLOR_ORIGINAL && stage == 1 && idx == 2) {
+        NvnTexture *t = si->ntex ? shader_texture_object(1, &si->tex[0]) : NULL;
+        const TexBackend *b = t ? (const TexBackend *)t->backend : NULL;
+        float local[SKY_PAINT_PARAMS_MAX / sizeof(float)];
+        if (t && b && sky_paint_filter_parameters(local, (const void *)(uintptr_t)r.addr, size, g_cur_fs_hash,
+                g_settings.watercolor_filter, t->width, t->height, b->width, b->height))
+            return ubo_span(vk_transient_copy(local, size, 256), size);
+    }
     // snapshot: later CPU writes must not leak in. Shared by the draws of one submission binding the same range:
     // within a command list nothing writes guest memory (no inline UpdateUniformBuffer: that writes through below
     // and drops the shared copies).
