@@ -340,6 +340,48 @@ static void unit_mark(const Tools *t, const Unit *u) {
     if (f) fputs(s, f), fclose(f);
 }
 
+// ------------------------------------------------------------------ resuming
+// A stopped or failed build keeps its work folder. Each object gets a stamp: FNV-1a of the compiler, its flags, the
+// headers' folder, GAMELIB_ID and the C it was compiled from. The generator writes the same C again on the next run,
+// so a unit whose stamp still matches (and whose object is there) isn't compiled again.
+static uint64_t fnv(uint64_t h, const void *p, size_t n) {
+    for (const unsigned char *b = (const unsigned char *)p; n--; b++) h = (h ^ *b) * 0x100000001b3ull;
+    return h;
+}
+
+static bool unit_stamp(const Tools *t, const Unit *u, char *out, size_t n) {
+    uint64_t h = 0xcbf29ce484222325ull;
+    const char *seed[] = {t->cc, GAMELIB_CFLAGS, t->inc, GAMELIB_ID};
+    for (size_t i = 0; i < sizeof seed / sizeof *seed; i++) h = fnv(h, seed[i], strlen(seed[i]) + 1);
+    FILE *f = fopen(u->src, "rb");
+    if (!f) return false;
+    static char buf[1 << 20];  // (the build loop is one thread)
+    size_t k;
+    while ((k = fread(buf, 1, sizeof buf, f)) > 0) h = fnv(h, buf, k);
+    fclose(f);
+    snprintf(out, n, "%016llx", (unsigned long long)h);
+    return true;
+}
+
+static bool unit_done(const Tools *t, const Unit *u) {
+    struct stat st;
+    char want[32], have[32] = "";
+    if (stat(u->obj, &st) != 0 || st.st_size == 0 || !unit_stamp(t, u, want, sizeof want)) return false;
+    FILE *f = fopen(u->stamp, "rb");
+    if (!f) return false;
+    size_t k = fread(have, 1, sizeof have - 1, f);
+    fclose(f);
+    have[k] = 0;
+    return !strcmp(want, have);
+}
+
+static void unit_mark(const Tools *t, const Unit *u) {
+    char s[32];
+    if (!unit_stamp(t, u, s, sizeof s)) return;
+    FILE *f = fopen(u->stamp, "wb");
+    if (f) fputs(s, f), fclose(f);
+}
+
 static PlatProc start_compile(const Tools *t, const Unit *u) {
     remove(u->stamp);  // (until it compiles: a stopped compile can leave part of an object)
     Args a = {0};
