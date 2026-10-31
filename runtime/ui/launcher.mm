@@ -514,9 +514,9 @@ static bool build_choice_shown(void) {
 }
 static const char *const BUILD_NAMES[] = {"Faster build", "Faster game"};
 static const char *const BUILD_DESC =
-    "How the game code is compiled from your game files.\n\nFaster build: the few giant functions that take most of "
-    "the time get less optimization, so the build finishes much sooner. The game may run slightly slower.\n\nFaster "
-    "game: everything fully optimized. The build takes much longer (over an hour on a laptop).";
+    "How the game code is compiled from your game files. Both optimize everything and take a few minutes.\n\nFaster "
+    "build: a file still compiling after 5 minutes (a very slow machine) is restarted without optimization.\n\nFaster "
+    "game: no time limit.";
 
 // ------------------------------------------------------------------ folder dialog (SDL calls back on any thread)
 static void SDLCALL picked(void *, const char *const *files, int) {

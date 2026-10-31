@@ -367,14 +367,27 @@ class Module:
         raise Unsupported(k)
 
     def emit_function(self, entry, end, labels, tables, hle):
-        out = [f'void {fname(entry)}(Cpu *c) {{']
         if entry in hle:
-            out.append(f'    {sanitize(hle[entry])}(c);')
-            out.append('}')
-            return out
-        out.append(f'    FN_ENTER({hx(entry)});')
-        batch = []
+            return [f'void {fname(entry)}(Cpu *c) {{', f'    {sanitize(hle[entry])}(c);', '}']
         refs = set()
+        # A table branch whose emulation missed its target (or a computed one never resolved) has to reach any
+        # instruction. Labelling them all in the function itself made every instruction a block the dispatch switch
+        # can enter, so nothing stays in registers across one: functions with a table ran far slower, and the big
+        # ones spent most of an hour in LLVM (main_707.c, 34620 instructions: 5 MB of C, -O0 after the budget,
+        # runtime/gamebuild.c). Those branches tail-call a twin instead, all labels, never optimised (it only runs
+        # after a miss), and the function keeps its own labels.
+        out = self._emit_body(entry, end, labels, tables, refs, True) if tables else []
+        out += self._emit_body(entry, end, labels, tables, refs, False)
+        self._refs = refs
+        return out
+
+    def _emit_body(self, entry, end, labels, tables, refs, twin):
+        if twin:
+            out = [f'static __attribute__((cold, noinline, optnone)) void {fname(entry)}_any(Cpu *c) {{',
+                   '    goto L_dispatch;']
+        else:
+            out = [f'void {fname(entry)}(Cpu *c) {{', f'    FN_ENTER({hx(entry)});']
+        batch = []
 
         def flush():
             if batch:
@@ -389,10 +402,7 @@ class Module:
             refs.add(t)
             return f'__attribute__((musttail)) return {fname(t)}(c);'
 
-        # Functions with jump tables also get the all-instruction fallback: a table whose emulation
-        # missed some cases then still reaches the right instruction instead of aborting.
-        all_labels = bool(tables)
-        if all_labels:
+        if twin:
             labels = set(range(entry, end, 4))
         rando_here = [a for a in range(entry, end, 4) if a - self.base in RANDO_CODE]
         if rando_here:
@@ -468,13 +478,12 @@ class Module:
                 out.append(f'    c->pc = {ins.target}; c->x[30] = {hx(a + 4)}; rt_dispatch(c);')
             elif k == 'br':
                 jt = tables.get(a)
-                if jt == 'all':
-                    out.append(f'    c->pc = {ins.target}; goto L_dispatch;')
-                    continue
                 if jt:
-                    cases = ' '.join(f'case {hx(t)}: goto L_{t:x};' for t in jt)
-                    out.append(f'    switch ({ins.target}) {{ {cases} default: break; }}')
-                    out.append(f'    c->pc = {ins.target}; goto L_dispatch;')
+                    if jt != 'all':
+                        cases = ' '.join(f'case {hx(t)}: goto L_{t:x};' for t in jt)
+                        out.append(f'    switch ({ins.target}) {{ {cases} default: break; }}')
+                    out.append(f'    c->pc = {ins.target}; ' + ('goto L_dispatch;' if twin else
+                               f'__attribute__((musttail)) return {fname(entry)}_any(c);'))
                     continue
                 out.append(f'    c->pc = {ins.target}; __attribute__((musttail)) return rt_dispatch(c);')
             elif k == 'ret':
@@ -483,13 +492,12 @@ class Module:
         flush()
         if last not in ('b', 'br', 'ret', 'trap'):
             out.append('    ' + jump(end) if end < self.hi else f'    rt_udf(c, {hx(end)});')
-        if all_labels:
+        if twin:
             out.append('L_dispatch:')
             cases = ' '.join(f'case {hx(t)}: goto L_{t:x};' for t in range(entry, end, 4))
             out.append(f'    switch (c->pc) {{ {cases} default: break; }}')
             out.append('    __attribute__((musttail)) return rt_dispatch(c);')
         out.append('}')
-        self._refs = refs
         return out
 
 

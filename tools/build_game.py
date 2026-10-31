@@ -33,7 +33,7 @@ OUT_DLL = os.path.abspath("extracted/skygame.dll")
 IMPLIB = os.path.abspath("skyrecomp.dll.a")
 
 # Matching GAMELIB_ID for skyrecomp.exe
-GAMELIB_ID = "5e5bafbb450f894b"
+GAMELIB_ID = "7a4f8bede980a2ca"
 
 os.makedirs(OBJ_DIR, exist_ok=True)
 CACHE_ID = os.path.join(OBJ_DIR, 'build.id')
@@ -44,7 +44,7 @@ except FileNotFoundError:
     CACHE_VALID = False
 
 BASE_CFLAGS = [
-    "-O0",
+    "-O1",
     "-fno-strict-aliasing",
     "-Wno-return-type",
     "-Wno-unused-label",

@@ -270,7 +270,7 @@ static const char *file_name(const char *path) {  // (for the log)
 
 // The flags the game code was built with (GAMELIB_CFLAGS, part of its id). zig cc reads -march=<cpu> with its own CPU
 // names (x86_64_v3) and takes "-<feature>" off the end, so x86-64-v3 would be CPU "x86": the same CPU as -mcpu there.
-static void add_cflags(Args *a, const Tools *t, bool o0, bool caps) {
+static void add_cflags(Args *a, const Tools *t, bool o0) {
     char buf[1024];
     snprintf(buf, sizeof buf, "%s", GAMELIB_CFLAGS);
     for (char *f = strtok(buf, " "); f; f = strtok(NULL, " ")) {
@@ -286,19 +286,9 @@ static void add_cflags(Args *a, const Tools *t, bool o0, bool caps) {
             add(a, f);
             // zig cc reads -O1 as ReleaseFast, which compiles C at clang -O2 (+ vectorizers): far slower on the
             // generated code than the -O1 `make` uses. A bare -O, which zig passes through to clang, is -O1.
-            if (t->zig && !strcmp(f, "-O1")) {
-                add(a, "-O");
-                // A function over 100 KB of C (a file of its own: tools/gen.py --big-fn) spent minutes in three LLVM
-                // passes - sdk_070.c (364 KB): LICM's promotion 53%, the register coalescer 25%, CodeGenPrepare 10%,
-                // 280 s; with these caps 37 s (zig 0.17's clang 22, -ftime-report). Only zig: its clang is pinned, so
-                // these hidden options exist. The fast build only (GameBuildOpts.optimized: every file at full -O1).
-                // ponytail: promotion is off in every function, not only the giant ones; apply it to those files
-                // alone if it costs frame time.
-                static const char *const cap[] = {"-disable-licm-promotion", "-licm-mssa-optimization-cap=10",
-                                                  "-large-interval-size-threshold=20", "-large-interval-freq-threshold=20",
-                                                  "-cgpp-huge-func=1000"};
-                for (size_t i = 0; caps && i < sizeof cap / sizeof *cap; i++) add(a, "-mllvm"), add(a, cap[i]);
-            }
+            if (t->zig && !strcmp(f, "-O1")) add(a, "-O");
+            // (The fast build used to cap three LLVM passes here for the giant functions: tools/gen.py no longer
+            // makes them - jump-table twins - and every file compiles in seconds at full -O1.)
         }
     }
     if (t->zig) add(a, "-fno-sanitize=all");
@@ -346,7 +336,7 @@ static bool unit_stamp(const Tools *t, const Unit *u, char *out, size_t n) {
     return true;
 }
 
-// The stamp ends with how the object was optimized: 0 full -O1, 1 -O1 with the pass caps, 2 -O0 (over the budget).
+// The stamp ends with how the object was optimized: 0 full -O1, 2 -O0 (over the budget); 1 was -O1 with LLVM pass caps.
 // The fast build takes any of them; the optimized one only full -O1.
 static bool unit_done(const Tools *t, const Unit *u, bool optimized) {
     struct stat st;
@@ -361,18 +351,18 @@ static bool unit_done(const Tools *t, const Unit *u, bool optimized) {
     return !strncmp(want, have, n) && have[n] == ' ' && (!optimized || have[n + 1] == '0');
 }
 
-static void unit_mark(const Tools *t, const Unit *u, bool caps) {
+static void unit_mark(const Tools *t, const Unit *u) {
     char s[32];
     if (!unit_stamp(t, u, s, sizeof s)) return;
     FILE *f = fopen(u->stamp, "wb");
-    if (f) fprintf(f, "%s %d", s, u->o0 ? 2 : caps), fclose(f);
+    if (f) fprintf(f, "%s %d", s, u->o0 ? 2 : 0), fclose(f);
 }
 
-static PlatProc start_compile(const Tools *t, const Unit *u, bool caps) {
+static PlatProc start_compile(const Tools *t, const Unit *u) {
     remove(u->stamp);  // (until it compiles: a stopped compile can leave part of an object)
     Args a = {0};
     compiler(&a, t);
-    add_cflags(&a, t, u->o0, caps);
+    add_cflags(&a, t, u->o0);
     char inc[1200];
     snprintf(inc, sizeof inc, "-I%s", t->inc);
     add(&a, inc);
@@ -466,7 +456,6 @@ bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size
 #else
     double budget = be ? atof(be) : o->optimized ? 0 : 300;
 #endif
-    bool caps = !o->optimized;
     unsigned long long done_bytes = 0;
     int resumed = 0;  // units an earlier run compiled already
     double shown = 0;
@@ -525,7 +514,7 @@ bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size
                 if (next - 1 > 0) remove(u->src);
                 continue;
             }
-            PlatProc p = start_compile(&t, &units.u[next], caps);
+            PlatProc p = start_compile(&t, &units.u[next]);
             if (!p) { snprintf(why, why_size, "the compiler didn't start"); ok = false; break; }
             run[nrun].p = p, run[nrun].unit = next++, run[nrun].t = plat_now_ns();
             nrun++;
@@ -538,7 +527,7 @@ bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size
                     stop(run[k].p);
                     u->o0 = true;
                     LOG("[gamebuild] %s: over %.0fs at -O1, compiling it at -O0\n", file_name(u->src), budget);
-                    PlatProc p = start_compile(&t, u, caps);
+                    PlatProc p = start_compile(&t, u);
                     if (!p) { snprintf(why, why_size, "the compiler didn't start"); ok = false; break; }
                     run[k].p = p, run[k].t = plat_now_ns();
                 }
@@ -551,7 +540,7 @@ bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size
                 snprintf(why, why_size, "the game code didn't compile");
                 ok = false;
             } else {
-                unit_mark(&t, u, caps);
+                unit_mark(&t, u);
             }
             double secs = (double)(plat_now_ns() - run[k].t) / 1e9;
             if (secs >= 30)  // (the slow ones: what the build's wall time waits on)
