@@ -1,6 +1,6 @@
 # Changelog
 
-## [2.1] - 2026-10-31
+## [2.1.0] - 2026-10-31
 
 This release brings major stability, performance, graphics, and quality-of-life improvements rolled up from @BlAnK182C-bak (Issue #92).
 
