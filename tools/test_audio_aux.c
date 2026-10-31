@@ -5,7 +5,7 @@
 #include <sys/mman.h>
 #include "../runtime/services/audio.c"
 
-Settings g_settings = {.volume = 1};
+Settings g_settings = {.volume = 1, .reverb = true};  // (Room reverb off skips aux)
 pthread_mutex_t g_klock = PTHREAD_MUTEX_INITIALIZER;
 Service *service_new(const char *name, ServiceHandler h, void *state) { abort(); }
 void ipc_return_object(IpcResp *resp, Service *s) { abort(); }

@@ -566,7 +566,8 @@ static void effect_update(Effect *fx, const uint8_t *e) {
 static void aux_apply(Renderer *r, Effect *fx, Mix *m) {
     AuxParam *a = &fx->ax;
     uint32_t N = r->sample_count;
-    if (!a->ok || ENV("LARECOMP_AUDIO_NO_AUX")) return;  // (switch: leave the mix untouched, as before aux existed)
+    // (Room reverb off, or the switch: leave the mix untouched - the dry sound, as before aux existed)
+    if (!a->ok || !g_settings.reverb || ENV("LARECOMP_AUDIO_NO_AUX")) return;
     float *in[MIXBUF_MAX], *out[MIXBUF_MAX];
     for (uint32_t c = 0; c < a->ch; c++) {
         if (a->in[c] < 0 || (uint32_t)a->in[c] >= m->bufs || a->out[c] < 0 || (uint32_t)a->out[c] >= m->bufs) return;
