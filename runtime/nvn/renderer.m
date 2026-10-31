@@ -1573,8 +1573,13 @@ static void debug_draw(Prog *pr, CmdRec *r, bool indexed) {
     for (int i = 0; i < 32; i++) {
         if (!st.tex[1][i]) continue;
         uint32_t tic = st.tex[1][i] & 0xFFFFF;
-        NvnTexture *t = st.tpool && tic < (uint32_t)st.tpool->count ? ((NvnTexEntry *)st.tpool->entries)[tic].tex : NULL;
-        if (t) LOG(" %d=[%ux%ux%u t%u f%#x fl%#x %s]", i, t->width, t->height, t->depth, t->target, t->format, t->flags, t->label);
+        NvnTexEntry *e = st.tpool && tic < (uint32_t)st.tpool->count ? &((NvnTexEntry *)st.tpool->entries)[tic] : NULL;
+        NvnTexture *t = e ? e->tex : NULL;
+        // sw: the texture's component swizzle and the pool view's when it sets one (0 zero, 1 one, 2..5 r g b a)
+        if (t) LOG(" %d=[%ux%ux%u t%u f%#x fl%#x %s sw%u%u%u%u]", i, t->width, t->height, t->depth, t->target, t->format, t->flags,
+                   t->label, t->swizzle[0], t->swizzle[1], t->swizzle[2], t->swizzle[3]);
+        if (t && e->has_view && (e->view.setmask & 8))
+            LOG("(view sw%u%u%u%u)", e->view.swizzle[0], e->view.swizzle[1], e->view.swizzle[2], e->view.swizzle[3]);
         else LOG(" %d=%llx", i, st.tex[1][i]);
     }
     LOG(" | rt %d", st.rt.ncolor);
