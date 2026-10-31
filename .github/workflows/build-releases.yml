@@ -151,7 +151,7 @@ jobs:
   build-macos:
     if: ${{ !inputs.windows_only }}
     name: Build macOS Release
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
