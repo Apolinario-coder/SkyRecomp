@@ -9,6 +9,7 @@
 #endif
 
 #include "cpu.h"
+#include "simd.h"
 
 extern GuestFn tests[];
 extern int ntests;
@@ -23,7 +24,7 @@ void rt_brk(Cpu *c, uint32_t imm, uint64_t pc) { (void)c; (void)imm; (void)pc; a
 void rt_udf(Cpu *c, uint64_t pc) { (void)c; (void)pc; abort(); }
 uint64_t rt_ticks(void) { return 0; }
 volatile int g_fnprof;
-void fnprof_hit(uint64_t addr) { (void)addr; }
+void fnprof_hit(uint64_t addr, uint64_t lr, uint64_t x0) { (void)addr, (void)lr, (void)x0; }
 
 static void *map_at(uint64_t addr, size_t len) {
 #ifdef _WIN32
