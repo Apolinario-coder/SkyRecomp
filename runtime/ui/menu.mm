@@ -592,10 +592,23 @@ static void tab_display(void) {
         if (opt_choice("Upscaler", &ui, ups, 3, 1, ud)) g_settings.upscaler = ui == 2 ? UPSCALE_NIS : ui == 1 ? UPSCALE_FSR1 : UPSCALE_BILINEAR;
 #endif
     }
-    static const char *aa[] = {"Off", "SMAA"};
-    opt_choice("Anti-aliasing", &g_settings.antialias, aa, 2, AA_OFF,
+    static const char *aa[] = {"Off", "SMAA", "FXAA"};  // AA_* order
+    opt_choice("Anti-aliasing", &g_settings.antialias, aa, 3, AA_OFF,
                "Smooths jagged edges of the game image before it is scaled to the window. SMAA: finds the edges and "
-               "blends only along them, so textures stay sharp. Most useful at a lower internal resolution.");
+               "blends only along them, so textures stay sharp. FXAA: smooths more edges, including thin and curved "
+               "ones, but softens the whole image a little. Both are most useful at a lower internal resolution; for "
+               "the cleanest image, raise Internal resolution above your display's (supersampling).");
+    {
+        static const char *af[] = {"Game", "2x", "4x", "8x", "16x"};
+        static const int af_level[] = {0, 2, 4, 8, 16};
+        int ai = 0;
+        for (int i = 0; i < 5; i++) if (af_level[i] == g_settings.aniso) ai = i;
+        if (opt_choice("Anisotropic filtering", &ai, af, 5, 0,
+                       "Keeps textures sharp when seen at a shallow angle - paths, floors and walls stretching into the "
+                       "distance - instead of blurring them. Game: the level the game asks for. 16x: sharpest; costs "
+                       "little on most GPUs."))
+            g_settings.aniso = af_level[ai];
+    }
     static const char *shc[] = {"Hybrid", "Wait", "Async"};  // SHADERS_* order
     opt_choice("Shader compilation (Experimental)", &g_settings.shader_compile, shc, 3, SHADERS_HYBRID,
                "What happens the first time something needs a new shader. Hybrid: what's drawn every frame appears "

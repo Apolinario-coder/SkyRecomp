@@ -225,7 +225,8 @@ void settings_load(void) {
                                   (n >= 1 && n <= 4) ? n : n > 4 ? 4 : RES_MATCH;  // (5x-8x were removed)
         }
         else if (!strcmp(key, "upscaler")) g_settings.upscaler = !strcmp(val, "bilinear") ? UPSCALE_BILINEAR : !strcmp(val, "nis") ? UPSCALE_NIS : !strcmp(val, "fsr1") ? UPSCALE_FSR1 : UPSCALE_SHARP;  // (metalfx / fsr1 / nis)
-        else if (!strcmp(key, "antialias")) g_settings.antialias = !strcmp(val, "off") ? AA_OFF : AA_SMAA;  // ("fxaa": SMAA now)
+        else if (!strcmp(key, "aniso")) g_settings.aniso = !strcmp(val, "game") ? 0 : atoi(val) >= 16 ? 16 : atoi(val) >= 8 ? 8 : atoi(val) >= 4 ? 4 : atoi(val) >= 2 ? 2 : 0;
+        else if (!strcmp(key, "antialias")) g_settings.antialias = !strcmp(val, "off") ? AA_OFF : !strcmp(val, "fxaa") ? AA_FXAA : AA_SMAA;
         else if (!strcmp(key, "inv_keys")) g_settings.inv_keys = atoi(val) != 0;
         else if (!strcmp(key, "dpad_move")) g_settings.dpad_move = atoi(val) != 0;
         else if (!strcmp(key, "free_cam")) g_settings.free_cam = atoi(val) != 0;
@@ -300,7 +301,9 @@ void settings_save(void) {
     fprintf(f, "frame_rate = %d\n", g_settings.frame_rate);
     fprintf(f, "game_build = %s\n", g_settings.game_build == GAME_BUILD_OPTIMIZED ? "optimized" : "fast");
     fprintf(f, "upscaler = %s\n", g_settings.upscaler == UPSCALE_METALFX ? "metalfx" : g_settings.upscaler == UPSCALE_NIS ? "nis" : g_settings.upscaler == UPSCALE_FSR1 ? "fsr1" : "bilinear");
-    fprintf(f, "antialias = %s\n", g_settings.antialias == AA_SMAA ? "smaa" : "off");
+    if (g_settings.aniso) fprintf(f, "aniso = %d\n", g_settings.aniso);
+    else fprintf(f, "aniso = game\n");
+    fprintf(f, "antialias = %s\n", g_settings.antialias == AA_SMAA ? "smaa" : g_settings.antialias == AA_FXAA ? "fxaa" : "off");
     if (g_settings.res_mode == RES_DYNAMIC) fprintf(f, "resolution = dynamic\n");
     else if (g_settings.res_mode == RES_Q75) fprintf(f, "resolution = 75%%\n");
     else if (g_settings.res_mode == RES_Q25) fprintf(f, "resolution = 25%%\n");

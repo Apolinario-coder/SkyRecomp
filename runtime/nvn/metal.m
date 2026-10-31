@@ -567,8 +567,17 @@ static const char *present_src =
     "  float2 p = float2((vid << 1) & 2, vid & 2);\n"
     "  V o; o.pos = float4(p * 2.0 - 1.0, 0, 1);\n"
     "  float2 uv = float2(p.x, pv[0].x > 0.5 ? p.y : 1.0 - p.y); o.uv = pv[1].xy + uv * pv[1].zw; return o; }\n"
+    // supersampling (Internal resolution above the window's): the whole footprint of the window pixel is averaged,
+    // not one bilinear tap that skips texels at 3x and above (as vulkan/shaders.c present.frag)
     "fragment float4 fs(V in [[stage_in]], texture2d<float> t [[texture(0)]], sampler s [[sampler(0)]]) {\n"
-    "  return float4(t.sample(s, in.uv).rgb, 1.0); }\n";
+    "  float2 ts = float2(t.get_width(), t.get_height()), r = abs(float2(dfdx(in.uv.x), dfdy(in.uv.y))) * ts;\n"
+    "  if (max(r.x, r.y) <= 1.01) return float4(t.sample(s, in.uv).rgb, 1.0);\n"
+    "  int2 n = clamp(int2(ceil(r - 0.01)), int2(1), int2(8));\n"
+    "  float2 d = r / float2(n) / ts, p0 = in.uv - 0.5 * r / ts + 0.5 * d;\n"
+    "  float3 c = float3(0.0);\n"
+    "  for (int y = 0; y < n.y; y++)\n"
+    "    for (int x = 0; x < n.x; x++) c += t.sample(s, p0 + float2(x, y) * d, level(0.0)).rgb;\n"
+    "  return float4(c / float(n.x * n.y), 1.0); }\n";
 
 void backend_init(void) {
     while (!atomic_load(&ui_ready)) usleep(1000);
@@ -845,6 +854,49 @@ static id<MTLTexture> smaa_encode(id<MTLCommandBuffer> cb, id<MTLTexture> in) {
     return out;
 }
 
+// FXAA (Video tab "Anti-aliasing"; runtime/nvn/fxaa.c, as vulkan/shaders.c "fxaa.frag"): one pass at the game image's
+// size, before the present / MetalFX. A shader or pipeline error is logged once and turns it off.
+static id<MTLTexture> fxaa_encode(id<MTLCommandBuffer> cb, id<MTLTexture> in) {
+    static bool failed;
+    static MTLPixelFormat lf;
+    static id<MTLRenderPipelineState> p;
+    static id<MTLTexture> out;
+    if (failed) return in;
+    if (!p || lf != in.pixelFormat) {
+        extern const char fxaa_src[];
+        NSString *src = [NSString stringWithFormat:@
+            "#include <metal_stdlib>\n"
+            "using namespace metal;\n"
+            "constexpr sampler fxaa_s(filter::linear, address::clamp_to_edge);\n"
+            "#define F2 float2\n#define F3 float3\n#define F4 float4\n#define SAT(x) saturate(x)\n"
+            "#define TAP(p) t.sample(fxaa_s, p, level(0.0))\n"
+            "#define TAPO(p, x, y) t.sample(fxaa_s, p, level(0.0), int2(x, y))\n"
+            "#define FXAA_ARGS texture2d<float> t,\n"
+            "%s"
+            "struct V { float4 pos [[position]]; };\n"
+            "vertex V fxaa_vs(uint vid [[vertex_id]]) {\n"
+            "  float2 p = float2((vid << 1) & 2, vid & 2);\n"
+            "  V o; o.pos = float4(p * 2.0 - 1.0, 0, 1); return o; }\n"
+            "fragment float4 fxaa_fs(V in [[stage_in]], texture2d<float> t0 [[texture(0)]]) {\n"
+            "  float2 rcp = 1.0 / float2(t0.get_width(), t0.get_height());\n"
+            "  return float4(fxaa(t0, in.pos.xy * rcp, rcp).rgb, 1.0); }\n", fxaa_src];
+        NSError *err = nil;
+        id<MTLLibrary> lib = [dev newLibraryWithSource:src options:nil error:&err];
+        if (!lib) { LOG("[fxaa] shader: %s\n", err.localizedDescription.UTF8String); failed = true; return in; }
+        MTLRenderPipelineDescriptor *pd = [MTLRenderPipelineDescriptor new];
+        pd.vertexFunction = [lib newFunctionWithName:@"fxaa_vs"];
+        pd.fragmentFunction = [lib newFunctionWithName:@"fxaa_fs"];
+        pd.colorAttachments[0].pixelFormat = in.pixelFormat;
+        p = [dev newRenderPipelineStateWithDescriptor:pd error:&err];
+        if (!p) { LOG("[fxaa] pipeline: %s\n", err.localizedDescription.UTF8String); failed = true; return in; }
+        lf = in.pixelFormat;
+        LOG("[fxaa] %lux%lu\n", (unsigned long)in.width, (unsigned long)in.height);
+    }
+    out = smaa_target(out, in.width, in.height, in.pixelFormat);
+    smaa_pass(cb, p, out, false, in, nil, nil);
+    return out;
+}
+
 static id<MTLTexture> metalfx_encode(id<MTLCommandBuffer> cb, id<MTLTexture> in) {
     g_fx.colorTexture = in;
     g_fx.inputContentWidth = in.width;
@@ -1027,9 +1079,9 @@ void backend_present(NvnTexture *t) {
         if (b && b->tex) {
             id<MTLTexture> src = raw_view(b->tex);
             // SMAA (Video tab "Anti-aliasing"): first, at the game image's size (MetalFX then upscales its result)
-            if (g_settings.antialias == AA_SMAA) {
+            if (g_settings.antialias == AA_SMAA || g_settings.antialias == AA_FXAA) {
                 [enc endEncoding];
-                src = smaa_encode(cb, src);
+                src = g_settings.antialias == AA_SMAA ? smaa_encode(cb, src) : fxaa_encode(cb, src);
                 MTLRenderPassDescriptor *rp2 = [MTLRenderPassDescriptor renderPassDescriptor];
                 rp2.colorAttachments[0].texture = drawable.texture;
                 rp2.colorAttachments[0].loadAction = MTLLoadActionLoad;

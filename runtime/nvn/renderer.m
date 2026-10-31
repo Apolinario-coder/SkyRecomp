@@ -975,7 +975,13 @@ static Prog *get_program(NvnProgram *p, ShaderKey *vkey, ShaderKey *fkey, bool w
     return pr;
 }
 
+// (an old sampler is released a second later: command buffers still in flight may use it)
+static void release_sampler(void *s) {
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC), dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{ CFRelease(s); });
+}
+
 static id<MTLSamplerState> sampler_for(NvnSamplerDesc *d) {
+    nvn_samplers_follow_aniso(release_sampler);
     if (d->backend) return (__bridge id<MTLSamplerState>)d->backend;
     MTLSamplerDescriptor *sd = [MTLSamplerDescriptor new];
     sd.magFilter = d->mag_filter == 1 ? MTLSamplerMinMagFilterLinear : MTLSamplerMinMagFilterNearest;
@@ -996,7 +1002,8 @@ static id<MTLSamplerState> sampler_for(NvnSamplerDesc *d) {
     sd.sAddressMode = modes[0]; sd.tAddressMode = modes[1]; sd.rAddressMode = modes[2];
     sd.lodMinClamp = d->lod_min;
     sd.lodMaxClamp = d->lod_max > 1000 ? FLT_MAX : d->lod_max;
-    if (d->max_aniso > 1) sd.maxAnisotropy = (NSUInteger)fminf(d->max_aniso, 16);
+    float af = nvn_sampler_aniso(d);
+    if (af > 1) sd.maxAnisotropy = (NSUInteger)fminf(af, 16);
     if (d->lod_bias != 0 && getenv("LARECOMP_LOG_BIAS"))
         LOG("[sampler] lod bias %g (min filter %u, aniso %g)\n", d->lod_bias, mf, d->max_aniso);
     static float lodmin = -1;  // LARECOMP_LOD_MIN=<n>: skip the n sharpest mips everywhere (aliasing experiments)

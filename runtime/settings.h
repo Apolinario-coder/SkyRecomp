@@ -11,7 +11,7 @@ enum { UPSCALE_BILINEAR = 0, UPSCALE_METALFX = 1 /* macOS */, UPSCALE_FSR1 = 2 /
 #else
 #define UPSCALE_SHARP UPSCALE_FSR1
 #endif
-enum { AA_OFF = 0, AA_SMAA = 1 };
+enum { AA_OFF = 0, AA_SMAA = 1, AA_FXAA = 2 };
 enum { PERF_OFF = 0, PERF_FPS = 1, PERF_FULL = 2 };  // the performance overlay (runtime/perfmon.c, F10)
 // What a draw does when its shaders or pipeline are still compiling (renderer.m, vulkan/exec.c): hybrid skips only
 // draws that are redrawn every frame and waits for the rest; wait never skips (stutters); async always skips
@@ -33,6 +33,7 @@ typedef struct {
     int res_mode;        // RES_MATCH, 1..4 (N x the Switch's 1080p), RES_DYNAMIC, RES_Q75/50/25 (share of the display)
     int upscaler;        // UPSCALE_*: how a lower internal resolution reaches the window (MetalFX: macOS, FSR 1: Windows)
     int antialias;       // AA_*: anti-aliasing of the game image before it is scaled to the window
+    int aniso;           // anisotropic filtering at least this (2..16; 0 = the game's own): nvn_sampler_aniso
     float volume;        // master volume, 1 = 100%
     bool reverb;         // room reverb effect
     bool movie_audio;

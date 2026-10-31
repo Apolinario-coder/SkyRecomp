@@ -256,7 +256,7 @@ void vk_image_init_layout(VkCommandBuffer cb, VkImage img, VkImageAspectFlags as
 }
 
 // Images destroyed by the guest are kept until the submissions that may use them have completed.
-typedef struct { VkImage img; VmaAllocation mem; VkImageView view; uint64_t seq; } Dead;
+typedef struct { VkImage img; VmaAllocation mem; VkImageView view; VkSampler smp; uint64_t seq; } Dead;
 static Dead *dead;
 static int ndead, cap_dead;
 static void views_forget(TexBackend *b);
@@ -266,7 +266,8 @@ void vk_collect_dead(void) {
     int k = 0;
     for (int i = 0; i < ndead; i++) {
         if (dead[i].seq > done) { dead[k++] = dead[i]; continue; }
-        if (dead[i].view) vkDestroyImageView(g_vk.dev, dead[i].view, NULL);
+        if (dead[i].smp) vkDestroySampler(g_vk.dev, dead[i].smp, NULL);
+        else if (dead[i].view) vkDestroyImageView(g_vk.dev, dead[i].view, NULL);
         else vmaDestroyImage(g_vk.vma, dead[i].img, dead[i].mem);
     }
     ndead = k;
@@ -374,6 +375,7 @@ static void defer(Dead d) {
 
 void vk_defer_image(VkImage img, VmaAllocation mem) { defer((Dead){.img = img, .mem = mem}); }
 void vk_defer_view(VkImageView v) { defer((Dead){.view = v}); }
+static void defer_sampler(void *s) { defer((Dead){.smp = (VkSampler)s}); }
 
 void vk_dl_note_upload(void *img, uint32_t w, uint32_t h, uint32_t lv);  // (exec.c: LARECOMP_VK_DEVLOST_TRACE)
 
@@ -871,6 +873,7 @@ static VkCompareOp compare_op(uint32_t f) {
 }
 
 VkSampler vk_sampler(NvnSamplerDesc *d) {
+    nvn_samplers_follow_aniso(defer_sampler);
     if (d->backend) return (VkSampler)d->backend;
     VkSamplerCreateInfo si = {.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
     si.magFilter = d->mag_filter == 1 ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
@@ -897,7 +900,8 @@ VkSampler vk_sampler(NvnSamplerDesc *d) {
     if (mf <= 1) si.maxLod = si.minLod + 0.25f;  // not mipmapped: stay on the base level
     if (si.maxLod < si.minLod) si.maxLod = si.minLod;
     si.mipLodBias = d->lod_bias;
-    if (d->max_aniso > 1) { si.anisotropyEnable = VK_TRUE; si.maxAnisotropy = fminf(d->max_aniso, 16); }
+    float af = nvn_sampler_aniso(d);
+    if (af > 1) { si.anisotropyEnable = VK_TRUE; si.maxAnisotropy = fminf(af, 16); }
     static float lodmin = -1;
     if (lodmin < 0) lodmin = getenv("LARECOMP_LOD_MIN") ? (float)atof(getenv("LARECOMP_LOD_MIN")) : 0;
     if (lodmin > 0 && mf > 1) si.minLod = fmaxf(si.minLod, lodmin);
