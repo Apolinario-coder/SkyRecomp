@@ -58,6 +58,7 @@ static struct {
     uint8_t blend[8][8];
     uint32_t channel_mask;
     uint8_t color_state[4], ds[8], ms[0x18], poly[4];
+    float alpha_ref;  // NVN alpha comparison reference (color_state[2]: the function), rscale[65].y
     float poly_offset[3];  // factor, units, clamp (nvnCommandBufferSetPolygonOffsetClamp)
     uint32_t attrib[16];
     int nattrib;
@@ -893,13 +894,14 @@ static Prog *get_program(NvnProgram *p, ShaderKey *vkey, ShaderKey *fkey, bool w
     for (size_t i = 0; i < sizeof *vkey; i++) { h ^= vb[i]; h *= 0x100000001B3ull; }
     for (int i = 0; i < 8; i++) { h ^= fkey->rt_kind[i]; h *= 0x100000001B3ull; }
     h ^= fkey->dual_source; h *= 0x100000001B3ull;
+    h ^= fkey->alpha_func; h *= 0x100000001B3ull;
     if (!h) h = 1;
     uint32_t slot = (uint32_t)(h ^ (h >> 31)) & (PROG_TAB - 1);
     while (prog_tab[slot].key && prog_tab[slot].key != h) slot = (slot + 1) & (PROG_TAB - 1);
     if (prog_tab[slot].key) { Prog *fp = (__bridge Prog *)prog_tab[slot].prog; return fp->failed ? nil : fp; }
-    NSString *key = [NSString stringWithFormat:@"%llx/%llx/%@/%@/%u%s", p->stages[0].code_addr, p->stages[1].code_addr,
+    NSString *key = [NSString stringWithFormat:@"%llx/%llx/%@/%@/%u/a%u%s", p->stages[0].code_addr, p->stages[1].code_addr,
                      [NSData dataWithBytes:vkey length:sizeof *vkey], [NSData dataWithBytes:fkey->rt_kind length:8],
-                     (unsigned)fkey->dual_source,
+                     (unsigned)fkey->dual_source, (unsigned)fkey->alpha_func,
                      vkey->flip_x ? "/mirror" : ""];  // (NSData's description elides the middle of the key's bytes)
     Prog *pr = cache[key];
     if (pr) {
@@ -1687,6 +1689,7 @@ static void draw_inner(CmdRec *r, bool indexed) {
     vkey.depth_minus_one = nvn_depth_mode() == 0;
     for (int i = 0; i < st.nattrib; i++) vkey.attr_kind[i] = (uint8_t)attr_kind(st.attrib[i] & 0xFF);
     for (int i = 0; i < st.rt.ncolor; i++) if (st.rt.color[i]) fkey.rt_kind[i] = (uint8_t)rt_kind(st.rt.color[i]->format);
+    fkey.alpha_func = st.color_state[2] < 8 ? st.color_state[2] : 0;  // NVN alpha comparison (as vulkan/exec.c)
     // Dual-source blending (SSHD eyes): colour outputs 0/1 are the two sources of attachment 0. Mirrors the
     // Vulkan backend's handling (runtime/nvn/vulkan/exec.c) - without this the fragment shader never declares
     // the second source output and the blend's secondary input is undefined.
@@ -2088,7 +2091,9 @@ static void draw_inner(CmdRec *r, bool indexed) {
         float rs[66][4] = {{vp_sx, vp_sy, vp_ox, vp_oy}};
         for (int i = 0; i < pr->fi->ntex && i < 64; i++) { rs[1 + i][0] = tex_sc[1][i][0]; rs[1 + i][1] = tex_sc[1][i][1]; }
         if (fkey.flip_x) rs[65][0] = (float)st.rt.color[0]->width;  // (mirror mode: the composite's width, guest pixels)
-        [enc setFragmentBytes:rs length:(NSUInteger)(fkey.flip_x ? 66 : 1 + pr->fi->ntex) * 16 atIndex:RSCALE_BUFFER_INDEX];
+        rs[65][1] = st.alpha_ref;  // (alpha comparison reference)
+        bool full = fkey.flip_x || fkey.alpha_func;
+        [enc setFragmentBytes:rs length:(NSUInteger)(full ? 66 : 1 + pr->fi->ntex) * 16 atIndex:RSCALE_BUFFER_INDEX];
     }
     if (st.ubuf[0][2].addr && st.ubuf[0][2].size >= 48 && !(st.ubuf[0][2].addr & 3)) {  // cut bushes' items
         extern void pot_item_draw(float *m);                                                 // (runtime/hle/pot_glow.c)
@@ -2549,6 +2554,7 @@ static void exec_list(uint64_t handle, int depth) {
         case CMD_BIND_BLEND: { uint8_t *b = x; memcpy(st.blend[b[0] & 7], b, 8); break; }
         case CMD_BIND_CHANNEL_MASK: memcpy(&st.channel_mask, x, 4); break;
         case CMD_BIND_COLOR: memcpy(st.color_state, x, 4); break;
+        case CMD_SET_ALPHA_REF: st.alpha_ref = r->f[0]; break;
         case CMD_BIND_DEPTH_STENCIL: memcpy(st.ds, x, 8); break;
         case CMD_BIND_MULTISAMPLE: memcpy(st.ms, x, 0x18); break;
         case CMD_BIND_POLYGON: memcpy(st.poly, x, 4); break;

@@ -2169,6 +2169,11 @@ ShaderInfo *maxwell_translate(const uint8_t *blob, size_t max_size, int stage, c
         }
         sp(&args, ", device uchar *gmem [[buffer(%d)]]", GMEM_BUFFER_INDEX);
     }
+    // NVN alpha comparison (as glsl_finish; Metal has no fixed-function alpha test either): discard against the
+    // reference in rscale[65].y
+    bool alpha_test = stage == STAGE_FRAGMENT && key && key->alpha_func > 0 && key->alpha_func < 8 &&
+                      (c->omap_target & 8) && key->rt_kind[0] == 0;
+    if (alpha_test) c->uses_rscale = true;
     if (c->uses_rscale && stage != STAGE_VERTEX) {
         sp(&args, ", constant float4 *rscale [[buffer(18)]]");
         info->uses_rscale = true;
@@ -2248,6 +2253,11 @@ ShaderInfo *maxwell_translate(const uint8_t *blob, size_t max_size, int stage, c
         if (tint)
             sp(&s, "  if (ltint[0].w > 0.0f) { float3 g = o.c0.rgb; float l = dot(g, float3(0.299f, 0.587f, 0.114f));\n"
                    "    o.c0.rgb = mix(g, ltint[0].rgb * pow(l, ltint[1].w) + ltint[1].rgb * l, ltint[0].w); }\n");
+        if (alpha_test) {  // (the tint leaves alpha alone)
+            static const char *const cmp[] = {NULL, NULL, "<", "==", "<=", ">", "!=", ">="};
+            if (key->alpha_func == 1) sp(&s, "  discard_fragment();\n");
+            else sp(&s, "  if (!(o.c0.a %s rscale[65].y)) discard_fragment();\n", cmp[key->alpha_func]);
+        }
         if (c->omap_depth) {
             if (c->reg_used[r + 1]) sp(&s, "  o.depth = as_type<float>(r%d);\n", r + 1);
             else sp(&s, "  o.depth = in.pos.z;\n");
