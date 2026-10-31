@@ -68,6 +68,8 @@ typedef struct {
     bool cheat_stamina;  // the stamina gauge never drains (tools/patches.py STAMINA_STORE_SITE)
     bool cheat_rupees;   // rupees kept at 9900
     bool cheat_beetle;   // the Beetle's flight timer never runs out (tools/patches.py BEETLE_TIMER_SITE)
+    bool cheat_dash;     // the Loftwing's dashes are never used up (tools/patches.py DASH_USE_SITE)
+    bool cheat_skyward;  // the sword stays charged with a Skyward Strike (runtime/ui/cheats.mm)
     bool cheat_hookshot; // hookshot latches onto any surface (Gameplay tab; runtime/hle/hookshot.c; seeds made with it: always)
     bool no_buff_drops;  // no Guardian Acorns / Pieces of Power (Gameplay tab; runtime/hle/qol.c; seeds made with it: always)
     // difficulty (runtime/ui/difficulty.mm)
@@ -75,6 +77,11 @@ typedef struct {
     bool diff_ohko;      // any hit kills
     bool diff_hero;      // Hero Mode flag forced on in the loaded save (2x damage, no recovery hearts)
     int colorblind;      // COLORBLIND_*: colour filter in the present shader (runtime/nvn/output_scale.c)
+    int dash_max;        // Loftwing dash charges, 3 (the game's) to 7 (tools/patches.py DASH_START_SITE, DASH_CAP_SITE)
+    float flight_speed;  // Loftwing forward speed multiplier (tools/patches.py FLIGHT_SPEED_SITE)
+    float walk_speed;    // Link's walking / running speed multiplier (tools/patches.py WALK_SPEED_SITE)
+    bool drop_hearts, drop_rupees, drop_ammo, drop_treasures;  // drop kinds allowed (tools/patches.py DROP_*, TREASURE_*)
+    bool drop_always;    // drop tables and treasure rolls never come up empty (Cheats tab)
     // cosmetics (runtime/ui/cosmetics.mm; applied live by runtime/nvn/texpatch.c), never part of a seed
     int tunic;           // index into g_tunic_colours (0 = Default: the game's / the seed's own)
     int hearts;          // index into g_heart_colours (0 = Default red)

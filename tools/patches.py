@@ -737,5 +737,125 @@ def _damage_shift(gen, a):
             f'  /* {a:#x}: lsl w21, w21, w8 (damage, doubled in Hero Mode) */')
 
 
+# Loftwing (dBird_c; runtime/ui/difficulty.mm, cheats.mm): its dash charges are an s16 at +0x14ca - set to 3 at create
+# (main+0x242a2c), one used per dash (main+0x24458c), one added every 50 frames while below 3 (main+0x2432f0; the HUD
+# shows 3 pips at 3 or more). Forward speed is base [+0x1dc] + dash boost [+0x14d8] + [+0x14dc], summed at main+0x248f44
+# just before it becomes this frame's movement.
+DASH_USE_SITE = 0x700024458c
+DASH_START_SITE = 0x7000242a2c
+DASH_CAP_SITE = 0x70002432f0
+FLIGHT_SPEED_SITE = 0x7000248f44
+
+
+def _dash_use(gen, a):
+    assert gen.word(a) == 0x51000529, hex(gen.word(a))  # sub w9, w9, #1
+    return ('{ extern int rt_cheat_dash(void); if (!rt_cheat_dash()) c->x[9] = (uint32_t)c->x[9] - 1u; }'
+            f'  /* {a:#x}: sub w9, w9, #1 (Loftwing dash used: infinite air dash) */')
+
+
+def _dash_start(gen, a):
+    assert gen.word(a) == 0x52800069, hex(gen.word(a))  # mov w9, #3
+    return f'{{ extern uint32_t rt_dash_max(void); c->x[9] = rt_dash_max(); }}  /* {a:#x}: mov w9, #3 (Loftwing dashes) */'
+
+
+def _dash_cap(gen, a):
+    assert gen.word(a) == 0x7100091f, hex(gen.word(a))  # cmp w8, #2 (then b.gt: full)
+    return ('{ extern uint32_t rt_dash_max(void); (void)subs32(c, (uint32_t)c->x[8], rt_dash_max() - 1u); }'
+            f'  /* {a:#x}: cmp w8, #2 (Loftwing dashes: recharged up to the max) */')
+
+
+def _flight_speed(gen, a):
+    assert gen.word(a) == 0x1e272863, hex(gen.word(a))  # fadd s3, s3, s7
+    return ('{ extern float rt_flight_speed(void); float a_, b_; memcpy(&a_, &c->v[3], 4); memcpy(&b_, &c->v[7], 4); '
+            'a_ = (a_ + b_) * rt_flight_speed(); c->v[3] = 0; memcpy(&c->v[3], &a_, 4); }'
+            f'  /* {a:#x}: fadd s3, s3, s7 (Loftwing forward speed) */')
+
+
+# Drops (runtime/ui/difficulty.mm: Gameplay tab "Drops", Cheats tab "Enemies always drop items"). Enemies, pots, grass,
+# barrels and dig spots roll their drop table in main+0xb90674 (the Wii decomp's
+# SpecialItemDropMgr::spawnSpecialDropItem): w19 = a roll 0..99; x28 = &DropList[table] (main+0x164c8f0, 16 bytes
+# each); each entry {u8 kind, u8 weight} at x20 that the player can use adds its weight to w26 until that passes the
+# roll. Past the last entry, or a light entry's extra roll failing, nothing drops (main+0xb90964). Kinds: 1-2 hearts,
+# 3-5 and 12-13 rupees, 7-11 arrows / seeds / bombs. Loop 1 (from main+0xb9076c) is only table 0x27, the Heart Medal's
+# extra roll; loop 2 (from main+0xb90864) every other table.
+DROP_KIND_SITES = {0x7000b90864: 0x7000b90850, 0x7000b9076c: 0x7000b90758}  # ldrb w22, [x20] -> the next entry
+DROP_THIN_SITE = 0x7000b908c4
+DROP_END_SITE = 0x7000b90860
+
+
+def _drop_kind(gen, a):
+    assert gen.word(a) == 0x39400296, hex(gen.word(a))  # ldrb w22, [x20]
+    return ('{ extern int rt_drop_kind(uint32_t); c->x[22] = LD8(c->x[20]); '
+            f'if (!rt_drop_kind((uint32_t)c->x[22])) goto L_{DROP_KIND_SITES[a]:x}; }}'
+            f'  /* {a:#x}: ldrb w22, [x20] (drop table entry: a turned-off kind is skipped, like a locked one) */')
+
+
+def _drop_thin(gen, a):
+    assert gen.word(a) == 0x14000028, hex(gen.word(a))  # b 0xb90964 (nothing)
+    return ('{ extern int rt_drop_always(uint64_t); if (rt_drop_always(c->x[28])) goto L_7000b90844; goto L_7000b90964; }'
+            f'  /* {a:#x}: b 0xb90964 (a light entry\'s extra roll failed: kept with always drop) */')
+
+
+def _drop_end(gen, a):
+    assert gen.word(a) == 0x54000822, hex(gen.word(a))  # b.hs 0xb90964 (past the last entry: nothing)
+    # always drop: roll again inside the weight that was there to win (the same entries count the second time)
+    return ('if (COND_CS(c)) { extern int rt_drop_always(uint64_t); uint32_t w_ = (uint32_t)c->x[26]; '
+            'if (rt_drop_always(c->x[28]) && w_ && (uint32_t)c->x[19] >= w_) { c->x[19] = (uint32_t)c->x[19] % w_; '
+            'c->x[20] = LD64(c->x[28] + 8); c->x[24] = 0; c->x[26] = 0; goto L_7000b90864; } goto L_7000b90964; }'
+            f'  /* {a:#x}: b.hs 0xb90964 (roll past the last entry: rolled again with always drop) */')
+
+
+# Treasures: tryDropItem(chance) at main+0xde5ef0 rolls an enemy's monster-material drop (Chu Jelly, Monster Claw,
+# Ornamental / Golden Skull, Evil Crystal; Treasure Medals add rolls) and answers w0 = dropped or not: 0 at main+0xde5ff0,
+# 1 at main+0xde6000. The return address (saved x30, [sp+0x38]) tells the item drops from its other callers.
+TREASURE_ROLL_SITES = {0x7000de5ff0: (0x2a1f03e0, 0, 'mov w0, wzr'), 0x7000de6000: (0x52800020, 1, 'mov w0, #1')}
+
+
+def _treasure_roll(gen, a):
+    word, won, what = TREASURE_ROLL_SITES[a]
+    assert gen.word(a) == word, hex(gen.word(a))
+    return ('{ extern uint32_t rt_treasure_roll(uint64_t ret, uint32_t won); '
+            f'c->x[0] = rt_treasure_roll(LD64(c->sp + 0x38), {won}); }}  /* {a:#x}: {what} (treasure drop roll) */')
+
+
+# Dash gauge with more wings (runtime/hle/dash_gauge.c): two nw4r::lyt pane constructors (main+0x100788c, 0x10082c8:
+# Picture and TextBox, both layout builders call them; main+0x1009570 is Window's) have just copied the pane's name
+# (x19 = the pane) here; and the HUD (main+0xc9d2d8) reads the Loftwing's charges for the gauge at main+0xca14fc.
+GAUGE_PICTURE_SITES = (0x70010078fc, 0x700100833c)
+DASH_GAUGE_SITE = 0x7000ca14fc
+
+
+def _gauge_picture(gen, a):
+    assert gen.word(a) == 0x910072a1, hex(gen.word(a))  # add x1, x21, #0x1c
+    return ('{ extern void rt_gauge_picture(uint64_t); rt_gauge_picture(c->x[19]); c->x[1] = c->x[21] + 0x1c; }'
+            f'  /* {a:#x}: add x1, x21, #0x1c (a pane got its name: dash gauge copies) */')
+
+
+def _dash_gauge(gen, a):
+    assert gen.word(a) == 0x79e99529, hex(gen.word(a))  # ldrsh w9, [x9, #0x14ca]
+    return ('{ extern void rt_dash_gauge(int32_t); c->x[9] = (uint32_t)(int32_t)(int16_t)LD16(c->x[9] + 0x14ca); '
+            'rt_dash_gauge((int32_t)c->x[9]); }'
+            f'  /* {a:#x}: ldrsh w9, [x9, #0x14ca] (the HUD reads the dash charges: dash gauge copies) */')
+
+
+# Link's speed (runtime/ui/difficulty.mm; Gameplay tab "Walking & running speed"): his on-foot movement (main+0xa4bc94) sets
+# the top speed each frame (13 in events, 23 running, 34.5 sprinting; walking is that times the stick tilt squared) at
+# player +0x64ec here.
+WALK_SPEED_SITE = 0x7000a4c508
+
+
+def _walk_speed(gen, a):
+    assert gen.word(a) == 0xbd04bac8, hex(gen.word(a))  # str s8, [x22, #0x4b8]
+    return ('{ extern float rt_walk_speed(void); float v_; memcpy(&v_, &c->v[8], 4); v_ *= rt_walk_speed(); '
+            'memcpy((void *)(uintptr_t)(c->x[22] + 0x4b8), &v_, 4); }'
+            f'  /* {a:#x}: str s8, [x22, #0x4b8] (Link\'s top speed) */')
+
+
 SKY_PATCHES = {STAMINA_STORE_SITE: _stamina_store, BEETLE_TIMER_SITE: _beetle_timer, HERO_UNLOCK_SITE: _hero_unlock,
-               DAMAGE_SHIFT_SITE: _damage_shift}
+               DAMAGE_SHIFT_SITE: _damage_shift, DASH_USE_SITE: _dash_use, DASH_START_SITE: _dash_start,
+               DASH_CAP_SITE: _dash_cap, FLIGHT_SPEED_SITE: _flight_speed, DROP_THIN_SITE: _drop_thin,
+               DROP_END_SITE: _drop_end, DASH_GAUGE_SITE: _dash_gauge,
+               WALK_SPEED_SITE: _walk_speed}
+SKY_PATCHES.update({_a: _drop_kind for _a in DROP_KIND_SITES})
+SKY_PATCHES.update({_a: _treasure_roll for _a in TREASURE_ROLL_SITES})
+SKY_PATCHES.update({_a: _gauge_picture for _a in GAUGE_PICTURE_SITES})

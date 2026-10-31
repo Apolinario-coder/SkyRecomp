@@ -42,6 +42,33 @@ extern "C" int32_t rt_damage(int32_t dmg, int32_t shift) {
 // Once per presented frame (from save_editor_frame).
 extern "C" void difficulty_frame(void) {}
 
+// Loftwing (tools/patches.py DASH_*_SITE, FLIGHT_SPEED_SITE)
+extern "C" uint32_t rt_dash_max(void) { return g_settings.dash_max >= 3 && g_settings.dash_max <= 7 ? g_settings.dash_max : 3; }
+extern "C" float rt_flight_speed(void) { return g_settings.flight_speed > 0 ? g_settings.flight_speed : 1.0f; }
+extern "C" float rt_walk_speed(void) { return g_settings.walk_speed > 0 ? g_settings.walk_speed : 1.0f; }
+
+// Drops (tools/patches.py DROP_*_SITE: drop table entry kinds; TREASURE_ROLL_SITES: monster materials)
+extern "C" int rt_drop_kind(uint32_t kind) {
+    if (kind == 1 || kind == 2) return g_settings.drop_hearts;
+    if ((kind >= 3 && kind <= 5) || kind == 12 || kind == 13) return g_settings.drop_rupees;
+    if (kind >= 7 && kind <= 11) return g_settings.drop_ammo;
+    return 1;  // (fairies, keys, Eldin Ore, Farore's Tears, Rupoors: as the game has them)
+}
+
+extern "C" int rt_drop_always(uint64_t list) {
+    uint64_t table = (list - (MAIN_BASE + 0x164c8f0)) >> 4;  // (not the Heart / Rupee Medals' extra rolls)
+    return g_settings.drop_always && table != 0x27 && table != 0x28;
+}
+
+extern "C" uint32_t rt_treasure_roll(uint64_t ret, uint32_t won) {
+    // tryDropItem's callers that drop an item: Bokoblins (skulls), Chuchus, Keese, Guay, Lizalfos... (+4: return address)
+    static const uint32_t item_calls[] = {0x2c782c, 0x2e4de4, 0x2f09f8, 0x3368b4, 0x358ff8, 0x35a350,
+                                          0x387e50, 0x38ba34, 0x3a23a8, 0x3b5060, 0x441820};
+    for (uint32_t a : item_calls)
+        if (ret == MAIN_BASE + a + 4) return !g_settings.drop_treasures ? 0 : g_settings.drop_always ? 1 : won;
+    return won;
+}
+
 // Gameplay tab rows (menu.mm tab_gameplay), each at the game's own value by default.
 extern "C" void difficulty_rows(void) {
     static const char *const names[] = {"Half", "Default", "2x", "3x", "4x", "5x", "6x", "7x", "8x"};
@@ -57,4 +84,57 @@ extern "C" void difficulty_rows(void) {
     }
     if (opt_toggle("One-hit KO", &g_settings.diff_ohko, false, "Any hit defeats Link, whatever his hearts."))
         settings_save();
+}
+
+extern "C" void loftwing_rows(void) {
+    static const char *const dashes[] = {"3 (Default)", "4", "5", "6", "7"};
+    int di = rt_dash_max() - 3;
+    if (opt_choice("Dash charges", &di, dashes, 5, 0,
+                   "How many dashes your Loftwing holds; they recharge one at a time as usual.\n\nApplies from the "
+                   "next time you call your Loftwing. The gauge shows the extra wings from the next start of the "
+                   "game.")) {
+        g_settings.dash_max = di + 3;
+        settings_save();
+    }
+    static const char *const names[] = {"0.5x", "0.75x", "Default", "1.25x", "1.5x", "2x"};
+    static const float mult[] = {0.5f, 0.75f, 1, 1.25f, 1.5f, 2};
+    int si = 2;
+    for (int i = 0; i < 6; i++)
+        if (fabsf(mult[i] - g_settings.flight_speed) < fabsf(mult[si] - g_settings.flight_speed)) si = i;
+    if (opt_choice("Flight speed", &si, names, 6, 2,
+                   "How fast your Loftwing flies, dashes included. Turning stays the same, so turns are wider when "
+                   "faster.")) {
+        g_settings.flight_speed = mult[si];
+        settings_save();
+    }
+}
+
+extern "C" void drop_rows(void) {
+    bool c = false;
+    c |= opt_toggle("Hearts", &g_settings.drop_hearts, true, "Defeated enemies, grass and pots can drop recovery hearts.");
+    c |= opt_toggle("Rupees", &g_settings.drop_rupees, true, "Defeated enemies, grass and pots can drop rupees.");
+    c |= opt_toggle("Ammo", &g_settings.drop_ammo, true,
+                    "Defeated enemies, grass and pots can drop arrows, Deku Seeds and bombs (once you have the bag).");
+    c |= opt_toggle("Treasures", &g_settings.drop_treasures, true,
+                    "Defeated enemies can drop monster materials: Chu Jelly, Monster Claws, Ornamental and Golden "
+                    "Skulls, Evil Crystals.");
+    if (c) settings_save();
+}
+
+static void speed_row(const char *label, float *v, const char *desc) {
+    static const char *const names[] = {"0.5x", "0.75x", "Default", "1.25x", "1.5x", "2x"};
+    static const float mult[] = {0.5f, 0.75f, 1, 1.25f, 1.5f, 2};
+    int si = 2;
+    for (int i = 0; i < 6; i++)
+        if (fabsf(mult[i] - *v) < fabsf(mult[si] - *v)) si = i;
+    if (opt_choice(label, &si, names, 6, 2, desc)) {
+        *v = mult[si];
+        settings_save();
+    }
+}
+
+extern "C" void link_rows(void) {
+    speed_row("Walking & running speed", &g_settings.walk_speed,
+              "How fast Link walks, runs and sprints. His animations keep their pace, so his feet may slide at the "
+              "far ends.");
 }

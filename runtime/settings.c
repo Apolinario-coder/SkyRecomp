@@ -43,6 +43,13 @@ Settings g_settings = {
     .tracker = true,
     .chaos_letters = CHAOS_LETTERS_MAP,
     .diff_damage = 1.0f,
+    .dash_max = 3,
+    .flight_speed = 1.0f,
+    .walk_speed = 1.0f,
+    .drop_hearts = true,
+    .drop_rupees = true,
+    .drop_ammo = true,
+    .drop_treasures = true,
     .upscaler = UPSCALE_SHARP,  // (MetalFX on macOS, AMD FSR 1 on Windows)
 };
 
@@ -262,6 +269,16 @@ void settings_load(void) {
         else if (!strcmp(key, "cheat_hearts")) g_settings.cheat_hearts = atoi(val) != 0;
         else if (!strcmp(key, "cheat_stamina")) g_settings.cheat_stamina = atoi(val) != 0;
         else if (!strcmp(key, "cheat_beetle")) g_settings.cheat_beetle = atoi(val) != 0;
+        else if (!strcmp(key, "cheat_dash")) g_settings.cheat_dash = atoi(val) != 0;
+        else if (!strcmp(key, "dash_max")) g_settings.dash_max = atoi(val) >= 3 && atoi(val) <= 7 ? atoi(val) : 3;
+        else if (!strcmp(key, "flight_speed")) g_settings.flight_speed = (float)atof(val);
+        else if (!strcmp(key, "walk_speed")) g_settings.walk_speed = (float)atof(val);
+        else if (!strcmp(key, "cheat_skyward")) g_settings.cheat_skyward = atoi(val) != 0;
+        else if (!strcmp(key, "drop_hearts")) g_settings.drop_hearts = atoi(val) != 0;
+        else if (!strcmp(key, "drop_rupees")) g_settings.drop_rupees = atoi(val) != 0;
+        else if (!strcmp(key, "drop_ammo")) g_settings.drop_ammo = atoi(val) != 0;
+        else if (!strcmp(key, "drop_treasures")) g_settings.drop_treasures = atoi(val) != 0;
+        else if (!strcmp(key, "drop_always")) g_settings.drop_always = atoi(val) != 0;
         else if (!strcmp(key, "cheat_rupees")) g_settings.cheat_rupees = atoi(val) != 0;
         else if (!strcmp(key, "cheat_hookshot")) g_settings.cheat_hookshot = atoi(val) != 0;
         else if (!strcmp(key, "no_buff_drops")) g_settings.no_buff_drops = atoi(val) != 0;
@@ -336,6 +353,12 @@ void settings_save(void) {
     fprintf(f, "chaos_letters = %s\n", letters[g_settings.chaos_letters]);
     fprintf(f, "cheat_hearts = %d\ncheat_stamina = %d\ncheat_rupees = %d\ncheat_beetle = %d\n", g_settings.cheat_hearts,
             g_settings.cheat_stamina, g_settings.cheat_rupees, g_settings.cheat_beetle);
+    fprintf(f, "cheat_dash = %d\ndash_max = %d\nflight_speed = %.2f\n", g_settings.cheat_dash, g_settings.dash_max,
+            g_settings.flight_speed);
+    fprintf(f, "walk_speed = %.2f\ncheat_skyward = %d\n", g_settings.walk_speed, g_settings.cheat_skyward);
+    fprintf(f, "drop_hearts = %d\ndrop_rupees = %d\ndrop_ammo = %d\ndrop_treasures = %d\ndrop_always = %d\n",
+            g_settings.drop_hearts, g_settings.drop_rupees, g_settings.drop_ammo, g_settings.drop_treasures,
+            g_settings.drop_always);
     fprintf(f, "cheat_hookshot = %d\n", g_settings.cheat_hookshot);
     fprintf(f, "no_buff_drops = %d\n", g_settings.no_buff_drops);
     fprintf(f, "diff_damage = %.2f\ndiff_ohko = %d\ndiff_hero = %d\n", g_settings.diff_damage, g_settings.diff_ohko,

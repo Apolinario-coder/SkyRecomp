@@ -37,6 +37,9 @@ void rando_tab_draw(float scale);
 bool warp_tab_draw(float scale);  // warp_tab.mm: true when a warp started
 extern "C" void cheats_draw(float scale);  // cheats.mm
 extern "C" void difficulty_rows(void);  // difficulty.mm
+extern "C" void loftwing_rows(void);    // difficulty.mm
+extern "C" void drop_rows(void);        // difficulty.mm
+extern "C" void link_rows(void);        // difficulty.mm
 void controls_bindings_draw(float scale);  // controls_ui.mm
 #include "../input_bind.h"
 #include "../paths.h"
@@ -682,6 +685,12 @@ static void tab_gameplay(void) {
     }
     opt_section("Difficulty");
     difficulty_rows();
+    opt_section("Link");
+    link_rows();
+    opt_section("Loftwing");
+    loftwing_rows();
+    opt_section("Drops");
+    drop_rows();
     opt_section("Accessibility");
     static const char *const cb[] = {"Off", "Red-weak (protan)", "Green-weak (deutan)", "Blue-weak (tritan)"};
     opt_choice("Color blind mode", &g_settings.colorblind, cb, 4, COLORBLIND_OFF,
