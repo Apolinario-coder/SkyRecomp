@@ -1,5 +1,39 @@
 # Changelog
 
+## [2.1] - 2026-10-31
+
+This release brings major stability, performance, graphics, and quality-of-life improvements rolled up from @BlAnK182C-bak (Issue #92).
+
+### Performance & Compilation
+- **Optimized game code (-O1):** Game code is now compiled with `-O1` optimization across all platforms, offering substantial performance and frame pacing gains while keeping build times controlled via LLVM pass caps.
+- **Pipeline Cache & Shader Compilation:** Added configurable shader compilation settings (hybrid, wait, or async) and persistent pipeline cache saving to minimize stutter.
+
+### Graphics & Rendering
+- **Bindless Shaders & Gather:** Translated bindless texture lookups and texture gathers across both Vulkan and Metal backends.
+- **Enhanced Video Settings:** Added FXAA, supersampling with proper averaging, and anisotropic filtering settings.
+- **Hardware Compatibility:** Vulkan now safely queries and activates only supported device features, fixing crashes on varied GPU architectures (#46, #59, #60). Guest heap is now allocated in 32 MB chunks.
+- **Metal Improvements:** Fixed NVN alpha comparisons, depth test behavior on passes lacking depth buffers (fixing dark Fi rendering), OR logic op blending, and thumbnail saving.
+- **Texture Fixes:** Corrected channel ordering for BGR5 formats and low-bit handling for 16-bit texture formats.
+
+### Controls & Input
+- **Stick Circle Clamping:** Kept both analog sticks constrained to the Nintendo Switch physical circle bounds (#16, #31).
+- **Free Camera Right Stick:** Right stick click now passes through correctly while using free camera (#86).
+- **Mouse Combat:** Sword swings can now be driven directly with mouse motion while holding left click.
+- **Prompt Icons:** Added crisp HUD and in-dialogue keyboard/controller prompt icons that automatically reflect the active input device.
+
+### Audio
+- Fixed aux reverb, high-pitched notes, missing PCM format decoders, and audio pop/click artifacts. Turning room reverb off now properly disables aux reverb.
+
+### Gameplay & Cheats
+- **Virtual Amiibo:** Added virtual Zelda & Loftwing amiibo support from the player's own dump in the Gameplay tab.
+- **Flight & Speed Tweaks:** Added Loftwing dash gauge, customizable flight and walking speed multipliers, and drop toggles.
+- **Cheats Tab:** Added options for Hero Mode from the start, custom damage taken multipliers, and color blind mode.
+- **Performance Overlay:** Built-in real-time overlay showing CPU, GPU, RAM, thermals, and frametime graphs.
+
+### Setup & Packaging
+- Setup now avoids folder dialog lockups and never attempts to copy game files over themselves (#81, #87).
+- Automated multi-platform release packaging for Windows, Linux AppImage, and macOS 14/15.
+
 ## [2.0.2] - 2026-10-25
 
 - **Language fixes and regional support:** Added automatic regional fallback so game data with either European (`en-GB`, `es-ES`, `fr-FR`) or North American (`en-US`, `es-419`, `fr-CA`) files correctly displays in English or the chosen language, preventing unwanted fallbacks.
