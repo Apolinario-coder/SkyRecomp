@@ -78,8 +78,11 @@ typedef struct {
     bool glsl;               // emit Vulkan GLSL: dialect-specific constructs here, the rest via glsl_rewrite()
     bool uses_gmem_store;    // STG present: the gmem buffer is not readonly
     uint32_t cbuf_need[18];  // highest constant vec4 index + 1 per cbuf (array size of the GLSL block)
-    // a register holding a texture handle read from the texture bindings, LDC c[2][areg + off] (TEX.B: emit_tex)
+    // a register holding a texture handle read from the texture bindings, LDC c[2][areg + off] (TEX.B: emit_tex).
+    // With an index register, the LDC also saves the binding's index in bs<handle reg>: the load often overwrites
+    // its own index register (LDC r5, c[2][r5 + 0x20] in the waterfall mist)
     struct { bool valid; uint8_t areg; uint32_t off; } handle_src[256];
+    uint8_t bs_used[256];
 } Ctx;
 
 static uint64_t bits(uint64_t w, int lo, int n) { return (w >> lo) & ((n == 64) ? ~0ull : ((1ull << n) - 1)); }
@@ -867,15 +870,29 @@ static void emit_tex(Ctx *c, uint64_t w, bool bindless) {
     int ar = c->handle_src[b].areg;
     uint32_t off = c->handle_src[b].off;
     if (ar == RZ) { emit_tex_binding(c, w, off / 4, b + 1, aoffi, lod_mode); return; }
-    c->reg_used[ar] = 1;
-    sp(&c->body, "    {\n    uint bslot = (r%d + %uu - 32u) >> 3;\n", ar, off);
+    sp(&c->body, "    {\n    uint bslot = bs%d;\n", b);
     for (int k = 0; k < BINDLESS_BINDINGS; k++) {
         if (k < BINDLESS_BINDINGS - 1) sp(&c->body, "    %sif (bslot == %du) {\n", k ? "} else " : "", k);
         else sp(&c->body, "    } else {\n");
         emit_tex_binding(c, w, (0x20 + 8 * k) / 4, b + 1, aoffi, lod_mode);
         if (c->tex_slot[(0x20 + 8 * k) / 4]) c->info->tex[c->tex_slot[(0x20 + 8 * k) / 4] - 1].bindless = true;
     }
-    sp(&c->body, "    }\n    }\n");
+    sp(&c->body, "    }\n");
+    // LARECOMP_BINDLESS_TINT=1 (debug): the result is a solid colour per picked binding - 0 red, 1 green, 2 blue,
+    // 3 yellow, 4 magenta, 5 cyan, 6 white, 7+ orange - to see which texture an effect's particles really sample
+    static int tint = -1;
+    if (tint < 0) tint = getenv("LARECOMP_BINDLESS_TINT") != NULL;
+    if (tint) {
+        int d = (int)bits(w, 0, 8), n = 0;
+        uint32_t mask = (uint32_t)bits(w, 31, 4);
+        sp(&c->body, "    { float4 tc = bslot == 0u ? float4(1, 0, 0, 1) : bslot == 1u ? float4(0, 1, 0, 1) : bslot == 2u ? "
+                     "float4(0, 0, 1, 1) : bslot == 3u ? float4(1, 1, 0, 1) : bslot == 4u ? float4(1, 0, 1, 1) : bslot == 5u ? "
+                     "float4(0, 1, 1, 1) : bslot == 6u ? float4(1, 1, 1, 1) : float4(1, 0.5, 0, 1);\n");
+        for (int comp = 0; comp < 4; comp++)
+            if ((mask >> comp) & 1 && d != RZ) sp(&c->body, "      r%d = as_type<uint>(tc[%d]);\n", d + n++, comp);
+        sp(&c->body, "    }\n");
+    }
+    sp(&c->body, "    }\n");
 }
 
 // ------------------------------------------------------------------ instruction translation
@@ -960,6 +977,10 @@ static void emit_insn(Ctx *c, uint64_t w, uint32_t pc) {
         int n = sz == 5 ? 2 : 1;
         char rb[16];
         const char *dyn = a == RZ ? NULL : reg(c, a, rb);
+        if (idx == 2 && d != RZ && dyn) {  // the binding index, before the load can overwrite its register
+            c->bs_used[d] = 1;
+            sp(&c->body, "    bs%d = (%s + %uu - 32u) >> 3;\n", d, dyn, (uint32_t)off);
+        }
         for (int i = 0; i < n; i++) {
             char cb[256];
             cbuf_ref(c, idx, off + 4 * i, dyn, cb);
@@ -1941,6 +1962,8 @@ static ShaderInfo *glsl_finish(Ctx *c, bool any_branch, bool dbg) {
     }
     for (int i = 0; i < 256; i++)
         if (c->reg_used[i]) sp(&s, "  uint r%d = 0u;\n", i);
+    for (int i = 0; i < 256; i++)
+        if (c->bs_used[i]) sp(&s, "  uint bs%d = 0u;\n", i);
     for (int i = 0; i < 7; i++)
         if (c->pred_used[i]) sp(&s, "  bool p%d = false;\n", i);
     if (c->uses_cc) sp(&s, "  uint cc = 0u; bool ccz = false, ccs = false;\n");
@@ -2180,6 +2203,8 @@ ShaderInfo *maxwell_translate(const uint8_t *blob, size_t max_size, int stage, c
     free(args.buf);
     for (int i = 0; i < 256; i++)
         if (c->reg_used[i]) sp(&s, "  uint r%d = 0;\n", i);
+    for (int i = 0; i < 256; i++)
+        if (c->bs_used[i]) sp(&s, "  uint bs%d = 0u;\n", i);
     for (int i = 0; i < 7; i++)
         if (c->pred_used[i]) sp(&s, "  bool p%d = false;\n", i);
     if (c->uses_cc) sp(&s, "  uint cc = 0; bool ccz = false, ccs = false;\n");
