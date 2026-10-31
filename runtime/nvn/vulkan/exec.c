@@ -1930,37 +1930,57 @@ static VkDescriptorBufferInfo cbuf_info(int stage, ShaderInfo *si, int k, uint32
     return ubo_span(guest_copy(r.addr, size), size);
 }
 
-// Global memory (shader LDG/STG, maxwell_gmem_base = HEAP_BASE): the guest heap imported as a GPU buffer
-// (VK_EXT_external_memory_host), zero-copy like metal.m's g_guest_buffer, so compute results land in guest
-// memory. The import pins its pages, so it covers only the heap the game set up (SetHeapSize), made on first use.
-// LARECOMP_VK_NO_GMEM=1: no import, reads return zero.
+// Guest heap as GPU buffers (VK_EXT_external_memory_host), zero-copy like metal.m's g_guest_buffer. An import pins its
+// pages - the driver faults in every page of the range - so what is imported is resident whether the game touched it
+// or not, where Metal's newBufferWithBytesNoCopy leaves untouched pages alone. Importing the whole heap the game set up
+// (SetHeapSize, ~3 GB) at the first draw put the process RSS at ~4.2 GB on Linux against ~1.1 GB on macOS. So two kinds:
+//  - gmem_buf, the whole heap: only for shader global memory (LDG/STG, maxwell_gmem_base = HEAP_BASE: one SSBO the
+//    shader indexes by guest address, which can't be split), made when a shader that uses it first runs, so compute
+//    results land in guest memory.
+//  - chunks (gch): vertex / index data (guest_direct) is read from 32 MB slices of the heap imported on first use, so
+//    only the slices the game actually draws from get pinned.
+// LARECOMP_VK_IMPORT_HEAP=1: import the whole heap at the first draw and serve everything from it (the old behaviour).
+// LARECOMP_VK_NO_GMEM=1: no imports (global memory reads return zero, vertices / indices are copied).
 static VkBuffer gmem_buf;
 static VkDeviceMemory gmem_mem;
 static uint64_t gmem_size;
+static int gmem_off = -1;  // 1: imports unavailable or switched off
+static bool gmem_failed;   // the whole-heap import failed (chunks may still work: they are far smaller)
 
-static bool gmem_import(uint64_t size) {
-    plat_commit(HEAP_BASE, size);  // An external host-memory import must cover committed pages.
+static bool gmem_disabled(void) {
+    if (gmem_off < 0) gmem_off = getenv("LARECOMP_VK_NO_GMEM") != NULL || !g_vk.host_import;
+    return gmem_off;
+}
+
+// Host memory [HEAP_BASE + lo, + size) as a buffer (lo and size page multiples). Nothing stays allocated on failure.
+static bool host_import(uint64_t lo, uint64_t size, VkBuffer *buf, VkDeviceMemory *mem) {
+    void *host = (void *)(uintptr_t)(HEAP_BASE + lo);
+    plat_commit(HEAP_BASE + lo, size);  // An external host-memory import must cover committed pages.
     PFN_vkGetMemoryHostPointerPropertiesEXT props =
         (PFN_vkGetMemoryHostPointerPropertiesEXT)vkGetDeviceProcAddr(g_vk.dev, "vkGetMemoryHostPointerPropertiesEXT");
     VkMemoryHostPointerPropertiesEXT mp = {.sType = VK_STRUCTURE_TYPE_MEMORY_HOST_POINTER_PROPERTIES_EXT};
-    if (!props || props(g_vk.dev, VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT, (void *)(uintptr_t)HEAP_BASE, &mp) != VK_SUCCESS ||
-        !mp.memoryTypeBits)
+    if (!props || props(g_vk.dev, VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT, host, &mp) != VK_SUCCESS || !mp.memoryTypeBits)
         return false;
     VkImportMemoryHostPointerInfoEXT imp = {.sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_HOST_POINTER_INFO_EXT,
                                             .handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT,
-                                            .pHostPointer = (void *)(uintptr_t)HEAP_BASE};
+                                            .pHostPointer = host};
     VkMemoryAllocateInfo ai = {.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, .pNext = &imp, .allocationSize = size,
                                .memoryTypeIndex = (uint32_t)__builtin_ctz(mp.memoryTypeBits)};
-    VkDeviceMemory mem;
-    if (vkAllocateMemory(g_vk.dev, &ai, NULL, &mem) != VK_SUCCESS) return false;
+    if (vkAllocateMemory(g_vk.dev, &ai, NULL, mem) != VK_SUCCESS) return false;
     VkExternalMemoryBufferCreateInfo eb = {.sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_BUFFER_CREATE_INFO,
                                            .handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT};
     VkBufferCreateInfo bi = {.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, .pNext = &eb, .size = size,
                              .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
                                       VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT};
+    if (vkCreateBuffer(g_vk.dev, &bi, NULL, buf) != VK_SUCCESS) { vkFreeMemory(g_vk.dev, *mem, NULL); return false; }
+    vkBindBufferMemory(g_vk.dev, *buf, *mem, 0);
+    return true;
+}
+
+static bool gmem_import(uint64_t size, const char *why) {
     VkBuffer buf;
-    if (vkCreateBuffer(g_vk.dev, &bi, NULL, &buf) != VK_SUCCESS) { vkFreeMemory(g_vk.dev, mem, NULL); return false; }
-    vkBindBufferMemory(g_vk.dev, buf, mem, 0);
+    VkDeviceMemory mem;
+    if (!host_import(0, size, &buf, &mem)) return false;
     if (gmem_buf) {  // the heap grew: the old import may still be in use by submitted work
         vk_wait_seq(submit_seq);
         vkDestroyBuffer(g_vk.dev, gmem_buf, NULL);
@@ -1969,25 +1989,76 @@ static bool gmem_import(uint64_t size) {
     gmem_buf = buf;
     gmem_mem = mem;
     gmem_size = size;
-    LOG("[vk] guest heap imported for shader global memory: %llu MB\n", (unsigned long long)(size >> 20));
+    LOG("[vk] whole guest heap imported (%s): %llu MB resident\n", why, (unsigned long long)(size >> 20));
     return true;
 }
 
-static uint64_t gmem_tried;  // heap size the import was last attempted for (gmem_info imports / re-imports)
+static uint64_t gmem_tried;  // heap size the import was last attempted for (guest_src re-imports in the eager mode)
 
-static VkDescriptorBufferInfo gmem_info(void) {
-    static int off = -1;
-    if (off < 0) off = getenv("LARECOMP_VK_NO_GMEM") != NULL || !g_vk.host_import;
+// The whole heap for a shader's global memory (why: for the log - what made the first import).
+static VkDescriptorBufferInfo gmem_info(const char *why) {
     uint64_t want = (kernel_heap_size() + 0xFFFF) & ~0xFFFFull;
     if (want > HEAP_MAX) want = HEAP_MAX;
-    if (!off && want > gmem_size && !gmem_import(want)) {
+    if (!gmem_disabled() && !gmem_failed && want > gmem_size && !gmem_import(want, why)) {
         LOG("[vk] guest heap import failed (%llu MB): shader global memory reads return zero\n", (unsigned long long)(want >> 20));
-        off = 1;
+        gmem_failed = true;
     }
     if (gmem_buf) return (VkDescriptorBufferInfo){gmem_buf, 0, gmem_size};
     static uint32_t zero[1024];
     VkSpan s = vk_transient_copy(zero, sizeof zero, 256);
     return (VkDescriptorBufferInfo){s.buf, s.off, sizeof zero};
+}
+
+// Chunk c imports heap offsets [c * GCH_SIZE, + GCH_SIZE + GCH_TAIL). The tail overlaps the next chunk (its pages are
+// shared, nothing is pinned twice), so a buffer starting near the end of a chunk is still served by it: only bindings
+// longer than the tail that start late in a chunk fall back to copies. 32 MB: a smaller slice wastes less on pages the
+// game never touched, a larger one imports less often (each import is an allocation the driver pins up front).
+// Never destroyed before a reboot (vk_exec_reset): submitted work and vertex cache entries refer to them.
+#define GCH_SHIFT 25
+#define GCH_SIZE (1ull << GCH_SHIFT)
+#define GCH_TAIL (8ull << 20)
+#define GCH_N (HEAP_MAX >> GCH_SHIFT)
+static struct { VkBuffer buf; VkDeviceMemory mem; bool bad; } gch[GCH_N];
+static uint64_t gch_bytes;  // imported so far (the log)
+
+static bool gch_import(uint64_t c) {
+    uint64_t lo = c << GCH_SHIFT, len = GCH_SIZE + GCH_TAIL;
+    if (len > HEAP_MAX - lo) len = HEAP_MAX - lo;
+    if (!host_import(lo, len, &gch[c].buf, &gch[c].mem)) {
+        gch[c].bad = true;  // (not retried at every draw)
+        LOG("[vk] guest heap chunk %llu import failed: its vertices / indices are copied\n", (unsigned long long)c);
+        return false;
+    }
+    gch_bytes += len;
+    LOG("[vk] guest heap chunk %llu (offset %llu MB) imported for vertex / index data: %llu MB in chunks\n", (unsigned long long)c,
+        (unsigned long long)(lo >> 20), (unsigned long long)(gch_bytes >> 20));
+    return true;
+}
+
+// The zero-copy source of guest memory [addr, addr + size), addr >= HEAP_BASE: its buffer, and that buffer's heap
+// offset *base. The whole-heap import when there is one, else the chunk holding addr (imported on first use). False:
+// copy the data instead (outside the heap the game set up, a binding running past its chunk's tail, imports off or
+// failed). Sources are page-aligned at both ends, so a page-rounded range inside the binding is inside the source too.
+static bool guest_src(uint64_t addr, uint64_t size, VkBuffer *buf, uint64_t *base) {
+    static int eager = -1;
+    if (eager < 0) eager = getenv("LARECOMP_VK_IMPORT_HEAP") != NULL;
+    if (gmem_disabled()) return false;
+    if (eager && addr + size > HEAP_BASE + gmem_size && kernel_heap_size() != gmem_tried) {
+        gmem_tried = kernel_heap_size();
+        gmem_info("LARECOMP_VK_IMPORT_HEAP");
+    }
+    if (gmem_buf && addr + size <= HEAP_BASE + gmem_size) {  // (a shader made the whole import: one buffer for everything)
+        *buf = gmem_buf;
+        *base = 0;
+        return true;
+    }
+    if (eager) return false;
+    uint64_t lo = addr - HEAP_BASE, c = lo >> GCH_SHIFT, cb = c << GCH_SHIFT;
+    if (lo >= HEAP_MAX || size > HEAP_MAX || lo + size > kernel_heap_size() || lo - cb + size > GCH_SIZE + GCH_TAIL) return false;
+    if (!gch[c].buf && (gch[c].bad || !gch_import(c))) return false;
+    *buf = gch[c].buf;
+    *base = cb;
+    return true;
 }
 
 // Compute dispatches that use global memory: the imported heap is host memory across PCIe on a discrete GPU, and a
@@ -2021,7 +2092,7 @@ static void gfast_prepare(VkCommandBuffer cb) {
     if (on < 0) { const char *e = getenv("LARECOMP_VK_GMEM_FAST"); on = !e || atoi(e) != 0; }
     memset(gmap_tab, 0, sizeof gmap_tab);
     gfast_n = 0;
-    gmem_info();  // (the heap import, made on first use)
+    gmem_info("compute shader with global memory");  // (the whole-heap import, made on first use)
     gfast_info();
     if (!on || !gmem_buf) return;
     struct { uint64_t lo, hi; } r[16];
@@ -2091,7 +2162,8 @@ static void gfast_finish(VkCommandBuffer cb) {
 #define VC_TAB 8192                   // entries (open addressing)
 #define VC_MAX_RANGE (64ull << 20)    // larger bound ranges: read in place
 #define VC_BUDGET (768ull << 20)      // device-local bytes kept; the least recently used go first
-typedef struct { uint64_t lo, hi, used_seq; uint32_t gen, epoch; VkBuffer buf; VmaAllocation mem; bool gpu; } VcEnt;
+// (src / sbase: the imported chunk the copies are made from and its heap offset; src null: the whole-heap import, base 0)
+typedef struct { uint64_t lo, hi, used_seq, sbase; uint32_t gen, epoch; VkBuffer buf, src; VmaAllocation mem; bool gpu; } VcEnt;
 static VcEnt vc_tab[VC_TAB];
 static uint32_t vc_pend[VC_TAB];  // entries the pending submission draws from (vc_flush brings them up to date)
 static int vc_npend;
@@ -2178,7 +2250,7 @@ static void vc_mark_sbufs(int stage) {
     }
 }
 
-static bool vcache_lookup(uint64_t addr, uint64_t size, VkBuffer *buf, VkDeviceSize *off) {
+static bool vcache_lookup(uint64_t addr, uint64_t size, VkBuffer src, uint64_t sbase, VkBuffer *buf, VkDeviceSize *off) {
     if (vc_on < 0) {
         const char *e = getenv("LARECOMP_VK_VCACHE");
         vc_on = !e || atoi(e) != 0;
@@ -2187,9 +2259,8 @@ static bool vcache_lookup(uint64_t addr, uint64_t size, VkBuffer *buf, VkDeviceS
             vc_on = 0;
         }
     }
-    if (!vc_on || !gmem_buf || size > VC_MAX_RANGE) return false;
+    if (!vc_on || size > VC_MAX_RANGE) return false;
     uint64_t lo = (addr - HEAP_BASE) & ~(VC_PAGE - 1), hi = (addr - HEAP_BASE + size + VC_PAGE - 1) & ~(VC_PAGE - 1);
-    if (hi > gmem_size) return false;
     uint64_t pend = vk_pending_seq();
     uint64_t h = (lo * 0x9E3779B97F4A7C15ull) ^ (hi * 0xC2B2AE3D27D4EB4Full);
     uint32_t slot = (uint32_t)(h ^ (h >> 32)) & (VC_TAB - 1), free_slot = ~0u, old_slot = ~0u;
@@ -2218,7 +2289,8 @@ static bool vcache_lookup(uint64_t addr, uint64_t size, VkBuffer *buf, VkDeviceS
                                  .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT};
         VmaAllocationCreateInfo ai = {.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE};
         if (vmaCreateBuffer(g_vk.vma, &bi, &ai, &e->buf, &e->mem, NULL) != VK_SUCCESS) { memset(e, 0, sizeof *e); return false; }
-        e->lo = lo; e->hi = hi;
+        e->lo = lo; e->hi = hi; e->sbase = sbase;
+        e->src = src == gmem_buf ? VK_NULL_HANDLE : src;  // (null: the whole-heap import, which a grown heap replaces)
         vc_bytes += hi - lo;
     }
     if (e->epoch != vc_epoch) {  // (pages turned GPU-written since: is this range one of them?)
@@ -2272,13 +2344,13 @@ void vc_flush(void) {
         int nc = 0;
         for (uint64_t p = e->lo / VC_PAGE; p < e->hi / VC_PAGE; p++) {
             if (e->gen && vc_page_gen[p] <= e->gen) continue;
-            uint64_t o = p * VC_PAGE;
+            uint64_t o = p * VC_PAGE - e->sbase;  // (offset in the source buffer)
             if (nc && cp[nc - 1].srcOffset + cp[nc - 1].size == o) { cp[nc - 1].size += VC_PAGE; continue; }
-            if (nc == 64) { nc = 1; cp[0] = (VkBufferCopy){e->lo, 0, e->hi - e->lo}; break; }  // (scattered: the whole range)
-            cp[nc++] = (VkBufferCopy){o, o - e->lo, VC_PAGE};
+            if (nc == 64) { nc = 1; cp[0] = (VkBufferCopy){e->lo - e->sbase, 0, e->hi - e->lo}; break; }  // (scattered: the whole range)
+            cp[nc++] = (VkBufferCopy){o, p * VC_PAGE - e->lo, VC_PAGE};
         }
         if (nc) {
-            vkCmdCopyBuffer(cb, gmem_buf, e->buf, (uint32_t)nc, cp);
+            vkCmdCopyBuffer(cb, e->src ? e->src : gmem_buf, e->buf, (uint32_t)nc, cp);
             for (int k = 0; k < nc; k++) prof_vc_copied += cp[k].size;
         }
         e->gen = g;
@@ -2287,9 +2359,9 @@ void vc_flush(void) {
 }
 
 // Vertex / index data from the imported guest heap (renderer.m bind_guest reads g_guest_buffer the same way): the
-// device-local cache above, else read in place - no per-draw copy, no index scan for the copy size. The game fences its
-// CPU writes as on the Switch. Falls back to copies outside the heap or without the import; LARECOMP_VK_COPY_VERTICES=1
-// forces copies.
+// device-local cache above, else read in place from the chunk of the heap (guest_src) holding it - no per-draw copy, no
+// index scan for the copy size. The game fences its CPU writes as on the Switch. Falls back to copies outside the heap,
+// past a chunk's tail or without the import; LARECOMP_VK_COPY_VERTICES=1 forces copies.
 static bool guest_direct(uint64_t addr, uint64_t size, VkBuffer *buf, VkDeviceSize *off) {
     static int copy = -1;
     if (copy < 0) {
@@ -2304,11 +2376,12 @@ static bool guest_direct(uint64_t addr, uint64_t size, VkBuffer *buf, VkDeviceSi
 #endif
     }
     if (copy || addr < HEAP_BASE) return false;
-    if (addr + size > HEAP_BASE + gmem_size && kernel_heap_size() != gmem_tried) { gmem_tried = kernel_heap_size(); gmem_info(); }
-    if (!gmem_buf || addr + size > HEAP_BASE + gmem_size) return false;
-    if (vcache_lookup(addr, size, buf, off)) return true;
-    *buf = gmem_buf;
-    *off = addr - HEAP_BASE;
+    VkBuffer src;
+    uint64_t base;
+    if (!guest_src(addr, size, &src, &base)) return false;
+    if (vcache_lookup(addr, size, src, base, buf, off)) return true;
+    *buf = src;
+    *off = addr - HEAP_BASE - base;
     return true;
 }
 
@@ -2316,7 +2389,7 @@ static int g_cs_n;  // (compute program table below)
 
 // In-place reboot (device.c backend_reset; GPU idle): drop what is keyed by guest addresses - programs by code
 // address (the old Prog / Pipe objects are leaked, so pipeline keys holding their pointers can't collide), compute
-// programs, shared copies - and the heap import: its pages are replaced (re-imported on first use).
+// programs, shared copies - and the heap imports (whole and chunks): their pages are replaced (re-imported on first use).
 void vk_exec_reset(void) {
     memset(prog_tab, 0, sizeof prog_tab);
     memset(pipe_tab, 0, sizeof pipe_tab);
@@ -2329,6 +2402,15 @@ void vk_exec_reset(void) {
         gmem_mem = VK_NULL_HANDLE;
     }
     gmem_size = gmem_tried = 0;
+    gmem_failed = false;
+    for (int i = 0; i < (int)GCH_N; i++) {
+        if (gch[i].buf) {
+            vkDestroyBuffer(g_vk.dev, gch[i].buf, NULL);
+            vkFreeMemory(g_vk.dev, gch[i].mem, NULL);
+        }
+    }
+    memset(gch, 0, sizeof gch);
+    gch_bytes = 0;
     for (int i = 0; i < VC_TAB; i++)  // (the vertex cache: copies of the old pages)
         if (vc_tab[i].buf) vmaDestroyBuffer(g_vk.vma, vc_tab[i].buf, vc_tab[i].mem);
     memset(vc_tab, 0, sizeof vc_tab);
@@ -2426,7 +2508,7 @@ static VkDescriptorSet stage_set(Prog *p, VkDescriptorSetLayout layout, uint32_t
             bi[n] = cbuf_info(stage, si, (int)b->binding, gx, gy, gz);
             w[n].pBufferInfo = &bi[n];
         } else if (b->type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER) {
-            bi[n] = b->binding == GFAST_BUFFER_INDEX ? gfast_info() : gmem_info();
+            bi[n] = b->binding == GFAST_BUFFER_INDEX ? gfast_info() : gmem_info(stage == 5 ? "compute shader with global memory" : "draw shader with global memory");
             w[n].pBufferInfo = &bi[n];
         } else {
             continue;  // rscale / tint: written below, once the textures (and their scales) are known
