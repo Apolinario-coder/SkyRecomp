@@ -1100,6 +1100,11 @@ void backend_present(NvnTexture *t) {
     g_frame_counter++;
     extern void rt_present_pace(void);
     rt_present_pace();  // (runtime/hle/framepace.c: the game's swap interval, as on Vulkan)
+    extern void perfmon_frame(void);
+    extern void perfmon_set_gpu_mem(float game_mb, float total_mb);
+    perfmon_frame();  // (runtime/perfmon.c: the performance overlay's frame times)
+    if (total_frames % 30 == 0)  // the game's Metal allocations, and how much the GPU may use (unified memory)
+        perfmon_set_gpu_mem(dev.currentAllocatedSize / 1048576.0f, dev.recommendedMaxWorkingSetSize / 1048576.0f);
     extern void input_frame(uint64_t frame);
     input_frame(total_frames);
     static long slow_ms = -1;  // LARECOMP_SLOW_FRAME_MS=<ms>: sleep per presented frame (simulate a slow machine)
@@ -1177,6 +1182,8 @@ void ui_window_init(void) {
     SDL_MetalView view = SDL_Metal_CreateView(window);
     layer = (__bridge CAMetalLayer *)SDL_Metal_GetLayer(view);
     dev = MTLCreateSystemDefaultDevice();
+    extern void perfmon_set_gpu_hint(const char *n);
+    perfmon_set_gpu_hint(dev.name.UTF8String);  // (runtime/perfmon.c: the overlay's GPU name)
     layer.device = dev;
     layer.pixelFormat = MTLPixelFormatBGRA8Unorm;
     layer.framebufferOnly = getenv("LARECOMP_WINDOW_SHOT") ? NO : YES;

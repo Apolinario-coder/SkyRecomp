@@ -125,6 +125,8 @@ static void pick_device(void) {
     free(qp);
     if (g_vk.qfam == UINT32_MAX) FATAL("no graphics+present queue\n");
     LOG("[vk] using %s\n", g_vk.props.deviceName);
+    extern void perfmon_set_gpu_hint(const char *n);
+    perfmon_set_gpu_hint(g_vk.props.deviceName);  // (runtime/perfmon.c: the overlay's GPU, NVML's pick)
 }
 
 static bool g_fault_ext;
@@ -599,6 +601,19 @@ void backend_present(NvnTexture *t) {
     g_frame_counter++;
     extern void vk_pace_frame(void);
     vk_pace_frame();  // (exec.c: the game's 30 fps mode when frames don't fit 60)
+    extern void perfmon_frame(void);
+    extern void perfmon_set_gpu_mem(float game_mb, float total_mb);
+    perfmon_frame();  // (runtime/perfmon.c: the performance overlay's frame times)
+    if (total_frames % 30 == 0 && g_vk.vma) {  // the game's device-local allocations (VMA's count), and those heaps' size
+        VmaBudget b[VK_MAX_MEMORY_HEAPS];
+        const VkPhysicalDeviceMemoryProperties *mp;
+        vmaGetHeapBudgets(g_vk.vma, b);
+        vmaGetMemoryProperties(g_vk.vma, &mp);
+        uint64_t used = 0, size = 0;
+        for (uint32_t i = 0; i < mp->memoryHeapCount; i++)
+            if (mp->memoryHeaps[i].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) used += b[i].usage, size += mp->memoryHeaps[i].size;
+        perfmon_set_gpu_mem(used / 1048576.0f, size / 1048576.0f);
+    }
     extern void input_frame(uint64_t frame);
     input_frame(total_frames);
     static long slow_ms = -1;

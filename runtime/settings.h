@@ -12,6 +12,7 @@ enum { UPSCALE_BILINEAR = 0, UPSCALE_METALFX = 1 /* macOS */, UPSCALE_FSR1 = 2 /
 #define UPSCALE_SHARP UPSCALE_FSR1
 #endif
 enum { AA_OFF = 0, AA_SMAA = 1 };
+enum { PERF_OFF = 0, PERF_FPS = 1, PERF_FULL = 2 };  // the performance overlay (runtime/perfmon.c, F10)
 enum { PROMPTS_AUTO = 0, PROMPTS_NINTENDO = 1, PROMPTS_XBOX = 2, PROMPTS_PLAYSTATION = 3, PROMPTS_KEYBOARD = 4 };
 enum { PROMPT_LOOK_LIGHT = 0, PROMPT_LOOK_DARK = 1 };
 enum { CHAOS_LETTERS_OFF = 0, CHAOS_LETTERS_EXPLORED = 1, CHAOS_LETTERS_MAP = 2 /* explored, all with the Map */ };
@@ -32,7 +33,7 @@ typedef struct {
     float volume;        // master volume, 1 = 100%
     bool reverb;         // room reverb effect
     bool movie_audio;
-    bool show_fps;
+    int perf_overlay;    // PERF_*: off, the frame rate, or the full overlay (F10 cycles them)
     bool hd_textures;    // external texture replacements, applied live on Vulkan
     bool reshade;        // load the bundled Windows ReShade layer on the next launch
     int frame_rate;       // 60 or 120; the Skyward Sword simulation step follows this target

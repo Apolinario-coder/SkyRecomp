@@ -33,7 +33,7 @@ Settings g_settings = {
     .gyro_sens = 1.0f,
     .reverb = true,
     .movie_audio = true,
-    .show_fps = false,
+    .perf_overlay = PERF_OFF,
     .hd_textures = true,
     .reshade = true,
     .frame_rate = 60,
@@ -204,7 +204,9 @@ void settings_load(void) {
         else if (!strcmp(key, "volume")) g_settings.volume = (float)atof(val);
         else if (!strcmp(key, "reverb")) g_settings.reverb = atoi(val) != 0;
         else if (!strcmp(key, "movie_audio")) g_settings.movie_audio = atoi(val) != 0;
-        else if (!strcmp(key, "show_fps")) g_settings.show_fps = atoi(val) != 0;
+        else if (!strcmp(key, "show_fps")) g_settings.perf_overlay = atoi(val) ? PERF_FPS : PERF_OFF;  // (older files)
+        else if (!strcmp(key, "perf_overlay"))
+            g_settings.perf_overlay = !strcmp(val, "full") ? PERF_FULL : !strcmp(val, "fps") ? PERF_FPS : PERF_OFF;
         else if (!strcmp(key, "frame_rate")) g_settings.frame_rate = atoi(val) == 120 ? 120 : 60;
         else if (!strcmp(key, "game_build")) g_settings.game_build = !strcmp(val, "optimized") ? GAME_BUILD_OPTIMIZED : GAME_BUILD_FAST;
         else if (!strcmp(key, "resolution")) {
@@ -284,7 +286,7 @@ void settings_save(void) {
     fprintf(f, "volume = %.2f\n", g_settings.volume);
     fprintf(f, "reverb = %d\n", g_settings.reverb);
     fprintf(f, "movie_audio = %d\n", g_settings.movie_audio);
-    fprintf(f, "show_fps = %d\n", g_settings.show_fps);
+    fprintf(f, "perf_overlay = %s\n", g_settings.perf_overlay == PERF_FULL ? "full" : g_settings.perf_overlay == PERF_FPS ? "fps" : "off");
     fprintf(f, "frame_rate = %d\n", g_settings.frame_rate);
     fprintf(f, "game_build = %s\n", g_settings.game_build == GAME_BUILD_OPTIMIZED ? "optimized" : "fast");
     fprintf(f, "upscaler = %s\n", g_settings.upscaler == UPSCALE_METALFX ? "metalfx" : g_settings.upscaler == UPSCALE_NIS ? "nis" : g_settings.upscaler == UPSCALE_FSR1 ? "fsr1" : "bilinear");
