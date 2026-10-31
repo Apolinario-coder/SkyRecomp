@@ -64,8 +64,9 @@ typedef struct {
     int game_build;      // GAME_BUILD_*: a faster build of the game code, or faster game code (start screen, Set up)
     // cheats (runtime/ui/cheats.mm), applied every frame while a save is loaded
     bool cheat_hearts;   // health kept full
-    bool cheat_ammo;     // bombs / arrows / magic powder kept full (for the bags Link owns)
-    bool cheat_rupees;   // rupees kept at 999
+    bool cheat_stamina;  // the stamina gauge never drains (tools/patches.py STAMINA_STORE_SITE)
+    bool cheat_rupees;   // rupees kept at 9900
+    bool cheat_beetle;   // the Beetle's flight timer never runs out (tools/patches.py BEETLE_TIMER_SITE)
     bool cheat_hookshot; // hookshot latches onto any surface (Gameplay tab; runtime/hle/hookshot.c; seeds made with it: always)
     bool no_buff_drops;  // no Guardian Acorns / Pieces of Power (Gameplay tab; runtime/hle/qol.c; seeds made with it: always)
     // difficulty (runtime/ui/difficulty.mm)

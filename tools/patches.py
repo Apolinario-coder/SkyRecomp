@@ -685,3 +685,32 @@ def _prompt_pos(gen, a):
 
 
 PATCHES[PROMPT_POS_SITE] = _prompt_pos
+
+
+# ---- Skyward Sword HD 1.0.0 (gen.py applies SKY_PATCHES to its main; PATCHES above are Link's Awakening's)
+
+# Cheats (runtime/ui/cheats.mm): the community Atmosphere codes for this build (switch-cheats-db, build id
+# D824D4B1BBD45D03) NOP or replace these instructions; here the runtime decides per frame, from the Cheats tab.
+# Infinite stamina: main+0xa554f8 stores the gauge after this frame's drain ([x23] - cost, floored at 0; the cost is
+# halved under a stamina potion).
+STAMINA_STORE_SITE = 0x7000a554f8
+
+
+def _stamina_store(gen, a):
+    assert gen.word(a) == 0xb90002e8, hex(gen.word(a))  # str w8, [x23]
+    return ('{ extern int rt_cheat_stamina(void); if (!rt_cheat_stamina()) ST32(c->x[23], (uint32_t)c->x[8]); }'
+            f'  /* {a:#x}: str w8, [x23] (stamina drain: infinite stamina) */')
+
+
+# Infinite Beetle flight: main+0x279ce4 takes this frame's step off the Beetle's flight timer (u16 at +0xb92; it falls
+# at 0).
+BEETLE_TIMER_SITE = 0x7000279ce4
+
+
+def _beetle_timer(gen, a):
+    assert gen.word(a) == 0x4b090108, hex(gen.word(a))  # sub w8, w8, w9
+    return ('{ extern int rt_cheat_beetle(void); if (!rt_cheat_beetle()) c->x[8] = (uint32_t)c->x[8] - (uint32_t)c->x[9]; }'
+            f'  /* {a:#x}: sub w8, w8, w9 (Beetle flight timer: infinite Beetle flight) */')
+
+
+SKY_PATCHES = {STAMINA_STORE_SITE: _stamina_store, BEETLE_TIMER_SITE: _beetle_timer}

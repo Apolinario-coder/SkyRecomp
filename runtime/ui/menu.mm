@@ -636,12 +636,6 @@ static void tab_display(void) {
                "a moment later instead of the game pausing, while shadows and other reused images still wait, so they "
                "are never wrong. Wait: everything waits, which can stutter. Async: nothing waits, so a shadow can be "
                "missing until it's redrawn.");
-
-    opt_section("Game");
-    opt_toggle("Remove blur", &g_settings.blur_removal, false,
-               "Turns off the tilt-shift blur at the top and bottom of the screen.");
-    opt_toggle("Hide Hero Mode icon", &g_settings.hide_hero_icon, false,
-               "Hides the Hero Mode emblem in the corner of the screen while playing a Hero Mode file.");
     opt_end();
 }
 
@@ -758,8 +752,6 @@ static void tab_quit(float scale, bool in_game) {
 static void tab_about(void) {
     header("Movement");
     toggle("D-pad moves Link", &g_settings.dpad_move);
-    toggle("360-degree movement", &g_settings.move_360);
-    hint("Link walks in the exact direction of the stick instead of snapping to 8 directions.");
     toggle("Free camera look", &g_settings.free_cam);
     hint("Moving the right stick looks around without having to hold L first. A short L press switches it off/on "
          "for this session; holding L while the eye is on turns the free camera off for the hold, so the right "
@@ -905,7 +897,7 @@ static void tabs_body(float scale, bool in_game, void (*prelaunch)(float)) {
     if (prelaunch) tabs[ntabs++] = {"Prelaunch", -1, true};
     static const char *names[] = {"Video", "Audio", "Save Editor", "Randomizer", "Warp", "Cheats", "Gameplay",
                                   "Cosmetics", "Controls", "Quit", "Mods"};
-    static const int order[] = {8, 0, 1, 6, 10, 9};  // Controls, Video, Audio, Gameplay, Mods, Quit
+    static const int order[] = {8, 0, 1, 6, 5, 10, 9};  // Controls, Video, Audio, Gameplay, Cheats, Mods, Quit
     for (int i : order)  // (Quit: in game only - the start screen has its own QUIT)
         if (i != 9 || !prelaunch) tabs[ntabs++] = {names[i], i, true};
     int cur = 0;  // g_tab / g_tab_request hold ids
@@ -985,6 +977,7 @@ static void tabs_body(float scale, bool in_game, void (*prelaunch)(float)) {
                 case 0: tab_display(); break;
                 case 1: tab_audio(); break;
                 case 6: tab_gameplay(); break;
+                case 5: cheats_draw(scale); break;
                 case 8: tab_about(); break;
                 case 10: tab_mods(scale); break;
                 case 9: tab_quit(scale, in_game); break;

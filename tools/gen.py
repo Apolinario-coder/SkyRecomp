@@ -429,9 +429,10 @@ class Module:
                 out.append('    else { ' + ' '.join(self.render_single(ins, a, jump, refs)) + ' } }')
                 last = 'op'
                 continue
-            if self.is_las and a in PATCHES:  # hand-written replacement for one instruction (tools/patches.py)
+            patch = PATCHES.get(a) if self.is_las else SKY_PATCHES.get(a) if self.is_skyward else None
+            if patch:  # hand-written replacement for one instruction (tools/patches.py)
                 flush()
-                out.append('    ' + PATCHES[a](self, a))
+                out.append('    ' + patch(self, a))
                 last = 'op'
                 continue
             if self.is_skyward and a in SKY_TIMING_STORES:
@@ -501,7 +502,7 @@ class Module:
         return out
 
 
-from patches import PATCHES
+from patches import PATCHES, SKY_PATCHES
 
 # Skyward Sword HD 1.0.0: shared step in original 30 Hz units, and the matching duration in milliseconds.
 SKY_TIMING_STORES = {
