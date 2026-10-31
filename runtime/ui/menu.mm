@@ -47,6 +47,23 @@ static std::atomic<bool> g_open{false};
 static std::atomic<bool> g_text_busy{false};  // a text field / the on-screen keyboard has the keys (render thread: ui_text_busy)
 static std::atomic<bool> g_want_fullscreen_apply{false};
 
+// Zelda & Loftwing amiibo (runtime/services/nfp.c): the player loads their own figure's dump once; then Fi's
+// "Use amiibo" recognises it. The file dialog opens on the main thread (macOS: AppKit panels only work there - from the
+// render thread it aborted) and answers on another; the pick is handled on the menu's next frame.
+extern "C" bool amiibo_loaded(void);
+extern "C" bool amiibo_import(const char *path, char *msg, size_t cap);
+static pthread_mutex_t amiibo_lock = PTHREAD_MUTEX_INITIALIZER;
+static char amiibo_pick[1024], amiibo_msg[160];
+static std::atomic<bool> g_amiibo_dialog{false};  // (opened on the main thread: menu_apply_window_requests)
+
+static void SDLCALL amiibo_picked(void *, const char *const *files, int) {
+    if (!files || !files[0]) return;
+    pthread_mutex_lock(&amiibo_lock);
+    snprintf(amiibo_pick, sizeof amiibo_pick, "%s", files[0]);
+    pthread_mutex_unlock(&amiibo_lock);
+}
+
+
 struct QEvent {
     enum { KEY, ANALOG, MOUSE_POS, MOUSE_BUTTON, WHEEL, TEXT } kind;
     ImGuiKey key;
@@ -275,6 +292,10 @@ void menu_apply_window_requests(void *win) {
     if (first || g_want_fullscreen_apply.exchange(false)) {
         first = false;
         SDL_SetWindowFullscreen(w, g_settings.fullscreen);
+    }
+    if (g_amiibo_dialog.exchange(false)) {
+        static const SDL_DialogFileFilter f[] = {{"amiibo dump", "bin"}};
+        SDL_ShowOpenFileDialog(amiibo_picked, NULL, w, f, 1, NULL, false);
     }
 }
 
@@ -621,6 +642,34 @@ static void tab_display(void) {
                "Turns off the tilt-shift blur at the top and bottom of the screen.");
     opt_toggle("Hide Hero Mode icon", &g_settings.hide_hero_icon, false,
                "Hides the Hero Mode emblem in the corner of the screen while playing a Hero Mode file.");
+    opt_end();
+}
+
+static void amiibo_rows(void) {
+    pthread_mutex_lock(&amiibo_lock);
+    if (amiibo_pick[0]) {
+        amiibo_import(amiibo_pick, amiibo_msg, sizeof amiibo_msg);
+        amiibo_pick[0] = 0;
+    }
+    pthread_mutex_unlock(&amiibo_lock);
+    bool have = amiibo_loaded();
+    char d[400];
+    snprintf(d, sizeof d, "In Fi's menu, \"Use amiibo\" recognises your Zelda & Loftwing amiibo right away: from the surface "
+             "Fi takes you to the sky, and from the sky back to the spot you left. Needs your own figure's dump, loaded "
+             "below.%s%s", amiibo_msg[0] ? "\n\n" : "", amiibo_msg);
+    if (!have) opt_disable_next();
+    opt_toggle("Zelda & Loftwing amiibo", &g_settings.amiibo, true, d);
+    snprintf(d, sizeof d, "Pick a dump of your own Zelda & Loftwing amiibo (a .bin made with an NFC phone app such as "
+             "TagMo). A copy is kept in the game's data folder; only the figure's ID is read from it.%s%s",
+             amiibo_msg[0] ? "\n\n" : "", amiibo_msg);
+    if (opt_button(have ? "Load another amiibo dump" : "Load amiibo dump", d)) g_amiibo_dialog = true;
+}
+
+
+// Gameplay: the game's text language and the Zelda & Loftwing amiibo
+static void tab_gameplay(void) {
+    opt_begin("##gameplay", ImGui::GetFontSize() / 34);
+    opt_section("Game");
     const char *names[N_LANGUAGES];
     for (int i = 0; i < N_LANGUAGES; i++) names[i] = g_language_names[i];
     int lang = g_settings.language;
@@ -637,6 +686,8 @@ static void tab_display(void) {
             set_open(false);
         }
     }
+    opt_section("amiibo");
+    amiibo_rows();
     opt_end();
 }
 
@@ -854,7 +905,7 @@ static void tabs_body(float scale, bool in_game, void (*prelaunch)(float)) {
     if (prelaunch) tabs[ntabs++] = {"Prelaunch", -1, true};
     static const char *names[] = {"Video", "Audio", "Save Editor", "Randomizer", "Warp", "Cheats", "Gameplay",
                                   "Cosmetics", "Controls", "Quit", "Mods"};
-    static const int order[] = {8, 0, 1, 10, 9};  // Controls, Video, Audio, Mods, Quit
+    static const int order[] = {8, 0, 1, 6, 10, 9};  // Controls, Video, Audio, Gameplay, Mods, Quit
     for (int i : order)  // (Quit: in game only - the start screen has its own QUIT)
         if (i != 9 || !prelaunch) tabs[ntabs++] = {names[i], i, true};
     int cur = 0;  // g_tab / g_tab_request hold ids
@@ -933,6 +984,7 @@ static void tabs_body(float scale, bool in_game, void (*prelaunch)(float)) {
                 case -1: prelaunch(scale); break;
                 case 0: tab_display(); break;
                 case 1: tab_audio(); break;
+                case 6: tab_gameplay(); break;
                 case 8: tab_about(); break;
                 case 10: tab_mods(scale); break;
                 case 9: tab_quit(scale, in_game); break;

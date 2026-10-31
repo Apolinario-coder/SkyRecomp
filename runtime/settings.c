@@ -35,6 +35,7 @@ Settings g_settings = {
     .movie_audio = true,
     .perf_overlay = PERF_OFF,
     .shader_compile = SHADERS_HYBRID,
+    .amiibo = true,
     .hd_textures = true,
     .reshade = true,
     .frame_rate = 60,
@@ -238,6 +239,7 @@ void settings_load(void) {
         else if (!strcmp(key, "disabled_mods") || !strcmp(key, "mod_order")) mods_settings_load(key, val);
         else if (!strcmp(key, "blur_removal")) g_settings.blur_removal = atoi(val) != 0;
         else if (!strcmp(key, "hide_hero_icon")) g_settings.hide_hero_icon = atoi(val) != 0;
+        else if (!strcmp(key, "amiibo")) g_settings.amiibo = atoi(val) != 0;
         else if (!strcmp(key, "mirror_mode")) g_settings.mirror_mode = atoi(val) != 0;
         else if (!strcmp(key, "prompts")) g_settings.prompts = !strcmp(val, "nintendo") ? PROMPTS_NINTENDO : !strcmp(val, "xbox") ?
                                                               PROMPTS_XBOX : !strcmp(val, "playstation") ? PROMPTS_PLAYSTATION :
@@ -317,6 +319,7 @@ void settings_save(void) {
     fprintf(f, "gyro_sens = %.2f\n", g_settings.gyro_sens);
     fprintf(f, "move_360 = %d\nblur_removal = %d\nhide_hero_icon = %d\n", g_settings.move_360, g_settings.blur_removal,
             g_settings.hide_hero_icon);
+    fprintf(f, "amiibo = %d\n", g_settings.amiibo);
     mods_settings_save(f);
     static const char *const prompts[] = {"auto", "nintendo", "xbox", "playstation", "keyboard"};
     fprintf(f, "prompts = %s\n", g_settings.prompts >= 0 && g_settings.prompts < 5 ? prompts[g_settings.prompts] : "auto");

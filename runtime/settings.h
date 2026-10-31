@@ -52,6 +52,7 @@ typedef struct {
     bool blur_removal;   // no tilt-shift blur at the top / bottom of the screen
     bool hide_hero_icon; // no Hero Mode icon on the HUD
     bool mirror_mode;    // the world mirrored left to right (Gameplay tab): renderers + runtime/hle/input.c
+    bool amiibo;         // Fi's "Use amiibo" finds the player's loaded Zelda & Loftwing dump (runtime/services/nfp.c)
     int language;        // LANG_AUTO or an index into g_language_codes: the game's text language
     int prompts;         // PROMPTS_*: button glyphs (auto = follow the controller SDL reports): runtime/nvn/texpatch.c
     int prompt_look;     // PROMPT_LOOK_*: those glyphs light like the game's own, or dark
