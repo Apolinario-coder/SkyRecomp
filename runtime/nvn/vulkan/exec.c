@@ -145,31 +145,8 @@ static bool pace_slow;
 static uint64_t stat_pace_over;
 
 void vk_pace_frame(void) {
-    static int cap_fps = -1;
-    if (cap_fps < 0) { const char *e = getenv("LARECOMP_UNLOCK_FPS"); cap_fps = !e || atoi(e) == 0; }
-    if (cap_fps) {
-        // The game's own swap interval (1 = 60 Hz, 2 = its 30 fps mode): on a console the compositor holds each
-        // present that many vsyncs - here the pacer does, so the game's 30 fps mode presents at 30 and plays at
-        // full speed instead of advancing the world twice per presented frame.
-        const uint32_t interval = rt_game_interval();
-        const uint64_t period_ns = rt_frame_period_ns() * interval;
-        static uint64_t next_present_ns;
-        static uint32_t interval_seen = 1;
-        if (interval_seen != interval) {  // (the game changed its frame mode: re-anchor the present grid)
-            interval_seen = interval;
-            next_present_ns = 0;
-        }
-        uint64_t t0 = plat_now_ns();
-        if (!next_present_ns) next_present_ns = t0;
-        next_present_ns += period_ns;
-        if (t0 < next_present_ns) {
-            SDL_DelayPrecise(next_present_ns - t0);
-            uint64_t t1 = plat_now_ns();
-            if (t1 > t0) g_blocked_ns += t1 - t0;
-        } else if (t0 > next_present_ns + period_ns * 2) {
-            next_present_ns = t0;
-        }
-    }
+    extern void rt_present_pace(void);
+    rt_present_pace();  // (runtime/hle/framepace.c: the game's swap interval, shared with metal.m)
     static int on = -1;
     if (on < 0) { const char *e = getenv("LARECOMP_PACE"); on = e && atoi(e) != 0; }
     static uint64_t last, last_wait;
@@ -1476,7 +1453,7 @@ typedef struct {
     uint32_t attr_mask;
     uint32_t stride[17], divisor[17], used_streams;
     uint8_t blend[8][8];
-    uint8_t blend_on, a2c, topo_class, poly_fill, depth_clamp, logic_op;
+    uint8_t blend_on, a2c, topo_class, poly_fill, depth_clamp, logic_op, or_max;
     uint32_t write_mask[8];
 } PipeKey;
 
@@ -1547,6 +1524,12 @@ static void build_pipeline(void *arg) {
             cba[i].dstAlphaBlendFactor = blend_factor(b[4]);
             cba[i].colorBlendOp = blend_op(b[5]);
             cba[i].alphaBlendOp = blend_op(b[6]);
+        }
+        if ((k->or_max >> i) & 1) {  // logic op OR without the logicOp feature: max blending (see the key below)
+            cba[i].blendEnable = VK_TRUE;
+            cba[i].srcColorBlendFactor = cba[i].dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
+            cba[i].srcAlphaBlendFactor = cba[i].dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+            cba[i].colorBlendOp = cba[i].alphaBlendOp = VK_BLEND_OP_MAX;
         }
     }
     VkPipelineColorBlendStateCreateInfo cb = {.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
@@ -2611,9 +2594,11 @@ static bool topology(uint32_t mode, VkPrimitiveTopology *t, uint8_t *cls) {
 }
 
 static void draw_(CmdRec *r, bool indexed);
+static void linear_rt_writeback(void);
 static void draw(CmdRec *r, bool indexed) {
     PROF_T0();
     draw_(r, indexed);
+    linear_rt_writeback();
     PROF_ADD(prof_draw);
 }
 static uint64_t prof_tp_;
@@ -2742,8 +2727,13 @@ static void draw_(CmdRec *r, bool indexed) {
         }
     }
     k.a2c = st.ms[0xC] != 0;
-    // NVN and Vulkan use the same logic-op values; OR preserves overlapping shadow-mask channels.
+    // NVN and Vulkan use the same logic-op values; OR preserves overlapping shadow-mask channels. A GPU without the
+    // logicOp feature (device.c) gets OR as max blending, as on Metal (renderer.m): exact for channels that are 0 or 1 -
+    // the shadow masks, where each caster ORs its own channel into a shared target (Link's red, an NPC's green).
     k.logic_op = g_vk.logic_op ? st.color_state[1] & 15 : VK_LOGIC_OP_COPY;
+    if (!g_vk.logic_op && (st.color_state[1] & 15) == VK_LOGIC_OP_OR)
+        for (int i = 0; i < st.rt.ncolor && i < 8; i++)
+            if (st.rt.color[i] && !rt_kind(st.rt.color[i]->format)) k.or_max |= (uint8_t)(1u << i);
     k.topo_class = cls;
     k.poly_fill = st.poly[2] != 1;
     k.depth_clamp = st.depth_clamp;
@@ -3226,6 +3216,27 @@ static void copy_texture_to_buffer(const TexRefRec *src, uint64_t dst) {
     renderer_flush();  // the CPU may read the result right after the fence
     memcpy((void *)(uintptr_t)dst, out.ptr, total);
     if (small_mem) vmaDestroyImage(g_vk.vma, srcimg, small_mem);
+}
+
+// Linear render targets (NVN flag 0x10) are ones the CPU reads straight from memory: the save files' thumbnails - the
+// game draws the last presented frame into a 256x144 linear target and memcpy's it into save/<n>.screenshot, which was
+// saved black (the texels stayed in the Vulkan image). So a draw into one is read back into guest memory, at the
+// target's own row pitch, before the submit returns (renderer.m does the same on Metal). Only the thumbnails so far,
+// so the wait costs nothing in play.
+// ponytail: a readback per draw - batch per pass if a game draws a lot into linear targets.
+static void linear_rt_writeback(void) {
+    for (int i = 0; i < st.rt.ncolor && i < 8; i++) {
+        NvnTexture *t = st.rt.color[i];
+        const FormatInfo *fi = t ? nvn_format_info(t->format) : NULL;
+        if (!t || !(t->flags & 0x10) || !fi || !fi->bpb || !t->stride || t->stride < (uint64_t)t->width * fi->bpb ||
+            t->addr < HEAP_BASE || t->addr + (uint64_t)t->stride * t->height > HEAP_BASE + HEAP_MAX)
+            continue;
+        TexRefRec ref = {.tex = (uint64_t)(uintptr_t)t};
+        uint64_t rs = st.copy_row_stride, is = st.copy_image_stride;
+        st.copy_row_stride = t->stride, st.copy_image_stride = 0;
+        copy_texture_to_buffer(&ref, t->addr);
+        st.copy_row_stride = rs, st.copy_image_stride = is;
+    }
 }
 
 static void copy_texture(const TexRefRec *src, const TexRefRec *dst, uint64_t flags) {

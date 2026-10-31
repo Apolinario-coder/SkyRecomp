@@ -1098,6 +1098,8 @@ void backend_present(NvnTexture *t) {
     frames++;
     total_frames++;
     g_frame_counter++;
+    extern void rt_present_pace(void);
+    rt_present_pace();  // (runtime/hle/framepace.c: the game's swap interval, as on Vulkan)
     extern void input_frame(uint64_t frame);
     input_frame(total_frames);
     static long slow_ms = -1;  // LARECOMP_SLOW_FRAME_MS=<ms>: sleep per presented frame (simulate a slow machine)

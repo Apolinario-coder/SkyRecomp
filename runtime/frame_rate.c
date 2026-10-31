@@ -41,7 +41,7 @@ float rt_sky_frame_ms(float original) {
 // The game's swap interval (written by the game's own interval setter into its system object, read every frame by
 // its frame timer - runtime/hle/framepace.c hands it here). 2 = the game took its own 30 fps mode: it will advance
 // two world steps per frame, expecting the display to hold each present for two vsyncs. The port's pacer does that
-// (exec.c vk_pace_frame): without it, presents continue at 60 and the whole world (every animation) runs twice as
+// (hle/framepace.c rt_present_pace): without it, presents continue at 60 and the whole world (every animation) runs twice as
 // fast - Link's own walking is a true fixed step per frame and stays normal, which makes the mismatch very visible.
 static _Atomic uint32_t game_interval = 1;
 
