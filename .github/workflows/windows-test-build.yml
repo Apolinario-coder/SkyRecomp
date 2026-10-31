@@ -1,0 +1,72 @@
+name: Windows test build
+
+# A Windows x64 package of a test/* branch, kept as the run's artifact (Actions > the run > Artifacts) instead of a
+# release. Same contents as the Linux / macOS release packages: the exe and its DLLs, and what the start screen builds
+# the game code with on the player's machine (skygen, zig, gamelib-src, skyrecomp.dll.a). No game files, no game code,
+# no 4K texture pack (`make dist LEAN=1`).
+on:
+  push:
+    branches:
+      - 'test/**'
+
+jobs:
+  windows:
+    name: Build Windows package (test)
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - name: Keep LF line endings
+        shell: pwsh
+        run: git config --global core.autocrlf false  # (the bash tools break with CRLF)
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Set up MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            make zip unzip curl
+            mingw-w64-ucrt-x86_64-clang mingw-w64-ucrt-x86_64-lld mingw-w64-ucrt-x86_64-binutils
+            mingw-w64-ucrt-x86_64-sdl3 mingw-w64-ucrt-x86_64-vulkan-devel mingw-w64-ucrt-x86_64-shaderc
+            mingw-w64-ucrt-x86_64-vulkan-memory-allocator mingw-w64-ucrt-x86_64-pkgconf mingw-w64-ucrt-x86_64-nasm
+
+      # the LGPL FFmpeg (tools/build_deps_windows.sh) takes a while to build; its output is reusable until the script changes
+      - name: Cache LGPL FFmpeg
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/deps-win
+            !build/deps-win/src
+          key: deps-win-${{ hashFiles('tools/build_deps_windows.sh') }}
+
+      # PyInstaller needs python.org's CPython (prebuilt unicorn / capstone wheels; MSYS2's Python has none)
+      - name: Build game setup tools (skygen)
+        shell: pwsh
+        run: |
+          python -m venv build/setup-venv
+          build/setup-venv/Scripts/python -m pip install pyinstaller==6.22.3 capstone==5.0.9 unicorn==2.1.4 lz4==4.4.5
+          build/setup-venv/Scripts/python -m PyInstaller --noconfirm --clean --log-level WARN --distpath build/helper --workpath build/pyinstaller tools/skygen.spec
+
+      - name: Build Windows package
+        run: |
+          make deps-windows
+          tools/fetch_zig.sh
+          make -j"$(nproc)" dist LEAN=1
+
+      - name: Keep the package as an artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: skyrecomp-windows-x64-${{ github.sha }}
+          path: build/dist/*.zip
+          compression-level: 0  # (the zip is already compressed)
+          if-no-files-found: error
