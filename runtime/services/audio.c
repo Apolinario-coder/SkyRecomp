@@ -13,12 +13,14 @@
 
 // ------------------------------------------------------------------ audren: a CPU mixer modelled on
 // Ryujinx's AudioRenderer (VoiceState / DataSourceHelper / StateUpdater, copies in notes/ryujinx_audio).
-// Voices decode PCM16 / ADPCM wave buffers, resample to 48 kHz, and mix into their destination mix's
+// Voices decode PCM (8/16/24/32-bit, float) / ADPCM wave buffers, resample to 48 kHz, and mix into their destination mix's
 // buffers; sub mixes route into their destination; the final mix feeds the device sink, which we
-// downmix to stereo and push to an SDL audio stream. Effects and splitters are not implemented.
+// downmix to stereo and push to an SDL audio stream. Effects: reverb (type 4) and aux (type 2, the game's CPU-side
+// effects) only; the other types are ignored.
 #define WB_COUNT 4
 #define MIXBUF_MAX 24
 #define HIST 4
+#define SRC_TMP_MAX 0x3F00  // source samples decoded per voice per block (Ryujinx DataSourceHelper tempBufferSize)
 
 typedef struct {
     uint64_t addr, size, ctx;
@@ -36,6 +38,7 @@ typedef struct {  // per channel resource, "VoiceUpdateState"
     int16_t hist[HIST];
     int16_t pred_scale, h0, h1;
     float bq[2][2];  // biquad filter state per voice filter
+    float last[MIXBUF_MAX];  // last sample sent to each destination buffer (after gain), for depop
 } ChanState;
 
 typedef struct {
@@ -45,7 +48,7 @@ typedef struct {
 
 typedef struct {
     uint8_t in_use, is_new, play_state;  // play_state: 0 started, 1 stopped, 2 stopping, 3 paused
-    uint8_t fmt, chans, drop;
+    uint8_t fmt, chans, drop, was_playing;
     uint32_t rate, wb_count, flush;
     float pitch, volume, prev_volume;
     int32_t mix_id;
@@ -66,6 +69,7 @@ typedef struct {
     uint32_t dest_splitter;
     float vol[MIXBUF_MAX * MIXBUF_MAX];
     float *buf;  // bufs * sample_count
+    float depop[MIXBUF_MAX];  // level handed over by voices that stopped mid-wave, decayed by apply_depop
 } Mix;
 
 typedef struct {
@@ -161,13 +165,22 @@ static int decode_voice(Voice *v, int ch, ChanState *cs, int16_t *out, int need)
                 }
             } else if (v->fmt == 6 && coefs) {
                 for (; n < want; n++) out[y + n] = adpcm_next(data, wb->size, start + cs->offset + n, coefs, cs);
-            } else if (v->fmt == 3) {  // PCM float
-                const float *pcm = (const float *)data;
-                uint64_t nsamp = wb->size / 4 / v->chans;
+            } else if (v->fmt >= 1 && v->fmt <= 5) {  // other PCM (SampleFormat 1 Int8, 3 Int24, 4 Int32, 5 Float)
+                // The mixer takes int16, so integer samples keep their top 16 bits (unaligned, little-endian)
+                static const uint8_t bps[6] = {0, 1, 2, 3, 4, 4};
+                uint32_t b = bps[v->fmt];
+                uint64_t nsamp = wb->size / b / v->chans;
                 for (; n < want; n++) {
                     uint64_t s = (uint64_t)start + cs->offset + n;
                     if (s >= nsamp) break;
-                    out[y + n] = (int16_t)clampf(pcm[s * v->chans + ch] * 32767.f, -32768.f, 32767.f);
+                    const uint8_t *p = data + (s * v->chans + ch) * b;
+                    float f;
+                    switch (v->fmt) {
+                    case 1: out[y + n] = (int16_t)(p[0] << 8); break;
+                    case 3: out[y + n] = (int16_t)(p[1] | p[2] << 8); break;
+                    case 4: out[y + n] = (int16_t)(p[2] | p[3] << 8); break;
+                    default: memcpy(&f, p, 4); out[y + n] = (int16_t)clampf(f * 32767.f, -32768.f, 32767.f);
+                    }
                 }
             }
         }
@@ -417,11 +430,94 @@ static void reverb_process(Reverb *rv, float *const *in, float *const *out, uint
     }
 }
 
+// ------------------------------------------------------------------ aux (AuxiliaryBuffer effect, type 2)
+// The renderer only shuttles samples: each frame it copies the effect's input mix buffers into a guest "send" ring and
+// fills the output mix buffers from a guest "return" ring; the game's own CPU code (nn::audio::ReadAuxSendBuffer ->
+// its reverb/delay -> WriteAuxReturnBuffer) sits in between on another thread. Sources: Ryujinx AuxiliaryBufferCommand
+// / AuxiliaryBufferHeader / CommandGenerator.GenerateAuxEffect, cross-checked against the game's own SDK, which ships a
+// software renderer (sdk: nn::audio::dsp::{Write,Read,Reset}AuxBufferDsp, CommandListProcessor::Process,
+// server::CommandGenerator::GenerateAuxCommand, server::AuxInfo::Update) and the CPU side (ReadAuxBuffer, WriteAuxBuffer,
+// SetAuxInputOutput, AddAux).
+//
+// Each ring is one guest buffer: 0x80 bytes of header, then `size` int32 samples. The header holds two AuxBufferInfo
+// (0x40 bytes: read offset, write offset, lost sample count, total sample count), the CPU's copy at +0 and the DSP's
+// at +0x40. Offsets count int32 samples. Send ring: we write at the DSP write offset, the guest reads up to it (ReadAuxBuffer
+// copies info+0x44 into its own write offset). Return ring: the guest writes (WriteAuxBuffer copies info+0x40 into its
+// read offset to see the free space), we read at the DSP read offset. So the renderer owns only the DSP infos and never
+// looks at the CPU ones; it also never checks for overrun/underrun, it just reads and writes at its own offsets.
+//
+// A frame of `ch` channels is ch blocks of sample_count samples back to back (channel c at c * sample_count, what
+// ProcessAuxReverb assumes too), and both offsets advance by ch * sample_count once per frame. SetAuxInputOutput makes
+// `size` a whole number of frames, so wrapping happens at frame boundaries.
+#define AUX_DSP 0x40   // DSP-side AuxBufferInfo within the header
+#define AUX_HDR 0x80   // header size = start of the sample ring
+
+typedef struct {
+    int8_t in[24], out[24];  // mix buffer index per channel (signed in the SDK; negative = invalid)
+    uint32_t ch, size;       // channels, ring capacity in int32 samples (all channels)
+    uint64_t send, ret;      // guest addresses of the send / return ring buffers (header first)
+    uint8_t ok;
+} AuxParam;
+
+// ponytail: the real renderer also requires both buffers to lie in an attached memory pool (and does nothing when
+// they don't); we only require them inside the guest window and 4-byte aligned, which is what keeps a bad
+// parameter from crashing us. Track audren memory pools if a game ever hands over a bogus-but-in-window address.
+static bool aux_range_ok(uint64_t a, uint64_t n) {
+    return a >= GUEST_LO && !(a & 3) && n <= GUEST_HI - GUEST_LO && a <= GUEST_HI - n;
+}
+
+// AuxiliaryBufferParameter at EffectInParameter + 0x20: input[24], output[24], channel count, sample rate, buffer storage
+// size (samples), channel count max, then send info / send storage / return info / return storage addresses (the
+// storage addresses are just info + 0x80, unused).
+static void aux_update(AuxParam *a, const uint8_t *d) {
+    memcpy(a->in, d, 24);
+    memcpy(a->out, d + 0x18, 24);
+    memcpy(&a->ch, d + 0x30, 4);
+    memcpy(&a->size, d + 0x38, 4);
+    memcpy(&a->send, d + 0x40, 8);
+    memcpy(&a->ret, d + 0x50, 8);
+    uint64_t bytes = AUX_HDR + (uint64_t)a->size * 4;
+    a->ok = a->ch >= 1 && a->ch <= MIXBUF_MAX && a->size && aux_range_ok(a->send, bytes) && aux_range_ok(a->ret, bytes);
+}
+
+// WriteAuxBufferDsp: n samples of one channel into the send ring, `off` samples (this channel's block) past the DSP write
+// offset; `upd` (last channel only: the whole frame) advances the offset afterwards. A write offset the guest scribbled
+// past the ring skips the transfer, offset update included (the SDK returns before it).
+static void aux_write(uint32_t *info, int32_t *ring, uint32_t size, float *mix, uint32_t n, uint32_t off, uint32_t upd) {
+    uint32_t at = __atomic_load_n(&info[1], __ATOMIC_ACQUIRE);
+    uint64_t pos = (uint64_t)at + off;
+    if (pos > size) return;
+    if (pos == size) pos = 0;
+    for (uint32_t i = 0; i < n; i++) {
+        int32_t v = (int32_t)lrintf(clampf(mix[i], -2147483648.f, 2147483520.f));
+        mix[i] = (float)v;  // the DSP's mix buffers are int: what the effect leaves in the input is rounded as well
+        ring[pos] = v;
+        if (++pos == size) pos = 0;
+    }
+    // samples first, then the offset the guest polls
+    if (upd) __atomic_store_n(&info[1], (uint32_t)(((uint64_t)at + upd) % size), __ATOMIC_RELEASE);
+}
+
+// ReadAuxBufferDsp: same walk over the return ring from the DSP read offset; false = nothing read (bad offset).
+static bool aux_read(uint32_t *info, const int32_t *ring, uint32_t size, float *mix, uint32_t n, uint32_t off, uint32_t upd) {
+    uint32_t at = __atomic_load_n(&info[0], __ATOMIC_ACQUIRE);
+    uint64_t pos = (uint64_t)at + off;
+    if (pos > size) return false;
+    if (pos == size) pos = 0;
+    for (uint32_t i = 0; i < n; i++) {
+        mix[i] = (float)ring[pos];
+        if (++pos == size) pos = 0;
+    }
+    if (upd) __atomic_store_n(&info[0], (uint32_t)(((uint64_t)at + upd) % size), __ATOMIC_RELEASE);
+    return true;
+}
+
 struct Effect {
     uint8_t type, enabled;
     int32_t mix_id;
     uint32_t order;
     Reverb rv;
+    AuxParam ax;
 };
 
 // Effect slot update from EffectInParameterVersion1 (0xC0 bytes: type, is_new, enabled, mix, buffers, order, data).
@@ -431,6 +527,13 @@ static void effect_update(Effect *fx, const uint8_t *e) {
     fx->enabled = e[2];
     memcpy(&fx->mix_id, e + 4, 4);
     memcpy(&fx->order, e + 0x18, 4);
+    if (fx->type == 2) {
+        aux_update(&fx->ax, e + 0x20);
+        if (e[1] && getenv("LARECOMP_AUDIO_LOG"))
+            LOG("[audren] aux init: mix %d ch %u size %u send %llx return %llx %s\n", fx->mix_id, fx->ax.ch, fx->ax.size,
+                (unsigned long long)fx->ax.send, (unsigned long long)fx->ax.ret, fx->ax.ok ? "ok" : "REJECTED");
+        return;
+    }
     if (fx->type != 4) return;
     const uint8_t *d = e + 0x20;
     uint16_t ch_max, ch;
@@ -454,12 +557,59 @@ static void effect_update(Effect *fx, const uint8_t *e) {
     }
 }
 
+// One aux frame (Ryujinx AuxiliaryBufferCommand.Process, once per channel; the offsets only move on the last one).
+// Enabled: input channel -> send ring, then the return ring -> output channel, which replaces whatever the output
+// buffer held, even when it is the input buffer (the effect has no dry path of its own; the game's return data carries
+// it); a failed read leaves silence. Disabled: both DSP infos are reset (the game does the same to its CPU copies in
+// SetAuxEnabled, so both sides restart at 0 on the next enable; the SDK also clears the lost-sample count at +8) and
+// the input passes through to the output.
+static void aux_apply(Renderer *r, Effect *fx, Mix *m) {
+    AuxParam *a = &fx->ax;
+    uint32_t N = r->sample_count;
+    if (!a->ok || ENV("LARECOMP_AUDIO_NO_AUX")) return;  // (switch: leave the mix untouched, as before aux existed)
+    float *in[MIXBUF_MAX], *out[MIXBUF_MAX];
+    for (uint32_t c = 0; c < a->ch; c++) {
+        if (a->in[c] < 0 || (uint32_t)a->in[c] >= m->bufs || a->out[c] < 0 || (uint32_t)a->out[c] >= m->bufs) return;
+        in[c] = m->buf + a->in[c] * N;
+        out[c] = m->buf + a->out[c] * N;
+    }
+    uint32_t *sinfo = (uint32_t *)(uintptr_t)(a->send + AUX_DSP), *rinfo = (uint32_t *)(uintptr_t)(a->ret + AUX_DSP);
+    int32_t *sring = (int32_t *)(uintptr_t)(a->send + AUX_HDR), *rring = (int32_t *)(uintptr_t)(a->ret + AUX_HDR);
+    if (!fx->enabled) {
+        sinfo[0] = sinfo[1] = sinfo[2] = rinfo[0] = rinfo[1] = rinfo[2] = 0;
+        for (uint32_t c = 0; c < a->ch; c++) if (in[c] != out[c]) memcpy(out[c], in[c], N * sizeof(float));
+        return;
+    }
+    // LARECOMP_AUDIO_AUX_LOG=1: every 400 frames (2 s at 32 kHz), the RMS sent to and returned by the game's reverb,
+    // and the offsets of both sides (a CPU offset that never moves = the game isn't servicing the rings)
+    static double es, er;
+    static uint32_t frames;
+    bool lg = ENV("LARECOMP_AUDIO_AUX_LOG") != NULL;
+    for (uint32_t c = 0; c < a->ch; c++) {
+        uint32_t off = c * N, upd = c == a->ch - 1 ? a->ch * N : 0;
+        if (lg) for (uint32_t i = 0; i < N; i++) es += in[c][i] * in[c][i];
+        aux_write(sinfo, sring, a->size, in[c], N, off, upd);
+        if (!aux_read(rinfo, rring, a->size, out[c], N, off, upd)) memset(out[c], 0, N * sizeof(float));
+        if (lg) for (uint32_t i = 0; i < N; i++) er += out[c][i] * out[c][i];
+    }
+    if (lg && ++frames == 400) {
+        const uint32_t *scpu = (const uint32_t *)(uintptr_t)a->send, *rcpu = (const uint32_t *)(uintptr_t)a->ret;
+        double n = 400.0 * N * a->ch;
+        LOG("[audren] aux mix %d: send rms %.1f return rms %.1f | send dsp w%u cpu r%u | return dsp r%u cpu w%u (size %u)\n",
+            fx->mix_id, sqrt(es / n), sqrt(er / n), sinfo[1], scpu[0], rinfo[0], rcpu[1], a->size);
+        es = er = 0;
+        frames = 0;
+    }
+}
+
 static void apply_effects(Renderer *r, int32_t mix_id, Mix *m) {
     uint32_t N = r->sample_count;
     for (uint32_t order = 0; order < r->effects; order++) {
         for (uint32_t i = 0; i < r->effects; i++) {
             Effect *fx = &r->fx[i];
-            if (fx->type != 4 || fx->mix_id != mix_id || fx->order != order || !fx->rv.ready) continue;
+            if (fx->mix_id != mix_id || fx->order != order) continue;
+            if (fx->type == 2) { aux_apply(r, fx, m); continue; }
+            if (fx->type != 4 || !fx->rv.ready) continue;
             int ch = fx->rv.p.ch;
             float *in[6], *out[6];
             int ok = 1;
@@ -481,6 +631,17 @@ static void apply_effects(Renderer *r, int32_t mix_id, Mix *m) {
     }
 }
 
+// DepopForMixBuffers (Ryujinx DepopForMixBuffersCommand), first thing for every mix: each buffer's handed-over level
+// is added on top and decays per sample, rounded toward zero so it ends at exactly 0 (a few ms)
+static void apply_depop(Renderer *r, Mix *m) {
+    float decay = r->sample_rate == 48000 ? 0.962189f : 0.943695f;
+    for (uint32_t b = 0; b < m->bufs && b < MIXBUF_MAX; b++) {
+        float d = m->depop[b], *o = m->buf + b * r->sample_count;
+        for (uint32_t i = 0; i < r->sample_count && d != 0; i++) { d = truncf(d * decay); o[i] += d; }
+        m->depop[b] = d;
+    }
+}
+
 static int hf_log = -1;
 static double hf[1024];
 
@@ -489,7 +650,7 @@ static void render_frame(Renderer *r, float *stereo) {
     uint32_t N = r->sample_count;
     for (uint32_t m = 0; m < r->nmix; m++)
         if (r->mix[m].buf) memset(r->mix[m].buf, 0, sizeof(float) * MIXBUF_MAX * N);
-    int16_t tmp[HIST + 4096];
+    int16_t tmp[HIST + SRC_TMP_MAX];
     float smp[4096];
     for (uint32_t vi = 0; vi < r->voices; vi++) {
         Voice *v = &r->voice[vi];
@@ -512,19 +673,33 @@ static void render_frame(Renderer *r, float *stereo) {
                 if (!dst) dst = find_mix(r, 0);
             }
         }
-        if (!play || v->wb_count == 0 || v->drop) continue;
+        if (!play || v->wb_count == 0 || v->drop) {
+            // DepopPrepare: a voice that stops or pauses mid-wave hands its last output to its mix, which decays it
+            // to zero (apply_depop) instead of stepping straight to silence, the click
+            if (v->was_playing && dst)
+                for (int c = 0; c < (v->chans > 6 ? 6 : v->chans); c++) {
+                    ChanState *cs = &r->chst[v->chan_ids[c] % r->voices];
+                    for (uint32_t b = 0; b < dst->bufs && b < MIXBUF_MAX; b++) dst->depop[b] += cs->last[b];
+                    memset(cs->last, 0, sizeof cs->last);
+                }
+            v->was_playing = 0;
+            continue;
+        }
+        v->was_playing = 1;
         // The guest can submit samples already converted to the renderer's rate.
         // Applying pitch/SRC again stretches those effects and changes their pitch.
         bool bypass_src = (v->behaviour & 2) != 0;  // SkipPitchAndSampleRateConversion
         float ratio = bypass_src ? 1.0f : (float)v->rate / r->sample_rate * v->pitch;
-        if (!(ratio > 0) || ratio > 8) ratio = 1;
+        // High notes on low-rate waves legitimately need ratios well above 8 (Ghirahim's daggers: a 22 kHz wave at
+        // +43..57 semitones is 8..18); only a ratio that overflows tmp[] is bogus.
+        if (!(ratio > 0) || ratio * N > SRC_TMP_MAX - 1) ratio = 1;
         int nch = v->chans > 6 ? 6 : v->chans;
         for (int c = 0; c < nch; c++) {
             uint32_t rid = v->chan_ids[c] % r->voices;
             ChanState *cs = &r->chst[rid];
             ChanRes *cr = &r->chres[rid];
             int need = (int)(cs->fraction + ratio * N);
-            if (need > 4096) need = 4096;
+            if (need > SRC_TMP_MAX) need = SRC_TMP_MAX;
             memcpy(tmp, cs->hist, sizeof cs->hist);
             int got = decode_voice(v, c, cs, tmp + HIST, need);
             if (got < need) memset(tmp + HIST + got, 0, (need - got) * 2);
@@ -566,6 +741,7 @@ static void render_frame(Renderer *r, float *stereo) {
             static int solo = -2;
             if (solo == -2) solo = getenv("LARECOMP_AUDIO_SOLO") ? atoi(getenv("LARECOMP_AUDIO_SOLO")) : -1;
             if (solo >= 0 && (int)vi != solo) continue;
+            memset(cs->last, 0, sizeof cs->last);
             for (uint32_t b = 0; b < dst->bufs && b < MIXBUF_MAX; b++) {
                 float g0 = v->prev_volume * cr->prev[b], g1 = v->volume * cr->mix[b];
                 if (sd) {
@@ -578,6 +754,7 @@ static void render_frame(Renderer *r, float *stereo) {
                 if (g0 == 0 && g1 == 0) continue;
                 float *o = dst->buf + b * N, dg = (g1 - g0) / N;
                 for (uint32_t i = 0; i < N; i++) o[i] += smp[i] * (g0 + dg * i);
+                cs->last[b] = smp[N - 1] * (g0 + dg * (N - 1));
             }
         }
         for (int c = 0; c < nch; c++) {
@@ -611,6 +788,7 @@ static void render_frame(Renderer *r, float *stereo) {
         for (uint32_t m = 1; m < r->nmix && m < 64; m++) {
             Mix *s = &r->mix[m];
             if (!s->used || depth[m] != d) continue;
+            apply_depop(r, s);
             apply_effects(r, (int32_t)m, s);
             Mix *t = find_mix(r, s->dest);
             if (!t || t == s) continue;
@@ -625,7 +803,7 @@ static void render_frame(Renderer *r, float *stereo) {
     }
     // final mix -> device sink (FL FR FC LFE BL BR) -> stereo
     Mix *f = find_mix(r, 0);
-    if (f) apply_effects(r, 0, f);
+    if (f) { apply_depop(r, f); apply_effects(r, 0, f); }
     for (uint32_t i = 0; i < N; i++) {
         float ch[6] = {0};
         if (f && r->sink_used)
@@ -963,7 +1141,7 @@ static void request_update(Renderer *r, IpcReq *req, IpcResp *resp) {
         const uint8_t *v = vin + i * 0x170;
         if (v[9]) update_voice(r, &r->voice[i], v, op + o);
     }
-    // effects (not processed): report them as enabled/disabled per request
+    // effects (reverb, aux): report them as enabled/disabled per request
     const uint8_t *ein = vin + voices_sz;
     oh[5] = neffects * 0x10;
     for (uint32_t i = 0; i < neffects && o + 0x10 <= out->size; i++, o += 0x10) {
@@ -973,7 +1151,7 @@ static void request_update(Renderer *r, IpcReq *req, IpcResp *resp) {
         static uint32_t seen_types;
         if (e[0] && e[0] < 32 && !(seen_types & (1u << e[0]))) {
             seen_types |= 1u << e[0];
-            LOG("[audren] effect type %u used%s: slot %u mix %d enabled %u\n", e[0], e[0] == 4 ? "" : " (not implemented)", i,
+            LOG("[audren] effect type %u used%s: slot %u mix %d enabled %u\n", e[0], e[0] == 4 || e[0] == 2 ? "" : " (not implemented)", i,
                 *(const int32_t *)(e + 4), e[2]);
         }
         if (e[0] && getenv("LARECOMP_AUDIO_LOG")) {
