@@ -36,7 +36,7 @@ void save_editor_on_open(void);
 void rando_tab_draw(float scale);
 bool warp_tab_draw(float scale);  // warp_tab.mm: true when a warp started
 extern "C" void cheats_draw(float scale);  // cheats.mm
-extern "C" void difficulty_draw(float scale);  // difficulty.mm
+extern "C" void difficulty_rows(void);  // difficulty.mm
 void controls_bindings_draw(float scale);  // controls_ui.mm
 #include "../input_bind.h"
 #include "../paths.h"
@@ -660,7 +660,7 @@ static void amiibo_rows(void) {
 }
 
 
-// Gameplay: the game's text language and the Zelda & Loftwing amiibo
+// Gameplay: the game's text language, difficulty, accessibility and the Zelda & Loftwing amiibo
 static void tab_gameplay(void) {
     opt_begin("##gameplay", ImGui::GetFontSize() / 34);
     opt_section("Game");
@@ -680,6 +680,13 @@ static void tab_gameplay(void) {
             set_open(false);
         }
     }
+    opt_section("Difficulty");
+    difficulty_rows();
+    opt_section("Accessibility");
+    static const char *const cb[] = {"Off", "Red-weak (protan)", "Green-weak (deutan)", "Blue-weak (tritan)"};
+    opt_choice("Color blind mode", &g_settings.colorblind, cb, 4, COLORBLIND_OFF,
+               "Shifts the colors you can't tell apart into ones you can (daltonization), for each common kind of "
+               "color blindness. Applies to the whole game picture.");
     opt_section("amiibo");
     amiibo_rows();
     opt_end();
@@ -786,24 +793,6 @@ static void tab_about(void) {
     }
     hint("Xbox, PlayStation and keyboard icons: light buttons like the game's own, or dark ones.");
     ImGui::Spacing();
-    header("System language");
-    {
-        // what the game is told the console's language is: its text follows this (runtime/settings.c)
-        const char *names[N_LANGUAGES];
-        for (int i = 0; i < N_LANGUAGES; i++) names[i] = g_language_names[i];
-        if (choice("Language", &g_settings.language, names, N_LANGUAGES)) settings_save();
-    }
-    if (settings_language_pending()) {
-        hint("Language change pending. The game must restart to reload its text. Save your progress first.");
-        if (ImGui::Button("Restart game to apply language")) {
-            settings_save();
-            rt_request_reboot(RT_REBOOT_GAME);
-            set_open(false);
-        }
-    } else {
-        hint("The game's text language. Changes made before Play apply when the game starts.");
-    }
-    ImGui::Spacing();
     header("Controls");
     controls_bindings_draw(ImGui::GetFontSize() / 34);
     ImGui::Spacing();
@@ -897,7 +886,7 @@ static void tabs_body(float scale, bool in_game, void (*prelaunch)(float)) {
     if (prelaunch) tabs[ntabs++] = {"Prelaunch", -1, true};
     static const char *names[] = {"Video", "Audio", "Save Editor", "Randomizer", "Warp", "Cheats", "Gameplay",
                                   "Cosmetics", "Controls", "Quit", "Mods"};
-    static const int order[] = {8, 0, 1, 6, 5, 10, 9};  // Controls, Video, Audio, Gameplay, Cheats, Mods, Quit
+    static const int order[] = {8, 0, 1, 6, 5, 9};  // Controls, Video, Audio, Gameplay, Cheats, Quit (Mods: hidden for now)
     for (int i : order)  // (Quit: in game only - the start screen has its own QUIT)
         if (i != 9 || !prelaunch) tabs[ntabs++] = {names[i], i, true};
     int cur = 0;  // g_tab / g_tab_request hold ids

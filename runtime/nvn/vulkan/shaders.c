@@ -248,17 +248,19 @@ static const char *builtin_src(const char *name, int *stage) {
         *stage = STAGE_FRAGMENT;
         return "#version 450\n"
                "layout(set = 0, binding = 0) uniform sampler2D t;\n"
+               "layout(push_constant) uniform P { vec4 a; vec4 crop; vec4 cm[3]; } pc;\n"  // cm: Color blind mode
                "layout(location = 0) in vec2 uv;\n"
                "layout(location = 0) out vec4 o;\n"
+               "vec4 cmix(vec3 c) { return vec4(clamp(vec3(dot(pc.cm[0].xyz, c), dot(pc.cm[1].xyz, c), dot(pc.cm[2].xyz, c)), 0.0, 1.0), 1.0); }\n"
                "void main() {\n"
                "  vec2 ts = vec2(textureSize(t, 0)), r = abs(vec2(dFdx(uv.x), dFdy(uv.y))) * ts;\n"  // texels per pixel
-               "  if (max(r.x, r.y) <= 1.01) { o = vec4(texture(t, uv).rgb, 1.0); return; }\n"
+               "  if (max(r.x, r.y) <= 1.01) { o = cmix(texture(t, uv).rgb); return; }\n"
                "  ivec2 n = clamp(ivec2(ceil(r - 0.01)), ivec2(1), ivec2(8));\n"
                "  vec2 d = r / vec2(n) / ts, p0 = uv - 0.5 * r / ts + 0.5 * d;\n"
                "  vec3 c = vec3(0.0);\n"
                "  for (int y = 0; y < n.y; y++)\n"
                "    for (int x = 0; x < n.x; x++) c += textureLod(t, p0 + vec2(x, y) * d, 0.0).rgb;\n"
-               "  o = vec4(c / float(n.x * n.y), 1.0);\n"
+               "  o = cmix(c / float(n.x * n.y));\n"
                "}\n";
     }
     // ---- post passes before the present (Video tab "Anti-aliasing" / "Upscaler"): exec.c vk_present_draw.

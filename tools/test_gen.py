@@ -4,7 +4,7 @@ from collections import Counter
 
 from gen import Module, SKY_TIMING_STORES
 from lifter import Lifter
-from patches import BEETLE_TIMER_SITE, SKY_PATCHES, STAMINA_STORE_SITE
+from patches import BEETLE_TIMER_SITE, DAMAGE_SHIFT_SITE, HERO_UNLOCK_SITE, SKY_PATCHES, STAMINA_STORE_SITE
 
 
 class JumpTableBoundaryTest(unittest.TestCase):
@@ -78,8 +78,9 @@ class JumpTableBoundaryTest(unittest.TestCase):
                         self.assertNotIn('VSF32(', code)  # (simd.h isn't included with --simd asm)
 
 
-    def test_sky_cheat_patches_only_for_sky(self):
-        words = {STAMINA_STORE_SITE: 0xb90002e8, BEETLE_TIMER_SITE: 0x4b090108}
+    def test_sky_patches_only_for_sky(self):
+        words = {STAMINA_STORE_SITE: 0xb90002e8, BEETLE_TIMER_SITE: 0x4b090108, HERO_UNLOCK_SITE: 0x38696908,
+                 DAMAGE_SHIFT_SITE: 0x1ac822b5}
         self.assertEqual(set(words), set(SKY_PATCHES))
         for pc, word in words.items():
             for sky in (False, True):
@@ -91,7 +92,7 @@ class JumpTableBoundaryTest(unittest.TestCase):
                     m.is_las, m.is_skyward = False, sky
                     m.lifter = Lifter(m.base, 'c')
                     code = '\n'.join(m.emit_function(m.lo, m.hi, set(), {}, {}))
-                    self.assertEqual('extern int rt_cheat_' in code, sky)
+                    self.assertEqual(f'/* {pc:#x}: ' in code, sky)
 
 
 if __name__ == '__main__':

@@ -569,15 +569,19 @@ static const char *present_src =
     "  float2 uv = float2(p.x, pv[0].x > 0.5 ? p.y : 1.0 - p.y); o.uv = pv[1].xy + uv * pv[1].zw; return o; }\n"
     // supersampling (Internal resolution above the window's): the whole footprint of the window pixel is averaged,
     // not one bilinear tap that skips texels at 3x and above (as vulkan/shaders.c present.frag)
-    "fragment float4 fs(V in [[stage_in]], texture2d<float> t [[texture(0)]], sampler s [[sampler(0)]]) {\n"
+    // cm: the colour matrix (Color blind mode, output_scale.c), as vulkan/shaders.c present.frag
+    "float4 cmix(constant float4 *cm, float3 c) {\n"
+    "  return float4(saturate(float3(dot(cm[0].xyz, c), dot(cm[1].xyz, c), dot(cm[2].xyz, c))), 1.0); }\n"
+    "fragment float4 fs(V in [[stage_in]], texture2d<float> t [[texture(0)]], sampler s [[sampler(0)]],\n"
+    "                   constant float4 *cm [[buffer(0)]]) {\n"
     "  float2 ts = float2(t.get_width(), t.get_height()), r = abs(float2(dfdx(in.uv.x), dfdy(in.uv.y))) * ts;\n"
-    "  if (max(r.x, r.y) <= 1.01) return float4(t.sample(s, in.uv).rgb, 1.0);\n"
+    "  if (max(r.x, r.y) <= 1.01) return cmix(cm, t.sample(s, in.uv).rgb);\n"
     "  int2 n = clamp(int2(ceil(r - 0.01)), int2(1), int2(8));\n"
     "  float2 d = r / float2(n) / ts, p0 = in.uv - 0.5 * r / ts + 0.5 * d;\n"
     "  float3 c = float3(0.0);\n"
     "  for (int y = 0; y < n.y; y++)\n"
     "    for (int x = 0; x < n.x; x++) c += t.sample(s, p0 + float2(x, y) * d, level(0.0)).rgb;\n"
-    "  return float4(c / float(n.x * n.y), 1.0); }\n";
+    "  return cmix(cm, c / float(n.x * n.y)); }\n";
 
 void backend_init(void) {
     while (!atomic_load(&ui_ready)) usleep(1000);
@@ -1111,6 +1115,9 @@ void backend_present(NvnTexture *t) {
             [enc setVertexBytes:pv length:sizeof pv atIndex:0];
             [enc setFragmentTexture:src atIndex:0];
             [enc setFragmentSamplerState:present_sampler atIndex:0];
+            float cm[12];
+            output_color_matrix(cm);
+            [enc setFragmentBytes:cm length:sizeof cm atIndex:0];
             [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3];
         }
         [enc endEncoding];

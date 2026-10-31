@@ -12,6 +12,7 @@ enum { UPSCALE_BILINEAR = 0, UPSCALE_METALFX = 1 /* macOS */, UPSCALE_FSR1 = 2 /
 #define UPSCALE_SHARP UPSCALE_FSR1
 #endif
 enum { AA_OFF = 0, AA_SMAA = 1, AA_FXAA = 2 };
+enum { COLORBLIND_OFF, COLORBLIND_PROTAN, COLORBLIND_DEUTAN, COLORBLIND_TRITAN };
 enum { PERF_OFF = 0, PERF_FPS = 1, PERF_FULL = 2 };  // the performance overlay (runtime/perfmon.c, F10)
 // What a draw does when its shaders or pipeline are still compiling (renderer.m, vulkan/exec.c): hybrid skips only
 // draws that are redrawn every frame and waits for the rest; wait never skips (stutters); async always skips
@@ -73,6 +74,7 @@ typedef struct {
     float diff_damage;   // damage taken multiplier (1 = normal)
     bool diff_ohko;      // any hit kills
     bool diff_hero;      // Hero Mode flag forced on in the loaded save (2x damage, no recovery hearts)
+    int colorblind;      // COLORBLIND_*: colour filter in the present shader (runtime/nvn/output_scale.c)
     // cosmetics (runtime/ui/cosmetics.mm; applied live by runtime/nvn/texpatch.c), never part of a seed
     int tunic;           // index into g_tunic_colours (0 = Default: the game's / the seed's own)
     int hearts;          // index into g_heart_colours (0 = Default red)

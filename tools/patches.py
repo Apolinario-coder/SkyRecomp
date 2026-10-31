@@ -713,4 +713,29 @@ def _beetle_timer(gen, a):
             f'  /* {a:#x}: sub w8, w8, w9 (Beetle flight timer: infinite Beetle flight) */')
 
 
-SKY_PATCHES = {STAMINA_STORE_SITE: _stamina_store, BEETLE_TIMER_SITE: _beetle_timer}
+# Hero Mode from the start: starting a new file, the file select (dLytFileSelectMgr_c::StateID_FileSelect) asks "Start
+# the game in Hero Mode?" (StateID_ModeSelect) only once a file has been cleared - bit 1 of the save manager's byte
+# +0xc9ed. Always set here, so the game's own Normal / Hero Mode choice comes up for every new file.
+HERO_UNLOCK_SITE = 0x7000c14d00
+
+
+def _hero_unlock(gen, a):
+    assert gen.word(a) == 0x38696908, hex(gen.word(a))  # ldrb w8, [x8, x9]
+    return f'c->x[8] = LD8(c->x[8] + c->x[9]) | 2u;  /* {a:#x}: ldrb w8, [x8, x9] (Hero Mode unlocked) */'
+
+
+# Damage taken (runtime/ui/difficulty.mm rt_damage; Gameplay tab): Link's health change (main+0xa68bd8, w1 = delta) on its
+# damage path doubles the (negative) delta in Hero Mode (w8 = flag 0xe2) here, then subtracts it from health (save
+# +0x5306). Redirected to rt_damage(damage, shift) for the multiplier / one-hit KO.
+DAMAGE_SHIFT_SITE = 0x7000a68edc
+
+
+def _damage_shift(gen, a):
+    assert gen.word(a) == 0x1ac822b5, hex(gen.word(a))  # lsl w21, w21, w8
+    return ('{ extern int32_t rt_damage(int32_t, int32_t); '
+            'c->x[21] = (uint32_t)-rt_damage(-(int32_t)c->x[21], (int32_t)(c->x[8] & 31)); }'
+            f'  /* {a:#x}: lsl w21, w21, w8 (damage, doubled in Hero Mode) */')
+
+
+SKY_PATCHES = {STAMINA_STORE_SITE: _stamina_store, BEETLE_TIMER_SITE: _beetle_timer, HERO_UNLOCK_SITE: _hero_unlock,
+               DAMAGE_SHIFT_SITE: _damage_shift}

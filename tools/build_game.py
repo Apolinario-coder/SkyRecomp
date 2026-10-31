@@ -33,7 +33,7 @@ OUT_DLL = os.path.abspath("extracted/skygame.dll")
 IMPLIB = os.path.abspath("skyrecomp.dll.a")
 
 # Matching GAMELIB_ID for skyrecomp.exe
-GAMELIB_ID = "60fa0c70f03833f1"
+GAMELIB_ID = "ce4a41531b09955b"
 
 os.makedirs(OBJ_DIR, exist_ok=True)
 CACHE_ID = os.path.join(OBJ_DIR, 'build.id')
