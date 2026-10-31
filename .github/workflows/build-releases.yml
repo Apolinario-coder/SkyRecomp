@@ -8,6 +8,11 @@ on:
         required: true
         default: v1.0.6
         type: string
+      windows_only:
+        description: Only the Windows package, built from this run's commit (a tag made before the Windows job existed)
+        required: false
+        default: false
+        type: boolean
   push:
     tags:
       - 'v*'
@@ -20,6 +25,7 @@ permissions:
 
 jobs:
   build-linux:
+    if: ${{ !inputs.windows_only }}
     name: Build Linux Release
     runs-on: ubuntu-latest
     steps:
@@ -122,6 +128,7 @@ jobs:
   # A self-contained AppImage (tools/linux/appimage.sh): built in an Ubuntu 22.04 container (podman) with SDL3, an LGPL
   # FFmpeg and shaderc from pinned sources bundled inside, so it runs on glibc 2.35+ whatever FFmpeg the system has.
   build-linux-appimage:
+    if: ${{ !inputs.windows_only }}
     name: Build Linux AppImage
     runs-on: ubuntu-latest
     steps:
@@ -142,6 +149,7 @@ jobs:
           gh release upload ${RELEASE_TAG} build/dist/*.AppImage --clobber
 
   build-macos:
+    if: ${{ !inputs.windows_only }}
     name: Build macOS Release
     runs-on: macos-14
     steps:
@@ -257,6 +265,7 @@ jobs:
   # loads copied in recursively and pointed at @rpath (tools/bundle_macos.sh). Unlike build-macos above (Homebrew's
   # SDL3/FFmpeg, one level of dylibs copied), it starts on a Mac without Homebrew. Needs macOS 15+ (APP_MIN).
   build-macos-15:
+    if: ${{ !inputs.windows_only }}
     name: Build macOS 15 Release
     runs-on: macos-15
     steps:
@@ -291,3 +300,68 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload ${RELEASE_TAG} SkyRecomp-${RELEASE_TAG}-macOS15.dmg SkyRecomp-${RELEASE_TAG}-macOS15.zip --clobber
+
+  # Windows x64 (MSYS2 UCRT64), as .github/workflows/windows-test-build.yml: the exe and its DLLs, and what the start
+  # screen builds the game code with (skygen, zig, gamelib-src, skyrecomp.dll.a). No game files or game code, and no 4K
+  # texture pack, ReShade or seed generator (`make dist LEAN=1`). The Vulkan loader is the system's.
+  build-windows:
+    name: Build Windows Release
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - name: Keep LF line endings
+        shell: pwsh
+        run: git config --global core.autocrlf false  # (the bash tools break with CRLF)
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.windows_only && github.sha || env.RELEASE_TAG }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Set up MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            make zip unzip curl
+            mingw-w64-ucrt-x86_64-clang mingw-w64-ucrt-x86_64-lld mingw-w64-ucrt-x86_64-binutils
+            mingw-w64-ucrt-x86_64-sdl3 mingw-w64-ucrt-x86_64-vulkan-devel mingw-w64-ucrt-x86_64-shaderc
+            mingw-w64-ucrt-x86_64-vulkan-memory-allocator mingw-w64-ucrt-x86_64-pkgconf mingw-w64-ucrt-x86_64-nasm
+
+      - name: Cache LGPL FFmpeg
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/deps-win
+            !build/deps-win/src
+          key: deps-win-${{ hashFiles('tools/build_deps_windows.sh') }}
+
+      # PyInstaller needs python.org's CPython (prebuilt unicorn / capstone wheels; MSYS2's Python has none)
+      - name: Build game setup tools (skygen)
+        shell: pwsh
+        run: |
+          python -m venv build/setup-venv
+          build/setup-venv/Scripts/python -m pip install pyinstaller==6.22.3 capstone==5.0.9 unicorn==2.1.4 lz4==4.4.5
+          build/setup-venv/Scripts/python -m PyInstaller --noconfirm --clean --log-level WARN --distpath build/helper --workpath build/pyinstaller tools/skygen.spec
+
+      - name: Build Windows package
+        run: |
+          sed -i "s/^#define LARECOMP_VERSION .*/#define LARECOMP_VERSION \"$RELEASE_TAG\"/" runtime/ui/launcher.mm
+          make deps-windows
+          tools/fetch_zig.sh
+          make -j"$(nproc)" dist LEAN=1
+          cp "build/dist/Sky Recomp-${RELEASE_TAG}-windows.zip" "SkyRecomp-${RELEASE_TAG}-Windows.zip"
+
+      - name: Upload to GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload $env:RELEASE_TAG "SkyRecomp-$env:RELEASE_TAG-Windows.zip" --clobber
