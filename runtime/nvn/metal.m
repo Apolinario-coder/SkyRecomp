@@ -28,7 +28,7 @@ id<MTLBuffer> g_guest_buffer;  // wraps the guest heap so GPU addresses map to b
 uint64_t g_guest_buffer_base;
 
 // ================================================================== formats
-typedef struct { MTLPixelFormat pf; uint8_t expand_rgb; uint8_t force_alpha_one; } MtlFormat;
+typedef struct { MTLPixelFormat pf; uint8_t expand_rgb; uint8_t force_alpha_one; uint8_t remap; } MtlFormat;
 
 static MtlFormat mtl_format(uint32_t f) {
     switch (f) {
@@ -77,10 +77,13 @@ static MtlFormat mtl_format(uint32_t f) {
     case 0x36: return (MtlFormat){MTLPixelFormatDepth32Float_Stencil8};
     case 0x37: return (MtlFormat){MTLPixelFormatRGBA8Unorm_sRGB, 0, 1};
     case 0x38: return (MtlFormat){MTLPixelFormatRGBA8Unorm_sRGB};
-    case 0x39: return (MtlFormat){MTLPixelFormatABGR4Unorm};
-    case 0x3A: return (MtlFormat){MTLPixelFormatB5G6R5Unorm};
-    case 0x3B: return (MtlFormat){MTLPixelFormatA1BGR5Unorm};
-    case 0x3C: return (MtlFormat){MTLPixelFormatB5G6R5Unorm};
+    // The 16-bit formats: NVN and Metal both name channels from the low bits up (RGB565: red in bits 0-4; see
+    // vulkan/textures.c fmt_of), but Metal has only the BGR / ABGR orders: those, their channels put back in the
+    // view (remap, renderer.m apply_swizzle). Sampled as GL's (red in the high bits) before: RGB565 brown wood was blue.
+    case 0x39: return (MtlFormat){MTLPixelFormatABGR4Unorm, 0, 0, REMAP_REVERSE};    // RGBA4
+    case 0x3A: return (MtlFormat){MTLPixelFormatBGR5A1Unorm, 0, 1, REMAP_SWAP_RB};   // RGB5
+    case 0x3B: return (MtlFormat){MTLPixelFormatBGR5A1Unorm, 0, 0, REMAP_SWAP_RB};   // RGB5A1
+    case 0x3C: return (MtlFormat){MTLPixelFormatB5G6R5Unorm, 0, 0, REMAP_SWAP_RB};   // RGB565
     case 0x3D: return (MtlFormat){MTLPixelFormatRGB10A2Unorm};
     case 0x3E: return (MtlFormat){MTLPixelFormatRGB10A2Uint};
     case 0x3F: return (MtlFormat){MTLPixelFormatRG11B10Float};
@@ -132,8 +135,9 @@ static MtlFormat mtl_format(uint32_t f) {
     case 0x92: return (MtlFormat){MTLPixelFormatASTC_10x10_sRGB};
     case 0x93: return (MtlFormat){MTLPixelFormatASTC_12x10_sRGB};
     case 0x94: return (MtlFormat){MTLPixelFormatASTC_12x12_sRGB};
-    case 0x95: case 0x97: return (MtlFormat){MTLPixelFormatA1BGR5Unorm};
-    case 0x96: return (MtlFormat){MTLPixelFormatA1BGR5Unorm};
+    case 0x95: return (MtlFormat){MTLPixelFormatBGR5A1Unorm, 0, 1};  // BGR5 (the 16-bit formats: 0x39 above)
+    case 0x96: return (MtlFormat){MTLPixelFormatBGR5A1Unorm};        // BGR5A1
+    case 0x97: return (MtlFormat){MTLPixelFormatA1BGR5Unorm};        // A1BGR5
     case 0x98: return (MtlFormat){MTLPixelFormatBGRA8Unorm, 0, 1};
     case 0x99: return (MtlFormat){MTLPixelFormatBGRA8Unorm};
     case 0x9A: return (MtlFormat){MTLPixelFormatBGRA8Unorm_sRGB, 0, 1};
@@ -147,6 +151,7 @@ bool renderer_format_is_depth(uint32_t f) { return f >= 0x31 && f <= 0x36; }
 bool renderer_format_has_stencil(uint32_t f) { return f == 0x31 || f == 0x35 || f == 0x36; }
 MTLPixelFormat renderer_pixel_format(uint32_t f) { return mtl_format(f).pf; }
 bool renderer_format_alpha_one(uint32_t f) { return mtl_format(f).force_alpha_one; }
+uint8_t renderer_format_remap(uint32_t f) { return mtl_format(f).remap; }
 
 // ================================================================== textures
 typedef struct {
@@ -562,8 +567,21 @@ static const char *present_src =
     "  float2 p = float2((vid << 1) & 2, vid & 2);\n"
     "  V o; o.pos = float4(p * 2.0 - 1.0, 0, 1);\n"
     "  float2 uv = float2(p.x, pv[0].x > 0.5 ? p.y : 1.0 - p.y); o.uv = pv[1].xy + uv * pv[1].zw; return o; }\n"
-    "fragment float4 fs(V in [[stage_in]], texture2d<float> t [[texture(0)]], sampler s [[sampler(0)]]) {\n"
-    "  return float4(t.sample(s, in.uv).rgb, 1.0); }\n";
+    // supersampling (Internal resolution above the window's): the whole footprint of the window pixel is averaged,
+    // not one bilinear tap that skips texels at 3x and above (as vulkan/shaders.c present.frag)
+    // cm: the colour matrix (Color blind mode, output_scale.c), as vulkan/shaders.c present.frag
+    "float4 cmix(constant float4 *cm, float3 c) {\n"
+    "  return float4(saturate(float3(dot(cm[0].xyz, c), dot(cm[1].xyz, c), dot(cm[2].xyz, c))), 1.0); }\n"
+    "fragment float4 fs(V in [[stage_in]], texture2d<float> t [[texture(0)]], sampler s [[sampler(0)]],\n"
+    "                   constant float4 *cm [[buffer(0)]]) {\n"
+    "  float2 ts = float2(t.get_width(), t.get_height()), r = abs(float2(dfdx(in.uv.x), dfdy(in.uv.y))) * ts;\n"
+    "  if (max(r.x, r.y) <= 1.01) return cmix(cm, t.sample(s, in.uv).rgb);\n"
+    "  int2 n = clamp(int2(ceil(r - 0.01)), int2(1), int2(8));\n"
+    "  float2 d = r / float2(n) / ts, p0 = in.uv - 0.5 * r / ts + 0.5 * d;\n"
+    "  float3 c = float3(0.0);\n"
+    "  for (int y = 0; y < n.y; y++)\n"
+    "    for (int x = 0; x < n.x; x++) c += t.sample(s, p0 + float2(x, y) * d, level(0.0)).rgb;\n"
+    "  return cmix(cm, c / float(n.x * n.y)); }\n";
 
 void backend_init(void) {
     while (!atomic_load(&ui_ready)) usleep(1000);
@@ -840,6 +858,49 @@ static id<MTLTexture> smaa_encode(id<MTLCommandBuffer> cb, id<MTLTexture> in) {
     return out;
 }
 
+// FXAA (Video tab "Anti-aliasing"; runtime/nvn/fxaa.c, as vulkan/shaders.c "fxaa.frag"): one pass at the game image's
+// size, before the present / MetalFX. A shader or pipeline error is logged once and turns it off.
+static id<MTLTexture> fxaa_encode(id<MTLCommandBuffer> cb, id<MTLTexture> in) {
+    static bool failed;
+    static MTLPixelFormat lf;
+    static id<MTLRenderPipelineState> p;
+    static id<MTLTexture> out;
+    if (failed) return in;
+    if (!p || lf != in.pixelFormat) {
+        extern const char fxaa_src[];
+        NSString *src = [NSString stringWithFormat:@
+            "#include <metal_stdlib>\n"
+            "using namespace metal;\n"
+            "constexpr sampler fxaa_s(filter::linear, address::clamp_to_edge);\n"
+            "#define F2 float2\n#define F3 float3\n#define F4 float4\n#define SAT(x) saturate(x)\n"
+            "#define TAP(p) t.sample(fxaa_s, p, level(0.0))\n"
+            "#define TAPO(p, x, y) t.sample(fxaa_s, p, level(0.0), int2(x, y))\n"
+            "#define FXAA_ARGS texture2d<float> t,\n"
+            "%s"
+            "struct V { float4 pos [[position]]; };\n"
+            "vertex V fxaa_vs(uint vid [[vertex_id]]) {\n"
+            "  float2 p = float2((vid << 1) & 2, vid & 2);\n"
+            "  V o; o.pos = float4(p * 2.0 - 1.0, 0, 1); return o; }\n"
+            "fragment float4 fxaa_fs(V in [[stage_in]], texture2d<float> t0 [[texture(0)]]) {\n"
+            "  float2 rcp = 1.0 / float2(t0.get_width(), t0.get_height());\n"
+            "  return float4(fxaa(t0, in.pos.xy * rcp, rcp).rgb, 1.0); }\n", fxaa_src];
+        NSError *err = nil;
+        id<MTLLibrary> lib = [dev newLibraryWithSource:src options:nil error:&err];
+        if (!lib) { LOG("[fxaa] shader: %s\n", err.localizedDescription.UTF8String); failed = true; return in; }
+        MTLRenderPipelineDescriptor *pd = [MTLRenderPipelineDescriptor new];
+        pd.vertexFunction = [lib newFunctionWithName:@"fxaa_vs"];
+        pd.fragmentFunction = [lib newFunctionWithName:@"fxaa_fs"];
+        pd.colorAttachments[0].pixelFormat = in.pixelFormat;
+        p = [dev newRenderPipelineStateWithDescriptor:pd error:&err];
+        if (!p) { LOG("[fxaa] pipeline: %s\n", err.localizedDescription.UTF8String); failed = true; return in; }
+        lf = in.pixelFormat;
+        LOG("[fxaa] %lux%lu\n", (unsigned long)in.width, (unsigned long)in.height);
+    }
+    out = smaa_target(out, in.width, in.height, in.pixelFormat);
+    smaa_pass(cb, p, out, false, in, nil, nil);
+    return out;
+}
+
 static id<MTLTexture> metalfx_encode(id<MTLCommandBuffer> cb, id<MTLTexture> in) {
     g_fx.colorTexture = in;
     g_fx.inputContentWidth = in.width;
@@ -1022,9 +1083,9 @@ void backend_present(NvnTexture *t) {
         if (b && b->tex) {
             id<MTLTexture> src = raw_view(b->tex);
             // SMAA (Video tab "Anti-aliasing"): first, at the game image's size (MetalFX then upscales its result)
-            if (g_settings.antialias == AA_SMAA) {
+            if (g_settings.antialias == AA_SMAA || g_settings.antialias == AA_FXAA) {
                 [enc endEncoding];
-                src = smaa_encode(cb, src);
+                src = g_settings.antialias == AA_SMAA ? smaa_encode(cb, src) : fxaa_encode(cb, src);
                 MTLRenderPassDescriptor *rp2 = [MTLRenderPassDescriptor renderPassDescriptor];
                 rp2.colorAttachments[0].texture = drawable.texture;
                 rp2.colorAttachments[0].loadAction = MTLLoadActionLoad;
@@ -1054,6 +1115,9 @@ void backend_present(NvnTexture *t) {
             [enc setVertexBytes:pv length:sizeof pv atIndex:0];
             [enc setFragmentTexture:src atIndex:0];
             [enc setFragmentSamplerState:present_sampler atIndex:0];
+            float cm[12];
+            output_color_matrix(cm);
+            [enc setFragmentBytes:cm length:sizeof cm atIndex:0];
             [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3];
         }
         [enc endEncoding];
@@ -1093,6 +1157,13 @@ void backend_present(NvnTexture *t) {
     frames++;
     total_frames++;
     g_frame_counter++;
+    extern void rt_present_pace(void);
+    rt_present_pace();  // (runtime/hle/framepace.c: the game's swap interval, as on Vulkan)
+    extern void perfmon_frame(void);
+    extern void perfmon_set_gpu_mem(float game_mb, float total_mb);
+    perfmon_frame();  // (runtime/perfmon.c: the performance overlay's frame times)
+    if (total_frames % 30 == 0)  // the game's Metal allocations, and how much the GPU may use (unified memory)
+        perfmon_set_gpu_mem(dev.currentAllocatedSize / 1048576.0f, dev.recommendedMaxWorkingSetSize / 1048576.0f);
     extern void input_frame(uint64_t frame);
     input_frame(total_frames);
     static long slow_ms = -1;  // LARECOMP_SLOW_FRAME_MS=<ms>: sleep per presented frame (simulate a slow machine)
@@ -1170,6 +1241,8 @@ void ui_window_init(void) {
     SDL_MetalView view = SDL_Metal_CreateView(window);
     layer = (__bridge CAMetalLayer *)SDL_Metal_GetLayer(view);
     dev = MTLCreateSystemDefaultDevice();
+    extern void perfmon_set_gpu_hint(const char *n);
+    perfmon_set_gpu_hint(dev.name.UTF8String);  // (runtime/perfmon.c: the overlay's GPU name)
     layer.device = dev;
     layer.pixelFormat = MTLPixelFormatBGRA8Unorm;
     layer.framebufferOnly = getenv("LARECOMP_WINDOW_SHOT") ? NO : YES;

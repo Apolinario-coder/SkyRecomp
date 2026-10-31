@@ -38,14 +38,28 @@ int main(void) {
     int32_t x = 0, y = 0;
     uint64_t b = sample(0, &x, &y, 100, false);
     assert(x == 12000 && (b & (1ull << BTN_L)));
+    // hold and swing: the mouse's travel since the press is the sword stick (60 px: full tilt), the camera stays put
     click(SDL_BUTTON_LEFT, true);
+    assert(mouse_swinging && !mouse_slash_until);
+    mouse_add_motion(&mouse_dx, 40); mouse_frame(1075000000);
+    x = y = 0; b = sample(0, &x, &y, 100, false);
+    assert(x > 16384 && x < 32767 && !y && !(b & (1ull << BTN_L)) && mouse_swung);
+    mouse_add_motion(&mouse_dx, 200); mouse_add_motion(&mouse_dy, -200); mouse_frame(1091666667);  // (kept in the circle)
+    int64_t r2 = (int64_t)mouse_sx * mouse_sx + (int64_t)mouse_sy * mouse_sy;
+    assert(mouse_sx > 16000 && mouse_sy > 16000 && r2 <= 32767ll * 32767 && r2 > 32700ll * 32700);
+    mouse_frame(1108333334);  // held still: the stick stays where it is
+    x = y = 0; b = sample(0, &x, &y, 101, false);
+    assert(x == mouse_sx && y == mouse_sy && y > 16000);
+    click(SDL_BUTTON_LEFT, false);
+    assert(!mouse_swinging && !mouse_slash_until && !mouse_sx && !mouse_sy);  // (it swung: no slash on release)
+    // a click without moving: a horizontal slash on release
+    click(SDL_BUTTON_LEFT, true); click(SDL_BUTTON_LEFT, false);
     uint64_t until = mouse_slash_until;
     assert(until > 0);
     x = y = 0; b = sample(0, &x, &y, until - 90, false);
     assert(!x && !y && !(b & (1ull << BTN_L)));
     x = y = 0; b = sample(0, &x, &y, until - 50, false);
     assert(x == 32767 && !(b & (1ull << BTN_L)));
-    click(SDL_BUTTON_LEFT, false);
     input_reset(); mouse_rx = 12000;
     click(SDL_BUTTON_RIGHT, true);
     x = y = 0; b = sample(0, &x, &y, SDL_GetTicks(), false);
@@ -80,5 +94,5 @@ int main(void) {
     assert(!mouse_captured); // a hidden/unfocused window cannot trap the cursor
     SDL_DestroyWindow(window);
     SDL_Quit();
-    puts("mouse controls: motion, 60/120 FPS, attack pulses, shield, thrust, item press/release, remapping and reset passed");
+    puts("mouse controls: motion, 60/120 FPS, hold and swing, click slash, shield, thrust, item press/release, remapping and reset passed");
 }

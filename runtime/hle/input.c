@@ -40,6 +40,10 @@ static bool mouse_skip_motion;
 static _Atomic int32_t mouse_dx, mouse_dy, mouse_rx, mouse_ry;
 static _Atomic int32_t mouse_slash_x, mouse_slash_y;
 static _Atomic uint64_t mouse_slash_until, mouse_shield_until;
+// Hold and swing: while left is held, the mouse's travel since the press is the sword stick (mouse_sx / mouse_sy, kept in
+// its circle), so a flick swings that way and the game's own stick gestures work; mouse_swung: it went past half tilt
+static _Atomic bool mouse_swinging, mouse_swung;
+static _Atomic int32_t mouse_sx, mouse_sy;
 static uint64_t mouse_frame_ns;
 
 static bool mouse_unbound(int button) {
@@ -62,6 +66,13 @@ static void mouse_frame(uint64_t now) {
     int32_t dx = atomic_exchange(&mouse_dx, 0), dy = atomic_exchange(&mouse_dy, 0);
     mouse_rx = (int32_t)fmax(-32767, fmin(32767, dx * gain));
     mouse_ry = (int32_t)fmax(-32767, fmin(32767, -dy * gain));
+    if (mouse_swinging) {  // (full tilt: 60 pixels of travel at 1x)
+        double k = 32767.0 / (60 * 256) * g_settings.mouse_sens;
+        double x = mouse_sx + dx * k, y = mouse_sy - dy * k, r = hypot(x, y);
+        if (r > 32767) x *= 32767 / r, y *= 32767 / r;
+        mouse_sx = (int32_t)x, mouse_sy = (int32_t)y;
+        if (r > 16384) mouse_swung = true;
+    }
 }
 
 // Host keys / buttons held by a test script (LARECOMP_HOST_INPUT, input_frame): they go through the bindings
@@ -133,6 +144,8 @@ void input_reset(void) {
     atomic_store(&mouse_btn_x2, false);
     mouse_dx = mouse_dy = mouse_rx = mouse_ry = 0;
     mouse_slash_until = mouse_shield_until = 0;
+    mouse_swinging = mouse_swung = false;
+    mouse_sx = mouse_sy = 0;
     recompute_keyboard();
 }
 
@@ -211,6 +224,8 @@ int input_pad_family(void) {
     }
     return env >= 0 ? env : pad_family;
 }
+// A controller is open (or LARECOMP_PAD_TYPE pretends one): Auto prompts follow it, else the keyboard's
+bool input_pad_connected(void) { return pad || getenv("LARECOMP_PAD_TYPE"); }
 
 // The controller's motion, for the game's six-axis sensor (gyro aiming and the motion camera, which the game offers
 // with a Pro Controller): written by sensor events on the main thread, read by GetSixAxisSensorState on the game's.
@@ -308,13 +323,16 @@ void input_handle_event(const SDL_Event *e) {
             if (down && mouse_captured && mouse_unbound(btn)) {
                 uint64_t now = SDL_GetTicks();
                 if (btn == SDL_BUTTON_LEFT && !((key_buttons | pad_buttons) & (1ull << BTN_ZR)) && !mouse_item_mode()) {
-                    int32_t x = mouse_rx, y = mouse_ry;
-                    if (abs(x) + abs(y) < 4000) x = 32767, y = 0;
-                    mouse_slash_x = x < -4000 ? -32767 : x > 4000 ? 32767 : 0;
-                    mouse_slash_y = y < -4000 ? -32767 : y > 4000 ? 32767 : 0;
-                    mouse_slash_until = now + 100;
+                    mouse_sx = mouse_sy = 0;
+                    mouse_swung = false;
+                    mouse_swinging = true;
                 }
                 if (btn == SDL_BUTTON_RIGHT && !mouse_item_mode()) mouse_shield_until = now + 80;
+            }
+            if (!down && btn == SDL_BUTTON_LEFT && mouse_swinging) {  // released without swinging: a horizontal slash
+                mouse_swinging = false;
+                mouse_sx = mouse_sy = 0;
+                if (!mouse_swung && !mouse_item_mode()) mouse_slash_x = 32767, mouse_slash_y = 0, mouse_slash_until = SDL_GetTicks() + 100;
             }
         }
         break;
@@ -601,7 +619,8 @@ static uint64_t free_camera_input(uint64_t b, int32_t *right_x, int32_t *right_y
         }
         const bool hold_off = l_now && free_cam_on;   // L held while the eye is on: the stick fights
         if (hold_off) b &= ~(1ull << BTN_L);          // ...without the game seeing L+stick (its camera)
-        const bool r_held = (b & (1ull << BTN_R)) != 0;
+        // (R3 too: rolling and the sword pull press the right stick, which nudges it - as L + R3 the game ignored them, #86)
+        const bool r_held = (b & ((1ull << BTN_R) | (1ull << BTN_RSTICK))) != 0;
         const bool zl_held = (b & (1ull << BTN_ZL)) != 0, zr_held = (b & (1ull << BTN_ZR)) != 0;
         if (!free_cam_on || hold_off || r_held || zl_held || zr_held) {
             // no free camera: the stick keeps its own game action (sword, aim, item wheel)
@@ -617,7 +636,7 @@ static uint64_t free_camera_input(uint64_t b, int32_t *right_x, int32_t *right_y
         free_cam_on = true;   // switching the setting back on starts with the free camera active
         free_cam_l_down = false;
     }
-    free_cam_active = g_settings.free_cam && free_cam_on && !(b & ((1ull << BTN_R) | (1ull << BTN_ZL) | (1ull << BTN_ZR))) && !free_cam_l_down;
+    free_cam_active = g_settings.free_cam && free_cam_on && !(b & ((1ull << BTN_R) | (1ull << BTN_RSTICK) | (1ull << BTN_ZL) | (1ull << BTN_ZR))) && !free_cam_l_down;
     *right_x = rx; *right_y = ry;
     b &= ~(0xfull << 20);
     if (rx < -16000) b |= 1ull << 20;
@@ -640,17 +659,21 @@ static bool mouse_input(uint64_t *buttons, int32_t *rx, int32_t *ry, uint64_t no
     bool item = item_mode || (b & (1ull << BTN_ZR)) != 0;
     if (item_mode && mouse_btn_left && mouse_unbound(SDL_BUTTON_LEFT)) b |= 1ull << BTN_ZR;
     bool slash = !item && now < mouse_slash_until && mouse_unbound(SDL_BUTTON_LEFT);
+    bool swing = !item && mouse_swinging;
     // A click starts at neutral, then flicks the stick; time-based pulses work at both 60 and 120 FPS.
-    if (slash) {
+    if (swing) {
+        *rx = mouse_sx;
+        *ry = mouse_sy;
+    } else if (slash) {
         bool neutral = mouse_slash_until - now > 80;
         *rx = neutral ? 0 : mouse_slash_x;
         *ry = neutral ? 0 : mouse_slash_y;
     } else if (item || (b & (1ull << BTN_R)) || (free_cam_on && !(b & (1ull << BTN_ZL)))) {
         *rx = clamp_axis(*rx + mouse_rx); *ry = clamp_axis(*ry + mouse_ry);
     }
-    if (slash || thrust || item_mode) b &= ~(1ull << BTN_L);
+    if (slash || swing || thrust || item_mode) b &= ~(1ull << BTN_L);
     *buttons = b;
-    return slash || thrust || item_mode;
+    return slash || swing || thrust || item_mode;
 }
 
 // NpadFullKeyState / NpadHandheldState / NpadJoy*State share this layout (0x28 bytes):
@@ -698,6 +721,8 @@ static void fill_state(Cpu *c) {
     int32_t rx = clamp_axis((menu ? 0 : key_rx + pad_rx) + script_rx), ry = clamp_axis((menu ? 0 : key_ry + pad_ry) + script_ry);
     uint64_t now = SDL_GetTicks();
     bool mouse_sword = mouse_input(&b, &rx, &ry, now, menu);
+    input_stick_circle(&lx, &ly);
+    input_stick_circle(&rx, &ry);
 
     extern bool mirror_input(void);  // mirror mode, the world on screen (runtime/hle/mirror.c): left and right swap
     bool mirrored = !menu && mirror_input();

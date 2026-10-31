@@ -241,13 +241,27 @@ static const char *builtin_src(const char *name, int *stage) {
                "  uv = pc.crop.xy + u * pc.crop.zw;\n"
                "}\n";
     }
+    // Supersampling (Internal resolution above the window's): one bilinear tap would skip texels at 3x and above, so
+    // the whole footprint of the window pixel is averaged - n evenly spaced taps per axis, at texel centres (exact)
+    // for whole-number ratios; at 2x this is the same 2 x 2 average as one bilinear tap. (As metal.m present_src.)
     if (!strcmp(name, "present.frag")) {
         *stage = STAGE_FRAGMENT;
         return "#version 450\n"
                "layout(set = 0, binding = 0) uniform sampler2D t;\n"
+               "layout(push_constant) uniform P { vec4 a; vec4 crop; vec4 cm[3]; } pc;\n"  // cm: Color blind mode
                "layout(location = 0) in vec2 uv;\n"
                "layout(location = 0) out vec4 o;\n"
-               "void main() { o = vec4(texture(t, uv).rgb, 1.0); }\n";
+               "vec4 cmix(vec3 c) { return vec4(clamp(vec3(dot(pc.cm[0].xyz, c), dot(pc.cm[1].xyz, c), dot(pc.cm[2].xyz, c)), 0.0, 1.0), 1.0); }\n"
+               "void main() {\n"
+               "  vec2 ts = vec2(textureSize(t, 0)), r = abs(vec2(dFdx(uv.x), dFdy(uv.y))) * ts;\n"  // texels per pixel
+               "  if (max(r.x, r.y) <= 1.01) { o = cmix(texture(t, uv).rgb); return; }\n"
+               "  ivec2 n = clamp(ivec2(ceil(r - 0.01)), ivec2(1), ivec2(8));\n"
+               "  vec2 d = r / vec2(n) / ts, p0 = uv - 0.5 * r / ts + 0.5 * d;\n"
+               "  vec3 c = vec3(0.0);\n"
+               "  for (int y = 0; y < n.y; y++)\n"
+               "    for (int x = 0; x < n.x; x++) c += textureLod(t, p0 + vec2(x, y) * d, 0.0).rgb;\n"
+               "  o = cmix(c / float(n.x * n.y));\n"
+               "}\n";
     }
     // ---- post passes before the present (Video tab "Anti-aliasing" / "Upscaler"): exec.c vk_present_draw.
     // Each draws a fullscreen triangle into an image the size of its output; push constants: two vec4.
@@ -309,6 +323,27 @@ static const char *builtin_src(const char *name, int *stage) {
             snprintf(src[k], n, "%s%s%s", head, smaa_hlsl_src, mains[k]);
         }
         return src[k];
+    }
+    // FXAA (runtime/nvn/fxaa.c), at the game image's size. a = (1 / size, size).
+    if (!strcmp(name, "fxaa.frag")) {
+        *stage = STAGE_FRAGMENT;
+        static char *src;
+        if (!src) {
+            extern const char fxaa_src[];
+            static const char *head =
+                "#version 450\n"
+                "layout(set = 0, binding = 0) uniform sampler2D t;\n"
+                "layout(push_constant) uniform P { vec4 a; vec4 b; } pc;\n"
+                "layout(location = 0) out vec4 o;\n"
+                "#define F2 vec2\n#define F3 vec3\n#define F4 vec4\n#define SAT(x) clamp(x, 0.0, 1.0)\n"
+                "#define TAP(p) textureLod(t, p, 0.0)\n#define TAPO(p, x, y) textureLodOffset(t, p, 0.0, ivec2(x, y))\n"
+                "#define FXAA_ARGS\n";
+            static const char *main_ = "void main() { o = vec4(fxaa(gl_FragCoord.xy * pc.a.xy, pc.a.xy).rgb, 1.0); }\n";
+            size_t n = strlen(head) + strlen(fxaa_src) + strlen(main_) + 1;
+            src = malloc(n);
+            snprintf(src, n, "%s%s%s", head, fxaa_src, main_);
+        }
+        return src;
     }
     // AMD FidelityFX Super Resolution 1 (MIT), EASU: edge-adaptive upscale. a = (in / out scale xy, offset zw),
     // b.xy = input size. 12 taps around the source pixel, direction / edge length from luma, Lanczos-2-like

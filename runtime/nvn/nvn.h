@@ -44,6 +44,12 @@ typedef struct {
     void *backend;
 } NvnSamplerDesc;
 
+// Anisotropic filtering (objects.c): the level a sampler is built with - the game's own, raised to Settings > Video >
+// Anisotropic filtering for mipmapped, linearly minified textures - and, when that setting changes, a rebuild of
+// every pool's samplers (free_backend releases each old one once the GPU is done with it)
+float nvn_sampler_aniso(const NvnSamplerDesc *d);
+void nvn_samplers_follow_aniso(void (*free_backend)(void *));
+
 typedef struct {
     uint32_t setmask;  // which fields are overridden
     uint16_t base_level, num_levels, min_layer, num_layers;

@@ -25,6 +25,7 @@ extern "C" bool vk_imgui_backend_init(void);  // runtime/nvn/vulkan/imgui_glue.c
 extern "C" {
 #include "../hle.h"
 #include "../settings.h"
+#include "../perfmon.h"
 #include "menu.h"
 extern "C" bool input_free_cam_active(void);  // runtime/hle/input.c: free camera session toggle
 void input_reset(void);
@@ -35,7 +36,10 @@ void save_editor_on_open(void);
 void rando_tab_draw(float scale);
 bool warp_tab_draw(float scale);  // warp_tab.mm: true when a warp started
 extern "C" void cheats_draw(float scale);  // cheats.mm
-extern "C" void difficulty_draw(float scale);  // difficulty.mm
+extern "C" void difficulty_rows(void);  // difficulty.mm
+extern "C" void loftwing_rows(void);    // difficulty.mm
+extern "C" void drop_rows(void);        // difficulty.mm
+extern "C" void link_rows(void);        // difficulty.mm
 void controls_bindings_draw(float scale);  // controls_ui.mm
 #include "../input_bind.h"
 #include "../paths.h"
@@ -45,6 +49,23 @@ void controls_bindings_draw(float scale);  // controls_ui.mm
 static std::atomic<bool> g_open{false};
 static std::atomic<bool> g_text_busy{false};  // a text field / the on-screen keyboard has the keys (render thread: ui_text_busy)
 static std::atomic<bool> g_want_fullscreen_apply{false};
+
+// Zelda & Loftwing amiibo (runtime/services/nfp.c): the player loads their own figure's dump once; then Fi's
+// "Use amiibo" recognises it. The file dialog opens on the main thread (macOS: AppKit panels only work there - from the
+// render thread it aborted) and answers on another; the pick is handled on the menu's next frame.
+extern "C" bool amiibo_loaded(void);
+extern "C" bool amiibo_import(const char *path, char *msg, size_t cap);
+static pthread_mutex_t amiibo_lock = PTHREAD_MUTEX_INITIALIZER;
+static char amiibo_pick[1024], amiibo_msg[160];
+static std::atomic<bool> g_amiibo_dialog{false};  // (opened on the main thread: menu_apply_window_requests)
+
+static void SDLCALL amiibo_picked(void *, const char *const *files, int) {
+    if (!files || !files[0]) return;
+    pthread_mutex_lock(&amiibo_lock);
+    snprintf(amiibo_pick, sizeof amiibo_pick, "%s", files[0]);
+    pthread_mutex_unlock(&amiibo_lock);
+}
+
 
 struct QEvent {
     enum { KEY, ANALOG, MOUSE_POS, MOUSE_BUTTON, WHEEL, TEXT } kind;
@@ -172,6 +193,11 @@ bool menu_handle_event(const SDL_Event *e) {
             if (!typing) set_open(!g_open.load());  // (Esc with the menu open goes to ImGui below: it cancels a field)
             return true;
         }
+        if (!e->key.repeat && e->key.scancode == SDL_SCANCODE_F10 && !typing) {  // performance overlay: off, FPS, full
+            g_settings.perf_overlay = (g_settings.perf_overlay + 1) % 3;
+            settings_save();
+            return true;
+        }
         if (!e->key.repeat && (e->key.scancode == SDL_SCANCODE_F11 ||
                                (e->key.scancode == SDL_SCANCODE_RETURN && (e->key.mod & (SDL_KMOD_ALT | SDL_KMOD_GUI))) ||
                                (e->key.scancode == SDL_SCANCODE_F && (e->key.mod & SDL_KMOD_GUI) && (e->key.mod & SDL_KMOD_CTRL)))) {
@@ -270,9 +296,69 @@ void menu_apply_window_requests(void *win) {
         first = false;
         SDL_SetWindowFullscreen(w, g_settings.fullscreen);
     }
+    if (g_amiibo_dialog.exchange(false)) {
+        static const SDL_DialogFileFilter f[] = {{"amiibo dump", "bin"}};
+        SDL_ShowOpenFileDialog(amiibo_picked, NULL, w, f, 1, NULL, false);
+    }
 }
 
 // ------------------------------------------------------------------ render thread
+// Performance overlay (F10, Settings > Video), in the style of MangoHud and of Savage Wind Recomp's (MIT): the game's
+// frame rate and frame times, and the machine's load, memory and temperatures (runtime/perfmon.c). Numbers the
+// platform doesn't give read "-". FPS mode keeps the old corner counter's size.
+static void perf_cell(const char *fmt, float v) {
+    ImGui::TableNextColumn();
+    if (v < 0) ImGui::TextDisabled("-");
+    else ImGui::Text(fmt, v);
+}
+static void perf_overlay_draw(ImGuiIO &io, float scale) {
+    PerfStats s;
+    perfmon_snapshot(&s);
+    ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x - 16 * scale, 16 * scale), 0, ImVec2(1, 0));
+    ImGui::SetNextWindowBgAlpha(g_settings.perf_overlay == PERF_FPS ? 0.45f : 0.6f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(6 * scale, 2 * scale));
+    ImGui::Begin("##perf", NULL, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize |
+                                     ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoFocusOnAppearing);
+    if (g_settings.perf_overlay == PERF_FPS) {
+        ImGui::SetWindowFontScale(0.65f);
+        ImGui::Text("%.0f  %.1f ms", s.fps, s.frame_ms_avg);
+        ImGui::End();
+        ImGui::PopStyleVar();
+        return;
+    }
+    ImGui::SetWindowFontScale(0.72f);
+    const ImVec4 gpu_c(0.55f, 0.83f, 0.31f, 1), cpu_c(0.18f, 0.59f, 0.80f, 1), ram_c(0.80f, 0.45f, 0.70f, 1),
+                 fps_c(0.95f, 0.95f, 0.95f, 1);
+    if (ImGui::BeginTable("##perft", 5, ImGuiTableFlags_SizingFixedFit)) {
+        ImGui::TableNextColumn(); ImGui::TextColored(gpu_c, "GPU");
+        perf_cell("%.0f%%", s.gpu_pct); perf_cell("%.0f C", s.gpu_temp_c); perf_cell("%.0f W", s.gpu_power_w);
+        perf_cell("%.0f MHz", s.gpu_clock_mhz);
+        ImGui::TableNextColumn(); ImGui::TextColored(gpu_c, "VRAM");
+        perf_cell("%.2f GB", s.vram_used_mb < 0 ? -1 : s.vram_used_mb / 1024);
+        perf_cell("/ %.1f GB", s.vram_total_mb < 0 ? -1 : s.vram_total_mb / 1024);
+        perf_cell("game %.2f GB", s.vram_game_mb < 0 ? -1 : s.vram_game_mb / 1024);
+        ImGui::TableNextColumn();
+        ImGui::TableNextColumn(); ImGui::TextColored(cpu_c, "CPU");
+        perf_cell("%.0f%%", s.cpu_total_pct); perf_cell("%.0f C", s.cpu_temp_c); perf_cell("game %.0f%%", s.cpu_game_pct);
+        ImGui::TableNextColumn();
+        if (s.cpu_temp_c >= 0 && s.cpu_temp_source) ImGui::TextDisabled("%s", s.cpu_temp_source);
+        ImGui::TableNextColumn(); ImGui::TextColored(ram_c, "RAM");
+        perf_cell("%.1f GB", s.ram_used_mb / 1024); perf_cell("/ %.1f GB", s.ram_total_mb / 1024);
+        perf_cell("game %.2f GB", s.ram_game_mb / 1024);
+        ImGui::TableNextColumn();
+        ImGui::TableNextColumn(); ImGui::TextColored(fps_c, "FPS");
+        perf_cell("%.0f", s.fps); perf_cell("%.1f ms", s.frame_ms_avg); perf_cell("1%% %.1f ms", s.frame_ms_low1);
+        perf_cell("max %.1f ms", s.frame_ms_max);
+        ImGui::EndTable();
+    }
+    float top = s.frame_ms_max > 50 ? s.frame_ms_max : 50;
+    ImGui::PlotLines("##ft", s.frame_ms, PERF_HISTORY, 0, NULL, 0, top, ImVec2(360 * scale, 48 * scale));
+    ImGui::TextDisabled("%s", s.gpu_name[0] ? s.gpu_name : "GPU");
+    ImGui::TextDisabled("%s", s.cpu_name);
+    ImGui::End();
+    ImGui::PopStyleVar();
+}
+
 static bool g_inited;
 static ImGuiContext *g_ctx;  // ours: the start screen (back to it after a reboot) has its own context
 static ImFont *g_font, *g_font_big;
@@ -445,6 +531,7 @@ static bool slider(const char *label, float *value, float min, float max, const 
 
 extern "C" void renderer_get_scale(float *sx, float *sy);
 extern "C" int input_pad_family(void);  // runtime/hle/input.c
+extern "C" bool input_pad_connected(void);
 extern "C" double output_scale_dynamic_factor(void);
 
 static void tab_display(void) {
@@ -460,7 +547,11 @@ static void tab_display(void) {
         g_settings.fullscreen = fs;
         g_want_fullscreen_apply.store(true);
     }
-    opt_toggle("Show FPS", &g_settings.show_fps, false, "Shows the frame rate in the top right corner.");
+    static const char *const perf_names[] = {"Off", "FPS", "Full"};
+    if (opt_choice("Performance overlay", &g_settings.perf_overlay, perf_names, 3, PERF_OFF,
+                   "Top right. FPS: the frame rate and frame time. Full: also GPU, CPU and RAM load, temperatures, "
+                   "VRAM and a frame time graph, for benchmarking. F10 switches between them while you play."))
+        settings_save();
     if (g_is_skyward) {
         const char *rates[] = {"60 FPS", "120 FPS (Experimental)"};
         int rate = g_settings.frame_rate == 120;
@@ -525,16 +616,57 @@ static void tab_display(void) {
         if (opt_choice("Upscaler", &ui, ups, 3, 1, ud)) g_settings.upscaler = ui == 2 ? UPSCALE_NIS : ui == 1 ? UPSCALE_FSR1 : UPSCALE_BILINEAR;
 #endif
     }
-    static const char *aa[] = {"Off", "SMAA"};
-    opt_choice("Anti-aliasing", &g_settings.antialias, aa, 2, AA_OFF,
+    static const char *aa[] = {"Off", "SMAA", "FXAA"};  // AA_* order
+    opt_choice("Anti-aliasing", &g_settings.antialias, aa, 3, AA_OFF,
                "Smooths jagged edges of the game image before it is scaled to the window. SMAA: finds the edges and "
-               "blends only along them, so textures stay sharp. Most useful at a lower internal resolution.");
+               "blends only along them, so textures stay sharp. FXAA: smooths more edges, including thin and curved "
+               "ones, but softens the whole image a little. Both are most useful at a lower internal resolution; for "
+               "the cleanest image, raise Internal resolution above your display's (supersampling).");
+    {
+        static const char *af[] = {"Game", "2x", "4x", "8x", "16x"};
+        static const int af_level[] = {0, 2, 4, 8, 16};
+        int ai = 0;
+        for (int i = 0; i < 5; i++) if (af_level[i] == g_settings.aniso) ai = i;
+        if (opt_choice("Anisotropic filtering", &ai, af, 5, 0,
+                       "Keeps textures sharp when seen at a shallow angle - paths, floors and walls stretching into the "
+                       "distance - instead of blurring them. Game: the level the game asks for. 16x: sharpest; costs "
+                       "little on most GPUs."))
+            g_settings.aniso = af_level[ai];
+    }
+    static const char *shc[] = {"Hybrid", "Wait", "Async"};  // SHADERS_* order
+    opt_choice("Shader compilation (Experimental)", &g_settings.shader_compile, shc, 3, SHADERS_HYBRID,
+               "What happens the first time something needs a new shader. Hybrid: what's drawn every frame appears "
+               "a moment later instead of the game pausing, while shadows and other reused images still wait, so they "
+               "are never wrong. Wait: everything waits, which can stutter. Async: nothing waits, so a shadow can be "
+               "missing until it's redrawn.");
+    opt_end();
+}
 
+static void amiibo_rows(void) {
+    pthread_mutex_lock(&amiibo_lock);
+    if (amiibo_pick[0]) {
+        amiibo_import(amiibo_pick, amiibo_msg, sizeof amiibo_msg);
+        amiibo_pick[0] = 0;
+    }
+    pthread_mutex_unlock(&amiibo_lock);
+    bool have = amiibo_loaded();
+    char d[400];
+    snprintf(d, sizeof d, "In Fi's menu, \"Use amiibo\" recognises your Zelda & Loftwing amiibo right away: from the surface "
+             "Fi takes you to the sky, and from the sky back to the spot you left. Needs your own figure's dump, loaded "
+             "below.%s%s", amiibo_msg[0] ? "\n\n" : "", amiibo_msg);
+    if (!have) opt_disable_next();
+    opt_toggle("Zelda & Loftwing amiibo", &g_settings.amiibo, true, d);
+    snprintf(d, sizeof d, "Pick a dump of your own Zelda & Loftwing amiibo (a .bin made with an NFC phone app such as "
+             "TagMo). A copy is kept in the game's data folder; only the figure's ID is read from it.%s%s",
+             amiibo_msg[0] ? "\n\n" : "", amiibo_msg);
+    if (opt_button(have ? "Load another amiibo dump" : "Load amiibo dump", d)) g_amiibo_dialog = true;
+}
+
+
+// Gameplay: the game's text language, difficulty, accessibility and the Zelda & Loftwing amiibo
+static void tab_gameplay(void) {
+    opt_begin("##gameplay", ImGui::GetFontSize() / 34);
     opt_section("Game");
-    opt_toggle("Remove blur", &g_settings.blur_removal, false,
-               "Turns off the tilt-shift blur at the top and bottom of the screen.");
-    opt_toggle("Hide Hero Mode icon", &g_settings.hide_hero_icon, false,
-               "Hides the Hero Mode emblem in the corner of the screen while playing a Hero Mode file.");
     const char *names[N_LANGUAGES];
     for (int i = 0; i < N_LANGUAGES; i++) names[i] = g_language_names[i];
     int lang = g_settings.language;
@@ -551,6 +683,21 @@ static void tab_display(void) {
             set_open(false);
         }
     }
+    opt_section("Difficulty");
+    difficulty_rows();
+    opt_section("Link");
+    link_rows();
+    opt_section("Loftwing");
+    loftwing_rows();
+    opt_section("Drops");
+    drop_rows();
+    opt_section("Accessibility");
+    static const char *const cb[] = {"Off", "Red-weak (protan)", "Green-weak (deutan)", "Blue-weak (tritan)"};
+    opt_choice("Color blind mode", &g_settings.colorblind, cb, 4, COLORBLIND_OFF,
+               "Shifts the colors you can't tell apart into ones you can (daltonization), for each common kind of "
+               "color blindness. Applies to the whole game picture.");
+    opt_section("amiibo");
+    amiibo_rows();
     opt_end();
 }
 
@@ -621,8 +768,6 @@ static void tab_quit(float scale, bool in_game) {
 static void tab_about(void) {
     header("Movement");
     toggle("D-pad moves Link", &g_settings.dpad_move);
-    toggle("360-degree movement", &g_settings.move_360);
-    hint("Link walks in the exact direction of the stick instead of snapping to 8 directions.");
     toggle("Free camera look", &g_settings.free_cam);
     hint("Moving the right stick looks around without having to hold L first. A short L press switches it off/on "
          "for this session; holding L while the eye is on turns the free camera off for the hold, so the right "
@@ -649,28 +794,13 @@ static void tab_about(void) {
     {
         static const char *const fam[] = {"Nintendo", "Xbox", "PlayStation"};
         char autol[64];
-        snprintf(autol, sizeof autol, "Auto (%s)", fam[input_pad_family() % 3]);
+        snprintf(autol, sizeof autol, "Auto (%s)", input_pad_connected() ? fam[input_pad_family() % 3] : "Keyboard");
         const char *names[] = {autol, "Nintendo", "Xbox", "PlayStation", "Keyboard"};
         choice("Button icons", &g_settings.prompts, names, 5);
+        static const char *const looks[] = {"Light (the game's own)", "Dark"};
+        choice("Button look", &g_settings.prompt_look, looks, 2);
     }
-    ImGui::Spacing();
-    header("System language");
-    {
-        // what the game is told the console's language is: its text follows this (runtime/settings.c)
-        const char *names[N_LANGUAGES];
-        for (int i = 0; i < N_LANGUAGES; i++) names[i] = g_language_names[i];
-        if (choice("Language", &g_settings.language, names, N_LANGUAGES)) settings_save();
-    }
-    if (settings_language_pending()) {
-        hint("Language change pending. The game must restart to reload its text. Save your progress first.");
-        if (ImGui::Button("Restart game to apply language")) {
-            settings_save();
-            rt_request_reboot(RT_REBOOT_GAME);
-            set_open(false);
-        }
-    } else {
-        hint("The game's text language. Changes made before Play apply when the game starts.");
-    }
+    hint("Xbox, PlayStation and keyboard icons: light buttons like the game's own, or dark ones.");
     ImGui::Spacing();
     header("Controls");
     controls_bindings_draw(ImGui::GetFontSize() / 34);
@@ -765,7 +895,7 @@ static void tabs_body(float scale, bool in_game, void (*prelaunch)(float)) {
     if (prelaunch) tabs[ntabs++] = {"Prelaunch", -1, true};
     static const char *names[] = {"Video", "Audio", "Save Editor", "Randomizer", "Warp", "Cheats", "Gameplay",
                                   "Cosmetics", "Controls", "Quit", "Mods"};
-    static const int order[] = {8, 0, 1, 10, 9};  // Controls, Video, Audio, Mods, Quit
+    static const int order[] = {8, 0, 1, 6, 5, 9};  // Controls, Video, Audio, Gameplay, Cheats, Quit (Mods: hidden for now)
     for (int i : order)  // (Quit: in game only - the start screen has its own QUIT)
         if (i != 9 || !prelaunch) tabs[ntabs++] = {names[i], i, true};
     int cur = 0;  // g_tab / g_tab_request hold ids
@@ -844,6 +974,8 @@ static void tabs_body(float scale, bool in_game, void (*prelaunch)(float)) {
                 case -1: prelaunch(scale); break;
                 case 0: tab_display(); break;
                 case 1: tab_audio(); break;
+                case 6: tab_gameplay(); break;
+                case 5: cheats_draw(scale); break;
                 case 8: tab_about(); break;
                 case 10: tab_mods(scale); break;
                 case 9: tab_quit(scale, in_game); break;
@@ -883,7 +1015,7 @@ void menu_render(void *cmd, uint32_t target_w, uint32_t target_h) {
     bool trk = !open && tracker_overlay_wanted();
     bool chaos = !open && chaos_overlay_wanted();
     bool kbd = g_kbd.load() == 1;
-    if (!open && !kbd && !g_settings.show_fps && !inv && !trk && !chaos && !g_settings.free_cam) {
+    if (!open && !kbd && g_settings.perf_overlay == PERF_OFF && !inv && !trk && !chaos && !g_settings.free_cam) {
         if (g_inited) { pthread_mutex_lock(&q_lock); q_events.clear(); pthread_mutex_unlock(&q_lock); }
         return;
     }
@@ -928,17 +1060,7 @@ void menu_render(void *cmd, uint32_t target_w, uint32_t target_h) {
 #endif
     ImGui::NewFrame();
 
-    if (g_settings.show_fps) {
-        ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x - 16 * scale, 16 * scale), 0, ImVec2(1, 0));
-        ImGui::SetNextWindowBgAlpha(0.45f);
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(6 * scale, 2 * scale));
-        ImGui::Begin("##fps", NULL, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize |
-                                        ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoFocusOnAppearing);
-        ImGui::SetWindowFontScale(0.65f);   // small: just the number
-        ImGui::Text("%.0f", io.Framerate);
-        ImGui::End();
-        ImGui::PopStyleVar();
-    }
+    if (g_settings.perf_overlay != PERF_OFF) perf_overlay_draw(io, scale);
 
     if (g_settings.free_cam) {
         // Free camera mode, bottom right, no text: an eye while it is on, a crossed-out eye while L toggled it off.

@@ -36,7 +36,7 @@ MINFLAG  := $(if $(MACOS_MIN),-mmacosx-version-min=$(MACOS_MIN))
 CC       := clang $(MINFLAG) $(CROSS)
 CXX      := clang++ $(MINFLAG) $(CROSS)
 IMGUI    := third_party/imgui
-GENFLAGS := -O0 -g0 -DNDEBUG -fno-strict-aliasing -Wno-return-type -Wno-unused-label -fvisibility=hidden -Iruntime
+GENFLAGS := -O1 -g0 -DNDEBUG -fno-strict-aliasing -Wno-return-type -Wno-unused-label -fvisibility=hidden -Iruntime
 
 # The game code (made by `make gen` from your own game files) is its own library next to the app (runtime/gamelib.h);
 # the app itself holds none of it
@@ -57,7 +57,7 @@ FFMPEG   := $(or $(DEPS),/opt/homebrew/opt/ffmpeg)
 EXE      := $(B)/skyrecomp
 DEPINC   := -I$(SDL)/include -I$(FFMPEG)/include
 LDFLAGS  := -L$(SDL)/lib -lSDL3 -Wl,-rpath,$(SDL)/lib -L$(FFMPEG)/lib -lavformat -lavcodec -lavutil -lswscale -Wl,-rpath,$(FFMPEG)/lib \
-            -framework CoreFoundation -framework Foundation -framework Metal -framework MetalFX -framework QuartzCore -framework AppKit -framework ImageIO -framework CoreGraphics -framework UniformTypeIdentifiers
+            -framework CoreFoundation -framework Foundation -framework Metal -framework MetalFX -framework QuartzCore -framework AppKit -framework ImageIO -framework CoreGraphics -framework UniformTypeIdentifiers -framework IOKit
 BACKEND_SRC := $(wildcard runtime/nvn/*.m)
 BACKEND_OBJ := $(patsubst runtime/%.m,$(B)/rt/%.o,$(BACKEND_SRC))
 IMGUI_OBJ += $(B)/imgui/imgui_impl_metal.o
@@ -89,6 +89,7 @@ EXE      := $(B)/skyrecomp.exe
 DEPINC   := $(if $(DEPS),-I$(DEPS)/include)
 OSFLAGS  := -D_FILE_OFFSET_BITS=64 -D_POSIX_THREAD_SAFE_FUNCTIONS -D_CRT_RAND_S -DWIN32_LEAN_AND_MEAN -DNOMINMAX
 GENARCH  ?= -march=x86-64-v3  # AVX2 + FMA for the lifted FP/SIMD code (simd.h); override for older CPUs
+# -O1 as elsewhere: with tools/gen.py's jump-table twins no game function takes LLVM minutes any more (full -O1: ~2 min)
 GENFLAGS += -D_FILE_OFFSET_BITS=64 $(GENARCH) -fno-sanitize=all
 LDFLAGS  := -fuse-ld=lld -Wl,--stack,16777216 $(if $(DEPS),-L$(DEPS)/lib) -lavformat -lavcodec -lavutil -lswscale -lSDL3 \
             -lvulkan-1 -lwinmm -lole32 -lshell32 -lcomdlg32 -luuid -lshaderc_shared \
@@ -111,7 +112,7 @@ endif
 GAMELIB_SRCS := tools/gen.py tools/lifter.py tools/analyze.py tools/nso.py tools/passes.py tools/patches.py \
                 tools/simd_c.py tools/rando/patch_variants.json tools/gamelib_entry.c runtime/hle/hle_symbols.txt \
                 runtime/cpu.h runtime/simd.h runtime/simd_fp.h runtime/gamelib.h
-GAMELIB_ID ?= 5e5bafbb450f894b
+GAMELIB_ID ?= 931ec98964ca8a89
 
 RT_OBJ   := $(patsubst runtime/%.c,$(B)/rt/%.o,$(RT_SRC))
 RTFLAGS  := -O2 -g -fno-strict-aliasing -Wall -Wno-unused-function -Iruntime -Iruntime/nvn -DGAMELIB_ID='"$(GAMELIB_ID)"' $(DEPINC) $(OSFLAGS)
@@ -230,6 +231,8 @@ dmg: app
 # with build/deps-win/bin first (the FFmpeg DLL names are the same as MSYS2's GPL ones). vulkan-1.dll is left
 # out: every Vulkan driver installs the loader in System32. Saves, seeds and game files go next to the exe at run time.
 # Needs: Windows 10+ x64, a Vulkan 1.3 driver, an AVX2 CPU (GENARCH x86-64-v3; checked at startup).
+# LEAN=1 (CI): without the seed generator helper, ReShade and the 4K visual pack (third_party/LAS-Randomizer and the
+# pack are not in this repo). The DLLs to ship are read from the exe's import tables (tools/win_dlls.sh).
 DIST     := build/dist/Sky Recomp
 WIN_B    := build/win-release
 VISUAL_PACK ?= build/visual-pack
@@ -237,9 +240,9 @@ PACK_PY ?= python3
 deps-windows:
 	tools/build_deps_windows.sh
 dist:
-	@[ -d "$(VISUAL_PACK)/reshade-shaders" ] || { echo "Set VISUAL_PACK to the complete 4K pack directory (including reshade-shaders and presets)"; exit 1; }
+	@$(if $(LEAN),:,[ -d "$(VISUAL_PACK)/reshade-shaders" ] || { echo "Set VISUAL_PACK to the complete 4K pack directory (including reshade-shaders and presets)"; exit 1; })
 	@[ -f build/deps-win/lib/libavcodec.dll.a ] || { echo "make deps-windows first (LGPL FFmpeg)"; exit 1; }
-	@[ -d build/helper/rando-gen ] || { echo "make rando-helper first (the seed generator)"; exit 1; }
+	@$(if $(LEAN),:,[ -d build/helper/rando-gen ] || { echo "make rando-helper first (the seed generator)"; exit 1; })
 	@[ -d build/helper/skygen ] || [ -d build/helper/lasgen ] || { echo "make gen-helper first (the game code generator)"; exit 1; }
 	@[ -x build/zig/zig.exe ] || { echo "tools/fetch_zig.sh first (the compiler)"; exit 1; }
 	$(MAKE) B=$(WIN_B) DEPS=$(CURDIR)/build/deps-win RELEASE=1 $(WIN_B)/skyrecomp.exe
@@ -257,12 +260,12 @@ dist:
 	cp third_party/imgui/LICENSE.txt "$(DIST)/LICENSE-ImGui.txt"
 	cp third_party/smaa/LICENSE.txt "$(DIST)/LICENSE-SMAA.txt"
 	cp third_party/xxhash/LICENSE "$(DIST)/LICENSE-xxHash"
-	cp -R build/helper/rando-gen "$(DIST)/"
-	PATH="$(CURDIR)/build/deps-win/bin:$$PATH" ldd $(WIN_B)/skyrecomp.exe | awk '(/ucrt64/ || /deps-win/) && !/vulkan-1/ {print $$3}' | sort -u | \
-	    xargs -I{} cp -u {} "$(DIST)/"
+	@$(if $(LEAN),:,cp -R build/helper/rando-gen "$(DIST)/")
+	tools/win_dlls.sh $(WIN_B)/skyrecomp.exe build/deps-win/bin "$${MINGW_PREFIX:-/ucrt64}/bin" | xargs -I{} cp -u {} "$(DIST)/"
+	ls "$(DIST)"/SDL3.dll "$(DIST)"/avcodec-*.dll "$(DIST)"/libshaderc_shared.dll >/dev/null  # (the DLLs it can't start without)
 	! ls "$(DIST)" | grep -iE 'x264|x265|xvid|postproc'  # (no GPL codec libraries in the release)
-	$(PACK_PY) tools/fetch_reshade.py --output "$(DIST)/reshade"
-	$(PACK_PY) tools/package_visuals.py --source "$(VISUAL_PACK)" --output "$(DIST)"
+	@$(if $(LEAN),:,$(PACK_PY) tools/fetch_reshade.py --output "$(DIST)/reshade")
+	@$(if $(LEAN),:,$(PACK_PY) tools/package_visuals.py --source "$(VISUAL_PACK)" --output "$(DIST)")
 	cd build/dist && if command -v zip >/dev/null; then zip -qr "Sky Recomp-$(VERSION)-windows.zip" "Sky Recomp"; \
 	    else /c/Windows/System32/tar.exe -a -cf "Sky Recomp-$(VERSION)-windows.zip" "Sky Recomp"; fi
 	@echo "build/dist/Sky Recomp-$(VERSION)-windows.zip"

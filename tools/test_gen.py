@@ -4,6 +4,10 @@ from collections import Counter
 
 from gen import Module, SKY_TIMING_STORES
 from lifter import Lifter
+from patches import (BEETLE_TIMER_SITE, DAMAGE_SHIFT_SITE, DASH_CAP_SITE, DASH_START_SITE, DASH_USE_SITE,
+                     DASH_GAUGE_SITE, DROP_END_SITE, DROP_KIND_SITES, DROP_THIN_SITE, FLIGHT_SPEED_SITE,
+                     GAUGE_PICTURE_SITES, HERO_UNLOCK_SITE, WALK_SPEED_SITE,
+                     SKY_PATCHES, STAMINA_STORE_SITE, TREASURE_ROLL_SITES)
 
 
 class JumpTableBoundaryTest(unittest.TestCase):
@@ -75,6 +79,29 @@ class JumpTableBoundaryTest(unittest.TestCase):
                         self.assertIn('*(f32a *)&c->v[0] = rt_sky_frame_step(*(f32a *)&c->v[0])', code)
                         self.assertIn('*(f32a *)&c->v[1] = rt_sky_frame_ms(*(f32a *)&c->v[1])', code)
                         self.assertNotIn('VSF32(', code)  # (simd.h isn't included with --simd asm)
+
+
+    def test_sky_patches_only_for_sky(self):
+        words = {STAMINA_STORE_SITE: 0xb90002e8, BEETLE_TIMER_SITE: 0x4b090108, HERO_UNLOCK_SITE: 0x38696908,
+                 DAMAGE_SHIFT_SITE: 0x1ac822b5, DASH_USE_SITE: 0x51000529, DASH_START_SITE: 0x52800069,
+                 DASH_CAP_SITE: 0x7100091f, FLIGHT_SPEED_SITE: 0x1e272863, DROP_THIN_SITE: 0x14000028,
+                 DROP_END_SITE: 0x54000822, DASH_GAUGE_SITE: 0x79e99529,
+                 WALK_SPEED_SITE: 0xbd04bac8}
+        words.update({a: 0x39400296 for a in DROP_KIND_SITES})
+        words.update({a: w for a, (w, _, _) in TREASURE_ROLL_SITES.items()})
+        words.update({a: 0x910072a1 for a in GAUGE_PICTURE_SITES})
+        self.assertEqual(set(words), set(SKY_PATCHES))
+        for pc, word in words.items():
+            for sky in (False, True):
+                with self.subTest(pc=hex(pc), sky=sky):
+                    m, _ = self.module(9)
+                    m.lo = m.base = pc
+                    m.words = [word, words.get(pc + 4, 0xD503201F), 0xD65F03C0]  # (the next one may be a site too)
+                    m.hi = m.lo + 12
+                    m.is_las, m.is_skyward = False, sky
+                    m.lifter = Lifter(m.base, 'c')
+                    code = '\n'.join(m.emit_function(m.lo, m.hi, set(), {}, {}))
+                    self.assertEqual(f'/* {pc:#x}: ' in code, sky)
 
 
 if __name__ == '__main__':

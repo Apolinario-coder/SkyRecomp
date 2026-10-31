@@ -1,0 +1,26 @@
+name: Linux test build
+
+# A Linux AppImage of a test/* branch, kept as the run's artifact (Actions > the run > Artifacts) instead of a release.
+# Built like build-releases.yml's AppImage job (tools/linux/appimage.sh).
+on:
+  push:
+    branches:
+      - 'test/**'
+
+jobs:
+  appimage:
+    name: Build Linux AppImage (test)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Build AppImage
+        run: bash tools/linux/appimage.sh x86_64
+
+      - name: Keep the AppImage as an artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: skyrecomp-linux-x86_64-${{ github.sha }}
+          path: build/dist/*.AppImage
+          if-no-files-found: error

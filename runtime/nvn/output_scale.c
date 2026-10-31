@@ -93,3 +93,27 @@ void output_scale(double dw, double dh, bool reshape_allowed, double now, double
     }
     o->vx = (dw - o->vw) / 2; o->vy = (dh - o->vh) / 2;
 }
+
+// Color blind mode (Gameplay tab): daltonization folded into the 3x3 matrix the present shader applies (identity when
+// off). S simulates what a protan / deutan / tritan viewer sees (Machado, Oliveira & Fernandes 2009, severity 1); the
+// difference they lose is moved into channels they can tell apart, as daltonize.js does: M = I + E (I - S).
+static void mul3(const double *a, const double *b, double *o) {
+    for (int r = 0; r < 3; r++)
+        for (int c = 0; c < 3; c++) o[r * 3 + c] = a[r * 3] * b[c] + a[r * 3 + 1] * b[3 + c] + a[r * 3 + 2] * b[6 + c];
+}
+
+void output_color_matrix(float m[12]) {
+    static const double sim[3][9] = {
+        {0.152286, 1.052583, -0.204868, 0.114503, 0.786281, 0.099216, -0.003882, -0.048116, 1.051998},
+        {0.367322, 0.860646, -0.227968, 0.280085, 0.672501, 0.047413, -0.011820, 0.042940, 0.968881},
+        {1.255528, -0.076749, -0.178779, -0.078411, 0.930809, 0.147602, 0.004733, 0.691367, 0.303900}};
+    static const double shift[9] = {0, 0, 0, 0.7, 1, 0, 0.7, 0, 1};
+    double r[9] = {1, 0, 0, 0, 1, 0, 0, 0, 1}, a[9], d[9];
+    int mode = g_settings.colorblind;
+    if (mode >= COLORBLIND_PROTAN && mode <= COLORBLIND_TRITAN) {
+        for (int i = 0; i < 9; i++) d[i] = (i % 4 == 0) - sim[mode - 1][i];
+        mul3(shift, d, a);
+        for (int i = 0; i < 9; i++) r[i] += a[i];
+    }
+    for (int i = 0; i < 3; i++) m[i * 4] = (float)r[i * 3], m[i * 4 + 1] = (float)r[i * 3 + 1], m[i * 4 + 2] = (float)r[i * 3 + 2], m[i * 4 + 3] = 0;
+}

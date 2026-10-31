@@ -14,6 +14,7 @@
 #include "maxwell/shader.h"
 #include "nvn.h"
 #include "renderer.h"
+#include "../settings.h"
 
 static id<MTLDevice> dev;
 static id<MTLCommandBuffer> cmdbuf;
@@ -57,6 +58,7 @@ static struct {
     uint8_t blend[8][8];
     uint32_t channel_mask;
     uint8_t color_state[4], ds[8], ms[0x18], poly[4];
+    float alpha_ref;  // NVN alpha comparison reference (color_state[2]: the function), rscale[65].y
     float poly_offset[3];  // factor, units, clamp (nvnCommandBufferSetPolygonOffsetClamp)
     uint32_t attrib[16];
     int nattrib;
@@ -850,10 +852,16 @@ void shader_cache_warm(void) {
     });
 }
 
-static bool sync_shaders(void) {  // LARECOMP_SYNC_SHADERS: compile on first use, blocking (deterministic tests)
-    static int v = -1;
-    if (v < 0) v = getenv("LARECOMP_SYNC_SHADERS") != NULL;
-    return v;
+// Settings > Video > Shader compilation (shader_compile_mode; as vulkan/exec.c): wait compiles on first use, blocking;
+// async skips draws until their shaders and pipeline are built; hybrid skips only draws that are redrawn every frame
+
+// Whether a draw into `target` waits for its shaders and pipeline. Under hybrid, a landscape target (the scene, its
+// effect buffers, the window image) is redrawn every frame, so its draws are skipped while they build; square or
+// portrait ones (shadow maps, cube faces, atlases) may be drawn once and reused.
+// ponytail: aspect-ratio heuristic, as on Vulkan
+static bool draw_must_wait(NvnTexture *target) {
+    int m = shader_compile_mode();
+    return m == SHADERS_WAIT || (m == SHADERS_HYBRID && !(target && target->width > target->height));
 }
 
 static void compile_program(Prog *pr) {
@@ -876,7 +884,7 @@ static void compile_program(Prog *pr) {
     pr->ready = true;
 }
 
-static Prog *get_program(NvnProgram *p, ShaderKey *vkey, ShaderKey *fkey) {
+static Prog *get_program(NvnProgram *p, ShaderKey *vkey, ShaderKey *fkey, bool wait) {
     shader_cache_warm();
     if (!(p->stage_mask & 1) || !(p->stage_mask & 2)) return nil;
     // fast path: hash of the code addresses and keys
@@ -886,13 +894,14 @@ static Prog *get_program(NvnProgram *p, ShaderKey *vkey, ShaderKey *fkey) {
     for (size_t i = 0; i < sizeof *vkey; i++) { h ^= vb[i]; h *= 0x100000001B3ull; }
     for (int i = 0; i < 8; i++) { h ^= fkey->rt_kind[i]; h *= 0x100000001B3ull; }
     h ^= fkey->dual_source; h *= 0x100000001B3ull;
+    h ^= fkey->alpha_func; h *= 0x100000001B3ull;
     if (!h) h = 1;
     uint32_t slot = (uint32_t)(h ^ (h >> 31)) & (PROG_TAB - 1);
     while (prog_tab[slot].key && prog_tab[slot].key != h) slot = (slot + 1) & (PROG_TAB - 1);
     if (prog_tab[slot].key) { Prog *fp = (__bridge Prog *)prog_tab[slot].prog; return fp->failed ? nil : fp; }
-    NSString *key = [NSString stringWithFormat:@"%llx/%llx/%@/%@/%u%s", p->stages[0].code_addr, p->stages[1].code_addr,
+    NSString *key = [NSString stringWithFormat:@"%llx/%llx/%@/%@/%u/a%u%s", p->stages[0].code_addr, p->stages[1].code_addr,
                      [NSData dataWithBytes:vkey length:sizeof *vkey], [NSData dataWithBytes:fkey->rt_kind length:8],
-                     (unsigned)fkey->dual_source,
+                     (unsigned)fkey->dual_source, (unsigned)fkey->alpha_func,
                      vkey->flip_x ? "/mirror" : ""];  // (NSData's description elides the middle of the key's bytes)
     Prog *pr = cache[key];
     if (pr) {
@@ -937,7 +946,16 @@ static Prog *get_program(NvnProgram *p, ShaderKey *vkey, ShaderKey *fkey) {
     }
     fkey->vs_out_mask = pr->vi->out_mask;
     pr->fi = maxwell_translate((const uint8_t *)(uintptr_t)p->stages[1].code_addr, fmax, STAGE_FRAGMENT, fkey);
-    if (!pr->fi->msl) { LOG("[shader] FS translate failed: %s\n", pr->fi->error); pr->failed = true; return nil; }
+    if (!pr->fi->msl) {
+        LOG("[shader] FS translate failed: %s (code %llx)\n", pr->fi->error, p->stages[1].code_addr);
+        char path[128];
+        mkdir("build/shaders", 0755);
+        snprintf(path, sizeof path, "build/shaders/fail_%llx_s1_code.bin", p->stages[1].code_addr);
+        FILE *f = fopen(path, "wb");
+        if (f) { fwrite((void *)(uintptr_t)p->stages[1].code_addr, 1, fmax < 0x4000 ? fmax : 0x4000, f); fclose(f); }
+        pr->failed = true;
+        return nil;
+    }
     if (getenv("LARECOMP_SAVE_MSL")) {
         mkdir("build/msl", 0755);
         char path[256];
@@ -947,7 +965,7 @@ static Prog *get_program(NvnProgram *p, ShaderKey *vkey, ShaderKey *fkey) {
         f = fopen(path, "w"); fputs(pr->fi->msl, f); fclose(f);
     }
     shader_cache_note(pr->vi->msl, pr->fi->msl);
-    if (sync_shaders()) {
+    if (wait) {
         compile_program(pr);
         return pr->failed ? nil : pr;
     }
@@ -959,7 +977,13 @@ static Prog *get_program(NvnProgram *p, ShaderKey *vkey, ShaderKey *fkey) {
     return pr;
 }
 
+// (an old sampler is released a second later: command buffers still in flight may use it)
+static void release_sampler(void *s) {
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC), dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{ CFRelease(s); });
+}
+
 static id<MTLSamplerState> sampler_for(NvnSamplerDesc *d) {
+    nvn_samplers_follow_aniso(release_sampler);
     if (d->backend) return (__bridge id<MTLSamplerState>)d->backend;
     MTLSamplerDescriptor *sd = [MTLSamplerDescriptor new];
     sd.magFilter = d->mag_filter == 1 ? MTLSamplerMinMagFilterLinear : MTLSamplerMinMagFilterNearest;
@@ -980,7 +1004,8 @@ static id<MTLSamplerState> sampler_for(NvnSamplerDesc *d) {
     sd.sAddressMode = modes[0]; sd.tAddressMode = modes[1]; sd.rAddressMode = modes[2];
     sd.lodMinClamp = d->lod_min;
     sd.lodMaxClamp = d->lod_max > 1000 ? FLT_MAX : d->lod_max;
-    if (d->max_aniso > 1) sd.maxAnisotropy = (NSUInteger)fminf(d->max_aniso, 16);
+    float af = nvn_sampler_aniso(d);
+    if (af > 1) sd.maxAnisotropy = (NSUInteger)fminf(af, 16);
     if (d->lod_bias != 0 && getenv("LARECOMP_LOG_BIAS"))
         LOG("[sampler] lod bias %g (min filter %u, aniso %g)\n", d->lod_bias, mf, d->max_aniso);
     static float lodmin = -1;  // LARECOMP_LOD_MIN=<n>: skip the n sharpest mips everywhere (aliasing experiments)
@@ -1040,9 +1065,14 @@ static id<MTLTexture> apply_swizzle(id<MTLTexture> tex, NvnTexture *t, const Nvn
     const uint8_t *sw = (has_view && (v->setmask & 8)) ? v->swizzle : t->swizzle;
     uint8_t c[4];
     for (int i = 0; i < 4; i++) c[i] = sw[i] <= 5 ? sw[i] : (uint8_t)(2 + i);
-    if (!c[0] && !c[1] && !c[2] && !c[3]) return tex;  // never set: identity
+    uint8_t remap = renderer_format_remap(t->format);  // (the 16-bit formats: channels in another order, metal.m)
+    if (!c[0] && !c[1] && !c[2] && !c[3]) {  // never set: identity
+        if (!remap) return tex;
+        c[0] = 2, c[1] = 3, c[2] = 4, c[3] = 5;
+    }
     if (renderer_format_alpha_one(t->format))
         for (int i = 0; i < 4; i++) if (c[i] == MTLTextureSwizzleAlpha) c[i] = MTLTextureSwizzleOne;
+    for (int i = 0; i < 4; i++) c[i] = renderer_remap_channel(remap, c[i]);
     if (c[0] == 2 && c[1] == 3 && c[2] == 4 && c[3] == (renderer_format_alpha_one(t->format) ? 1 : 5)) return tex;
     if (tex.sampleCount > 1 || renderer_format_is_depth(t->format)) return tex;
     uint32_t swz = c[0] | c[1] << 8 | c[2] << 16 | (uint32_t)c[3] << 24;
@@ -1540,13 +1570,18 @@ static void debug_draw(Prog *pr, CmdRec *r, bool indexed) {
         for (int i = 0; i < 16; i++)
             if (st.sbuf[sg][i].addr) LOG(" %c%d(%llx,%llu)", sg ? 'f' : 'v', i, st.sbuf[sg][i].addr, st.sbuf[sg][i].size);
     LOG(" | tex:");
-    for (int i = 0; i < pr->fi->ntex; i++) LOG(" off%u", pr->fi->tex[i].handle_offset);
+    for (int i = 0; i < pr->fi->ntex; i++) LOG(" off%u%s", pr->fi->tex[i].handle_offset, pr->fi->tex[i].bindless ? "B" : "");  // B: a TEX.B candidate
     LOG(" bound:");
     for (int i = 0; i < 32; i++) {
         if (!st.tex[1][i]) continue;
         uint32_t tic = st.tex[1][i] & 0xFFFFF;
-        NvnTexture *t = st.tpool && tic < (uint32_t)st.tpool->count ? ((NvnTexEntry *)st.tpool->entries)[tic].tex : NULL;
-        if (t) LOG(" %d=[%ux%ux%u t%u f%#x fl%#x %s]", i, t->width, t->height, t->depth, t->target, t->format, t->flags, t->label);
+        NvnTexEntry *e = st.tpool && tic < (uint32_t)st.tpool->count ? &((NvnTexEntry *)st.tpool->entries)[tic] : NULL;
+        NvnTexture *t = e ? e->tex : NULL;
+        // sw: the texture's component swizzle and the pool view's when it sets one (0 zero, 1 one, 2..5 r g b a)
+        if (t) LOG(" %d=[%ux%ux%u t%u f%#x fl%#x %s sw%u%u%u%u]", i, t->width, t->height, t->depth, t->target, t->format, t->flags,
+                   t->label, t->swizzle[0], t->swizzle[1], t->swizzle[2], t->swizzle[3]);
+        if (t && e->has_view && (e->view.setmask & 8))
+            LOG("(view sw%u%u%u%u)", e->view.swizzle[0], e->view.swizzle[1], e->view.swizzle[2], e->view.swizzle[3]);
         else LOG(" %d=%llx", i, st.tex[1][i]);
     }
     LOG(" | rt %d", st.rt.ncolor);
@@ -1555,6 +1590,17 @@ static void debug_draw(Prog *pr, CmdRec *r, bool indexed) {
     LOG(" | vp %.0f %.0f %.0f %.0f | attrs %#x streams:", st.viewport[0][0], st.viewport[0][1], st.viewport[0][2], st.viewport[0][3], pr->vi->attr_mask);
     for (int i = 0; i < st.nattrib; i++) LOG(" a%d(f%#x s%u o%u)", i, st.attrib[i] & 0xFF, (st.attrib[i] >> 8) & 0x1F, st.attrib[i] >> 13);
     for (int i = 0; i < 12; i++) if (st.vbuf[i].addr) LOG(" vb%d(%llx,%llu,stride %u div %u)", i, st.vbuf[i].addr, st.vbuf[i].size, st.stream[i][0], st.stream[i][1]);
+    for (int a = 1; a <= 2 && a < st.nattrib; a++) {  // the first vertex's attributes 1-2 read as floats (empty buffers)
+        uint32_t at = st.attrib[a], s = (at >> 8) & 0x1F, off = at >> 13;
+        if (s < 16 && st.vbuf[s].addr && off + 12 <= st.vbuf[s].size) {
+            const float *v = (const float *)(uintptr_t)(st.vbuf[s].addr + off);
+            LOG(" v0.a%d(%g %g %g)", a, v[0], v[1], v[2]);
+        }
+    }
+    if (st.ubuf[0][0].addr && st.ubuf[0][0].size >= 16) {  // vertex cb3 row 0 (the camera)
+        const float *m = (const float *)(uintptr_t)st.ubuf[0][0].addr;
+        LOG(" cb3[0](%g %g %g %g)", m[0], m[1], m[2], m[3]);
+    }
     if (st.ubuf[0][0].addr && st.ubuf[0][0].size == 560) {
         const float *f = (const float *)(uintptr_t)st.ubuf[0][0].addr;
         LOG("\n  vs ubo0:");
@@ -1599,13 +1645,49 @@ static uint64_t pipeline_state_hash(Prog *pr) {
     h = hmix(h, &st.nstream, sizeof st.nstream);
     h = hmix(h, st.stream, sizeof st.stream[0] * (size_t)(st.nstream < 16 ? st.nstream : 16));
     h = hmix(h, &st.channel_mask, sizeof st.channel_mask);
-    h = hmix(h, &st.color_state[0], sizeof st.color_state[0]);
+    h = hmix(h, &st.color_state[0], 2);  // (blend enables, logic op)
     h = hmix(h, &st.ms[0xC], 1);
     return h ? h : 1;
 }
 
+// Linear render targets (NVN flag 0x10) are ones the CPU reads straight from memory: the save files' thumbnails - the
+// game draws the last presented frame into a 256x144 linear target and memcpy's it into save/<n>.screenshot, which was
+// saved black (the texels stayed in the Metal texture). So a draw into one is finished and blitted back into guest
+// memory before the submit returns. Only the thumbnails so far, so the wait costs nothing in play.
+// ponytail: a wait per draw - batch per pass if a game draws a lot into linear targets; 2D, guest-sized, in the heap.
+static uint64_t renderer_pixel_format_bytes(MTLPixelFormat pf, uint64_t nvn_bpb);
+void renderer_flush(void);
+static void draw_inner(CmdRec *r, bool indexed);
 static void draw(CmdRec *r, bool indexed) {
+    draw_inner(r, indexed);
+    bool wrote = false;
+    for (int i = 0; i < st.rt.ncolor && i < 8; i++) {
+        NvnTexture *t = st.rt.color[i];
+        if (!t || !(t->flags & 0x10) || !t->stride || t->addr < HEAP_BASE ||
+            t->addr + t->stride * t->height > HEAP_BASE + HEAP_MAX)
+            continue;
+        id<MTLTexture> tex = renderer_texture(t, nil, true);
+        const FormatInfo *fi = nvn_format_info(t->format);
+        if (!fi || tex.textureType != MTLTextureType2D || tex.width != t->width || tex.height != t->height ||
+            renderer_pixel_format_bytes(tex.pixelFormat, fi->bpb) != fi->bpb || t->stride < t->width * fi->bpb)
+            continue;
+        if (!wrote) end_pass(), wrote = true;
+        id<MTLBlitCommandEncoder> b = [cb() blitCommandEncoder];
+        [b copyFromTexture:tex sourceSlice:0 sourceLevel:0 sourceOrigin:MTLOriginMake(0, 0, 0)
+                sourceSize:MTLSizeMake(t->width, t->height, 1) toBuffer:g_guest_buffer destinationOffset:t->addr - HEAP_BASE
+        destinationBytesPerRow:t->stride destinationBytesPerImage:t->stride * t->height];
+        [b endEncoding];
+    }
+    if (wrote) renderer_flush();
+}
+static void draw_inner(CmdRec *r, bool indexed) {
     if (!st.program) { stat_skipped++; return; }
+    // NVN's front-and-back cull (Face 3) drops every polygon while points and lines still draw; Metal has no such cull
+    // mode, so a polygon draw goes here. (How the game hides a material: the Remlit's night face and claws by day,
+    // zeldaret/ss d_a_e_remly.cpp applyScaryMat - drawn before, as cull none. Modes: 0-3 points / lines, 10-11 lines
+    // with adjacency.)
+    uint32_t pmode = (uint32_t)r->x[0];
+    if (st.poly[0] == 3 && pmode >= 4 && pmode != 10 && pmode != 11) return;
     static bool logged_modes;
     if (!logged_modes) {
         logged_modes = true;
@@ -1618,6 +1700,7 @@ static void draw(CmdRec *r, bool indexed) {
     vkey.depth_minus_one = nvn_depth_mode() == 0;
     for (int i = 0; i < st.nattrib; i++) vkey.attr_kind[i] = (uint8_t)attr_kind(st.attrib[i] & 0xFF);
     for (int i = 0; i < st.rt.ncolor; i++) if (st.rt.color[i]) fkey.rt_kind[i] = (uint8_t)rt_kind(st.rt.color[i]->format);
+    fkey.alpha_func = st.color_state[2] < 8 ? st.color_state[2] : 0;  // NVN alpha comparison (as vulkan/exec.c)
     // Dual-source blending (SSHD eyes): colour outputs 0/1 are the two sources of attachment 0. Mirrors the
     // Vulkan backend's handling (runtime/nvn/vulkan/exec.c) - without this the fragment shader never declares
     // the second source output and the blend's secondary input is undefined.
@@ -1626,8 +1709,31 @@ static void draw(CmdRec *r, bool indexed) {
         for (int i = 1; i <= 4; i++) if (b[i] >= 0x10 && b[i] <= 0x13) fkey.dual_source = true;
         if (fkey.dual_source) fkey.rt_kind[1] = fkey.rt_kind[0];
     }
-    Prog *pr = get_program(st.program, &vkey, &fkey);
+    bool wait = draw_must_wait(st.rt.ncolor && st.rt.color[0] ? st.rt.color[0] : st.rt.depth);
+    Prog *pr = get_program(st.program, &vkey, &fkey, wait);
+    if (pr && wait) while (!pr->ready && !pr->failed) usleep(50);  // (queued earlier by a draw that skips)
     if (!pr || !pr->ready) { stat_skipped++; return; }
+    {   // LARECOMP_F9_BINDLESS: an F9 dump of the next frame, once, at the first draw of a TEX.B shader (effects too short
+        // to catch by hand: grass-cut leaves)
+        static int armed = -1;
+        if (armed < 0) armed = getenv("LARECOMP_F9_BINDLESS") != NULL;
+        bool bl = false;
+        for (int i = 0; armed && i < pr->fi->ntex; i++) bl |= pr->fi->tex[i].bindless;
+        if (bl) {
+            extern volatile int g_debug_frame_request;
+            g_debug_frame_request = 1;
+            armed = 0;
+        }
+        // LARECOMP_F9_FS=<fragment shader code address, hex>: the same, at that shader's first draw (passes that run
+        // only for a moment: Fi's glow map is built while she appears)
+        static uint64_t f9_fs = 1;
+        if (f9_fs == 1) f9_fs = getenv("LARECOMP_F9_FS") ? strtoull(getenv("LARECOMP_F9_FS"), NULL, 16) : 0;
+        if (f9_fs && st.program->stages[1].code_addr == f9_fs) {
+            extern volatile int g_debug_frame_request;
+            g_debug_frame_request = 1;
+            f9_fs = 0;
+        }
+    }
     {   // mirror mode (runtime/hle/mirror.c): the scene's composite into the window image is drawn mirrored - the
         // unblended full-screen draw sampling an image the window's size (the window images also serve as scratch
         // targets earlier in the frame: those draws sample smaller images; the HUD after it blends)
@@ -1641,7 +1747,8 @@ static void draw(CmdRec *r, bool indexed) {
         }
         if (mirror_draw(composite)) {  // (the vertex flip mirrors a composite drawn with uvs, the fragment one a
             vkey.flip_x = fkey.flip_x = true;  // composite reading pixel positions; get_program keys on vkey)
-            pr = get_program(st.program, &vkey, &fkey);
+            pr = get_program(st.program, &vkey, &fkey, wait);
+            if (pr && wait) while (!pr->ready && !pr->failed) usleep(50);
             if (!pr || !pr->ready) { stat_skipped++; return; }
         }
     }
@@ -1774,6 +1881,19 @@ static void draw(CmdRec *r, bool indexed) {
             ca.rgbBlendOperation = blend_op(b[5]);
             ca.alphaBlendOperation = blend_op(b[6]);
         }
+        // Logic op (NVN's numbering is Vulkan's; it replaces blending). Metal has none: OR as max blending, exact for
+        // channels that are 0 or 1 - the shadow masks, where each caster ORs its own channel into a shared target
+        // (Link's red, an NPC's green) and a plain write let the last one drawn erase the others' (Vulkan: exec.c).
+        uint8_t lop = st.color_state[1] & 15;
+        if (lop == 7 && !rt_kind(st.rt.color[i]->format)) {
+            ca.blendingEnabled = YES;
+            ca.sourceRGBBlendFactor = ca.destinationRGBBlendFactor = MTLBlendFactorOne;
+            ca.sourceAlphaBlendFactor = ca.destinationAlphaBlendFactor = MTLBlendFactorOne;
+            ca.rgbBlendOperation = ca.alphaBlendOperation = MTLBlendOperationMax;
+        } else if (lop != 3) {
+            static uint16_t seen;
+            if (!(seen & (1u << lop))) seen |= 1u << lop, LOG("[metal] logic op %u not emulated: drawn as a copy\n", lop);
+        }
     }
     pd.alphaToCoverageEnabled = st.ms[0xC] != 0;
     NSMutableString *pk = [NSMutableString stringWithFormat:@"%u %p %p %lu %lu", g_boot_gen, pr->vs, pr->fs,
@@ -1795,15 +1915,16 @@ static void draw(CmdRec *r, bool indexed) {
     NSMutableDictionary *ready_pipes = g_ready_pipes;  // async pipeline builds finished on Metal's threads
     static id pending;
     if (!ready_pipes) { ready_pipes = g_ready_pipes = [NSMutableDictionary new]; pending = [NSObject new]; }
-    if (pobj == pending) {
+    while (pobj == pending) {  // (a waiting draw polls until Metal's thread finishes the build)
         @synchronized(ready_pipes) {
             id done = ready_pipes[pk];
             if (done) { [ready_pipes removeObjectForKey:pk]; cache[pk] = done; pobj = done; }
         }
-        if (pobj == pending) { stat_skipped++; return; }
+        if (pobj == pending && !wait) { stat_skipped++; return; }
+        if (pobj == pending) usleep(50);
     }
     if (!pobj) {
-        if (sync_shaders()) {
+        if (wait) {
             NSError *err;
             pobj = TIMED_COMPILE([dev newRenderPipelineStateWithDescriptor:pd error:&err]);
             if (!pobj) {
@@ -1836,19 +1957,24 @@ static void draw(CmdRec *r, bool indexed) {
     // depth / stencil
     static uint64_t last_dsk;
     static id<MTLDepthStencilState> last_dss;
-    uint64_t dsk = hmix(hmix(hmix(0xcbf29ce484222325ull, st.ds, 8), st.stencil_mask, sizeof st.stencil_mask), st.stencil_vmask, sizeof st.stencil_vmask);
+    // A pass with no depth buffer has no depth test, as in Vulkan (Fi's lighting is baked into a 256 x 256 target with
+    // the depth test still on; Metal rejected every pixel, so the bake stayed empty and she rendered dark)
+    uint8_t has_depth = st.rt.depth && renderer_format_is_depth(st.rt.depth->format) && st.rt.depth->format != 0x31;
+    uint64_t dsk = hmix(hmix(hmix(hmix(0xcbf29ce484222325ull, st.ds, 8), st.stencil_mask, sizeof st.stencil_mask), st.stencil_vmask,
+                             sizeof st.stencil_vmask), &has_depth, 1);
     id<MTLDepthStencilState> dss = dsk == last_dsk ? last_dss : nil;
     NSString *dk = nil;
     if (!dss) {
-        dk = [NSString stringWithFormat:@"ds %02x%02x%02x%02x%02x%02x%02x%02x %x %x %x %x", st.ds[0], st.ds[1], st.ds[2], st.ds[3],
-                    st.ds[4], st.ds[5], st.ds[6], st.ds[7], st.stencil_mask[0], st.stencil_vmask[0], st.stencil_mask[1], st.stencil_vmask[1]];
+        dk = [NSString stringWithFormat:@"ds %02x%02x%02x%02x%02x%02x%02x%02x %x %x %x %x%s", st.ds[0], st.ds[1], st.ds[2], st.ds[3],
+                    st.ds[4], st.ds[5], st.ds[6], st.ds[7], st.stencil_mask[0], st.stencil_vmask[0], st.stencil_mask[1], st.stencil_vmask[1],
+                    has_depth ? "" : " nodepth"];
         dss = cache[dk];
     }
     if (!dss) {
         MTLDepthStencilDescriptor *dd = [MTLDepthStencilDescriptor new];
         static int nodt = -1;
         if (nodt < 0) nodt = getenv("LARECOMP_NO_DEPTH_TEST") != NULL;
-        if (st.ds[0] && !nodt) { dd.depthCompareFunction = compare_fn(st.ds[2]); dd.depthWriteEnabled = st.ds[1] != 0; }
+        if (st.ds[0] && !nodt && has_depth) { dd.depthCompareFunction = compare_fn(st.ds[2]); dd.depthWriteEnabled = st.ds[1] != 0; }
         else { dd.depthCompareFunction = MTLCompareFunctionAlways; dd.depthWriteEnabled = NO; }
         if (st.ds[3]) {
             uint32_t ops = st.ds[5] | st.ds[6] << 8 | st.ds[7] << 16;
@@ -1990,7 +2116,9 @@ static void draw(CmdRec *r, bool indexed) {
         float rs[66][4] = {{vp_sx, vp_sy, vp_ox, vp_oy}};
         for (int i = 0; i < pr->fi->ntex && i < 64; i++) { rs[1 + i][0] = tex_sc[1][i][0]; rs[1 + i][1] = tex_sc[1][i][1]; }
         if (fkey.flip_x) rs[65][0] = (float)st.rt.color[0]->width;  // (mirror mode: the composite's width, guest pixels)
-        [enc setFragmentBytes:rs length:(NSUInteger)(fkey.flip_x ? 66 : 1 + pr->fi->ntex) * 16 atIndex:RSCALE_BUFFER_INDEX];
+        rs[65][1] = st.alpha_ref;  // (alpha comparison reference)
+        bool full = fkey.flip_x || fkey.alpha_func;
+        [enc setFragmentBytes:rs length:(NSUInteger)(full ? 66 : 1 + pr->fi->ntex) * 16 atIndex:RSCALE_BUFFER_INDEX];
     }
     if (st.ubuf[0][2].addr && st.ubuf[0][2].size >= 48 && !(st.ubuf[0][2].addr & 3)) {  // cut bushes' items
         extern void pot_item_draw(float *m);                                                 // (runtime/hle/pot_glow.c)
@@ -2317,6 +2445,10 @@ static void copy_texture(const TexRefRec *src, const TexRefRec *dst, uint64_t fl
     snap_reason = "tex2tex"; snapshots_invalidate(NULL);
     NvnTexture *st_ = (NvnTexture *)(uintptr_t)src->tex, *dt = (NvnTexture *)(uintptr_t)dst->tex;
     if (!st_ || !dt) return;
+    if (ENV("LARECOMP_LOG_COPIES"))  // (debug) every texture copy / downsample: what fills a target no pass draws
+        LOG("[copy] frame %llu %ux%u f%#x %llx -> %ux%u f%#x %llx flags %#llx\n", (unsigned long long)renderer_present_count(),
+            st_->width, st_->height, st_->format, (unsigned long long)st_->addr, dt->width, dt->height, dt->format,
+            (unsigned long long)dt->addr, (unsigned long long)flags);
     end_pass();
     id<MTLTexture> s = sampled_texture(st_, &src->view, src->has_view, TEXTYPE_2D);
     renderer_mark_gpu_owned(dt);
@@ -2451,6 +2583,7 @@ static void exec_list(uint64_t handle, int depth) {
         case CMD_BIND_BLEND: { uint8_t *b = x; memcpy(st.blend[b[0] & 7], b, 8); break; }
         case CMD_BIND_CHANNEL_MASK: memcpy(&st.channel_mask, x, 4); break;
         case CMD_BIND_COLOR: memcpy(st.color_state, x, 4); break;
+        case CMD_SET_ALPHA_REF: st.alpha_ref = r->f[0]; break;
         case CMD_BIND_DEPTH_STENCIL: memcpy(st.ds, x, 8); break;
         case CMD_BIND_MULTISAMPLE: memcpy(st.ms, x, 0x18); break;
         case CMD_BIND_POLYGON: memcpy(st.poly, x, 4); break;

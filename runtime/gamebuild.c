@@ -15,7 +15,7 @@
 
 // From the Makefile: the flags the game code is compiled and linked with (as `make` builds it in a source checkout)
 #ifndef GAMELIB_CFLAGS
-#define GAMELIB_CFLAGS "-O0 -g0 -DNDEBUG -fno-strict-aliasing -fvisibility=hidden -fno-sanitize=all"
+#define GAMELIB_CFLAGS "-O1 -g0 -DNDEBUG -fno-strict-aliasing -fvisibility=hidden -fno-sanitize=all"
 #endif
 #ifndef GAMELIB_SHARED
 #define GAMELIB_SHARED "-shared"
@@ -240,6 +240,7 @@ static void log_error(const char *path, char *out, size_t n) {  // first error l
 typedef struct {
     char src[1100], obj[1100], log[1100], stamp[1100];  // stamp: what obj was compiled from (resuming, below)
     unsigned long long bytes;
+    bool o0;  // compiled again at -O0: it outlasted the -O1 budget (gamebuild_run)
 } Unit;
 
 typedef struct {
@@ -259,11 +260,17 @@ static void add_unit(Units *us, const char *src, const char *work, const char *s
     snprintf(u->stamp, sizeof u->stamp, "%s" SEP "%s.stamp", work, stem);
     struct stat st;
     u->bytes = stat(src, &st) == 0 ? (unsigned long long)st.st_size : 0;
+    u->o0 = false;
+}
+
+static const char *file_name(const char *path) {  // (for the log)
+    const char *s = strrchr(path, SEP[0]);
+    return s ? s + 1 : path;
 }
 
 // The flags the game code was built with (GAMELIB_CFLAGS, part of its id). zig cc reads -march=<cpu> with its own CPU
 // names (x86_64_v3) and takes "-<feature>" off the end, so x86-64-v3 would be CPU "x86": the same CPU as -mcpu there.
-static void add_cflags(Args *a, const Tools *t) {
+static void add_cflags(Args *a, const Tools *t, bool o0) {
     char buf[1024];
     snprintf(buf, sizeof buf, "%s", GAMELIB_CFLAGS);
     for (char *f = strtok(buf, " "); f; f = strtok(NULL, " ")) {
@@ -272,8 +279,16 @@ static void add_cflags(Args *a, const Tools *t) {
             snprintf(cpu, sizeof cpu, "-mcpu=%s", f + 7);
             for (char *c = cpu + 6; *c; c++) if (*c == '-') *c = '_';
             add(a, cpu);
+        } else if (o0 && !strcmp(f, "-O1")) {  // (zig cc's -O0 is its Debug mode, which turns UBSan on: off again)
+            add(a, "-O0");
+            add(a, "-fno-sanitize=undefined");
         } else {
             add(a, f);
+            // zig cc reads -O1 as ReleaseFast, which compiles C at clang -O2 (+ vectorizers): far slower on the
+            // generated code than the -O1 `make` uses. A bare -O, which zig passes through to clang, is -O1.
+            if (t->zig && !strcmp(f, "-O1")) add(a, "-O");
+            // (The fast build used to cap three LLVM passes here for the giant functions: tools/gen.py no longer
+            // makes them - jump-table twins - and every file compiles in seconds at full -O1.)
         }
     }
     if (t->zig) add(a, "-fno-sanitize=all");
@@ -321,30 +336,33 @@ static bool unit_stamp(const Tools *t, const Unit *u, char *out, size_t n) {
     return true;
 }
 
-static bool unit_done(const Tools *t, const Unit *u) {
+// The stamp ends with how the object was optimized: 0 full -O1, 2 -O0 (over the budget); 1 was -O1 with LLVM pass caps.
+// The fast build takes any of them; the optimized one only full -O1.
+static bool unit_done(const Tools *t, const Unit *u, bool optimized) {
     struct stat st;
-    char want[32], have[32] = "";
+    char want[32], have[40] = "";
     if (stat(u->obj, &st) != 0 || st.st_size == 0 || !unit_stamp(t, u, want, sizeof want)) return false;
     FILE *f = fopen(u->stamp, "rb");
     if (!f) return false;
     size_t k = fread(have, 1, sizeof have - 1, f);
     fclose(f);
     have[k] = 0;
-    return !strcmp(want, have);
+    size_t n = strlen(want);
+    return !strncmp(want, have, n) && have[n] == ' ' && (!optimized || have[n + 1] == '0');
 }
 
 static void unit_mark(const Tools *t, const Unit *u) {
     char s[32];
     if (!unit_stamp(t, u, s, sizeof s)) return;
     FILE *f = fopen(u->stamp, "wb");
-    if (f) fputs(s, f), fclose(f);
+    if (f) fprintf(f, "%s %d", s, u->o0 ? 2 : 0), fclose(f);
 }
 
 static PlatProc start_compile(const Tools *t, const Unit *u) {
     remove(u->stamp);  // (until it compiles: a stopped compile can leave part of an object)
     Args a = {0};
     compiler(&a, t);
-    add_cflags(&a, t);
+    add_cflags(&a, t, u->o0);
     char inc[1200];
     snprintf(inc, sizeof inc, "-I%s", t->inc);
     add(&a, inc);
@@ -391,8 +409,8 @@ bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size
         setenv("ZIG_LOCAL_CACHE_DIR", zc, 1);
 #endif
     }
-    LOG("[gamebuild] generator %s%s%s, compiler %s%s, %d jobs\n", t.gen, t.gen_script[0] ? " " : "", t.gen_script,
-        t.cc, t.zig ? " cc" : "", o->jobs);
+    LOG("[gamebuild] generator %s%s%s, compiler %s%s, %d jobs, %s\n", t.gen, t.gen_script[0] ? " " : "", t.gen_script,
+        t.cc, t.zig ? " cc" : "", o->jobs, o->optimized ? "faster game" : "faster build");
 
     // 1. Generate all four Skyward Sword modules, compiling finished files as they arrive.
     enum { NMODULES = 4 };
@@ -424,8 +442,20 @@ bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size
     int queued[NMODULES] = {0};  // chunk files of each module put in units so far
     bool tables[NMODULES] = {false};
     int next = 0, jobs = o->jobs < 1 ? 1 : o->jobs > 64 ? 64 : o->jobs;
-    struct { PlatProc p; int unit; } run[64];
+    struct { PlatProc p; int unit; uint64_t t; } run[64];
     int nrun = 0;
+    // A file still compiling at -O1 after this long starts again at -O0, done in seconds: a few giant functions spend
+    // most of an hour in LLVM's loop passes (main_515.c, 3.8 MB: 37 min alone - LICM even without promotion, and
+    // LoopLoadElimination, which no option caps) and the build waited on them. Those functions run unoptimized.
+    // ponytail: a fixed budget, so a slower machine sends more files to -O0; LARECOMP_GAMEBUILD_BUDGET=<s>, 0 = never.
+    // The fast build only (o->optimized: none). Off on Windows: killing zig cc there leaves its compiler running
+    // (runtime/platform/windows.c ends a job's processes only with the app), and its release ships the library built.
+    const char *be = getenv("LARECOMP_GAMEBUILD_BUDGET");
+#ifdef _WIN32
+    double budget = be ? atof(be) : 0;
+#else
+    double budget = be ? atof(be) : o->optimized ? 0 : 300;
+#endif
     unsigned long long done_bytes = 0;
     int resumed = 0;  // units an earlier run compiled already
     double shown = 0;
@@ -445,9 +475,11 @@ bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size
                 if (r >= 0) {
                     g->exit = r;
                     read_gen_log(g);
-                    if (r != 0) {
-                        char last[300];
-                        log_tail(g->log, last, sizeof last);
+                    char last[300];
+                    log_tail(g->log, last, sizeof last);
+                    if (r == 0) {  // ("main: wrote N chunks, Ns total": ending late = the build waits on the generator)
+                        LOG("[gamebuild] %s, at %.0fs\n", last, (double)(plat_now_ns() - t0) / 1e9);
+                    } else {
                         LOG("[gamebuild] generator (%s) failed (exit 0x%08x, log %s): %s\n",
                             g->name, (unsigned)r, g->log, last[0] ? last : "no output was written");
                         snprintf(why, why_size, "the game code couldn't be prepared");
@@ -476,7 +508,7 @@ bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size
 
         // compiles
         while (nrun < jobs && next < units.n) {
-            if (unit_done(&t, &units.u[next])) {  // (compiled by an earlier, stopped run)
+            if (unit_done(&t, &units.u[next], o->optimized)) {  // (compiled by an earlier, stopped run)
                 Unit *u = &units.u[next++];
                 done_bytes += u->bytes, resumed++;
                 if (next - 1 > 0) remove(u->src);
@@ -484,13 +516,23 @@ bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size
             }
             PlatProc p = start_compile(&t, &units.u[next]);
             if (!p) { snprintf(why, why_size, "the compiler didn't start"); ok = false; break; }
-            run[nrun].p = p, run[nrun].unit = next++;
+            run[nrun].p = p, run[nrun].unit = next++, run[nrun].t = plat_now_ns();
             nrun++;
         }
         for (int k = 0; k < nrun; k++) {
             int r = finished(run[k].p);
-            if (r < 0) continue;
             Unit *u = &units.u[run[k].unit];
+            if (r < 0) {
+                if (budget > 0 && !u->o0 && (double)(plat_now_ns() - run[k].t) / 1e9 > budget) {
+                    stop(run[k].p);
+                    u->o0 = true;
+                    LOG("[gamebuild] %s: over %.0fs at -O1, compiling it at -O0\n", file_name(u->src), budget);
+                    PlatProc p = start_compile(&t, u);
+                    if (!p) { snprintf(why, why_size, "the compiler didn't start"); ok = false; break; }
+                    run[k].p = p, run[k].t = plat_now_ns();
+                }
+                continue;
+            }
             if (r != 0) {
                 char last[300];
                 log_tail(u->log, last, sizeof last);
@@ -500,6 +542,9 @@ bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size
             } else {
                 unit_mark(&t, u);
             }
+            double secs = (double)(plat_now_ns() - run[k].t) / 1e9;
+            if (secs >= 30)  // (the slow ones: what the build's wall time waits on)
+                LOG("[gamebuild] %s: %llu KB, %.0fs%s\n", file_name(u->src), u->bytes >> 10, secs, u->o0 ? " at -O0" : "");
             done_bytes += u->bytes;
             if (run[k].unit > 0) remove(u->src);  // (generated C, done with: not kept. Unit 0 is the shipped entry file)
             run[k--] = run[--nrun];

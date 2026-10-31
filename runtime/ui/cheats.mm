@@ -1,5 +1,11 @@
-// Cheats tab: toggles applied to the live save every frame while a save is loaded (layout: notes/save_format.md),
-// plus one-shot buttons. Settings persist in larecomp.ini (g_settings.cheat_*).
+// Cheats tab (Skyward Sword HD 1.0.0), from the community's Atmosphere codes for this build (switch-cheats-db, build
+// id D824D4B1BBD45D03). Two kinds:
+// - code: tools/patches.py SKY_PATCHES ask rt_cheat_*() at the instruction the code patches (stamina drain, Beetle
+//   flight timer, Loftwing dash); off, the game's own instruction runs.
+// - values topped up every frame: the live save file sits at a fixed spot of the game's static heap arena in main's
+//   .bss (the codes' addresses). Each write first checks that the health fields look like a save file, so a layout
+//   that differs (the title screen, another build) leaves memory alone.
+// Settings persist in larecomp.ini (g_settings.cheat_*).
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,91 +16,73 @@
 extern "C" {
 #include "../hle.h"
 #include "../settings.h"
-int game_in_play(void);
 }
 
-#define LIVE_SAVE 0x7001CBB220ull  // main + 0x1CBB220
-template <typename T> static T &F(uint32_t off) { return *(T *)(uintptr_t)(LIVE_SAVE + off); }
+#define SAVE_HEALTH 0x7005AF0056ull  // u16 heart capacity, u16 (unused), u16 current health: quarter hearts
+#define SAVE_RUPEES 0x7005AEB7B2ull  // u16
+static volatile uint16_t &U16(uint64_t a) { return *(volatile uint16_t *)(uintptr_t)a; }
+#define PLAYER 0x7001826AD0ull         // dAcPy_c * (Link), null without him
+#define PLAYER_VTABLE 0x7001637D28ull  // its vtable (main+0xab3c2c sets it)
 
-enum : uint32_t {
-    RUPEES = 0x5540, HP = 0x5544, PIECES = 0x5550, CONTAINERS = 0x5558, UPGRADES = 0x555C, BOMBS = 0x555E,
-    ARROWS = 0x555F, POWDER = 0x5560, ITEMS = 0x5568,
-};
-
-static int max_hp(void) {  // quarter-hearts, as GetMaxHealth() computes it
-    return 12 + 4 * (__builtin_popcount(F<uint16_t>(CONTAINERS) & 0x1FF) + __builtin_popcountll(F<uint64_t>(PIECES)) / 4);
-}
-
-static void fill_ammo(uint32_t count_off, int item_bit, int up_bit, int base_cap) {
-    if (!((F<uint32_t>(ITEMS) >> item_bit) & 1)) return;  // only bags Link owns
-    int cap = ((F<uint8_t>(UPGRADES) >> up_bit) & 1) ? base_cap * 2 : base_cap;
-    if (F<uint8_t>(count_off) != cap) F<uint8_t>(count_off) = (uint8_t)cap;
-}
+extern "C" int rt_cheat_stamina(void) { return g_settings.cheat_stamina; }
+extern "C" int rt_cheat_beetle(void) { return g_settings.cheat_beetle; }
+extern "C" int rt_cheat_dash(void) { return g_settings.cheat_dash; }
 
 // Once per presented frame (render thread), from save_editor_frame.
 extern "C" void cheats_frame(void) {
-    if (!game_in_play()) return;
-    static int env = -1;  // LARECOMP_CHEATS=hearts,ammo,rupees: force on for tests (not saved)
+    if (!g_is_skyward) return;
+    if (g_settings.cheat_skyward) {  // the community code's "Lightning Skyward Sword", on Link himself
+        uint64_t p = *(volatile uint64_t *)(uintptr_t)PLAYER;
+        if (p && *(volatile uint64_t *)(uintptr_t)p == PLAYER_VTABLE) {
+            *(volatile uint8_t *)(uintptr_t)(p + 0x446) |= 0x50;  // +0x444 bits 20 / 22: Skyward Strike charged
+            *(volatile uint16_t *)(uintptr_t)(p + 0x641E) = 0x120;  // its timer
+            *(volatile uint8_t *)(uintptr_t)(p + 0x63B7) = 0x37;
+        }
+    }
+    static int env = -1;  // LARECOMP_CHEATS=hearts,stamina,rupees,beetle: force on for tests (not saved)
     if (env < 0) {
         const char *e = getenv("LARECOMP_CHEATS");
         env = e != NULL;
         if (e) {
             g_settings.cheat_hearts |= strstr(e, "hearts") != NULL;
-            g_settings.cheat_ammo |= strstr(e, "ammo") != NULL;
+            g_settings.cheat_stamina |= strstr(e, "stamina") != NULL;
             g_settings.cheat_rupees |= strstr(e, "rupees") != NULL;
+            g_settings.cheat_beetle |= strstr(e, "beetle") != NULL;
         }
     }
-    if (g_settings.cheat_hearts) {
-        int m = max_hp();
-        if (F<int16_t>(HP) > 0 && F<int16_t>(HP) < m) F<int16_t>(HP) = (int16_t)m;  // (0 = dying/respawning: leave it)
-    }
-    if (g_settings.cheat_ammo) {
-        fill_ammo(BOMBS, 2, 4, 30);
-        fill_ammo(ARROWS, 3, 5, 30);
-        fill_ammo(POWDER, 8, 3, 20);
-    }
-    if (g_settings.cheat_rupees && F<uint32_t>(RUPEES) != 999) F<uint32_t>(RUPEES) = 999;
+    uint16_t cap = U16(SAVE_HEALTH), hp = U16(SAVE_HEALTH + 4);
+    bool save = cap >= 12 && cap <= 80 && cap % 4 == 0 && hp <= cap;
+    static int was = -1;
+    if (save != was) LOG("[cheats] save file %s (capacity %u, health %u)\n", save ? "found" : "gone", cap, hp), was = save;
+    if (!save) return;
+    if (g_settings.cheat_hearts && hp > 0 && hp < cap) U16(SAVE_HEALTH + 4) = cap;  // (0 = defeated: left alone)
+    if (g_settings.cheat_rupees && U16(SAVE_RUPEES) < 9900) U16(SAVE_RUPEES) = 9900;
 }
 
 extern "C" void cheats_draw(float scale) {
-    if (!game_in_play()) {
-        ImGui::TextDisabled("Load a save file and get into the game to use cheats.");
-        return;
-    }
     opt_begin("##cheats", scale);
     opt_section("Always on");
-    if (opt_toggle("Infinite hearts", &g_settings.cheat_hearts, false, "Health refills to full whenever Link is hurt."))
+    if (opt_toggle("Infinite health", &g_settings.cheat_hearts, false,
+                   "Health refills to full whenever Link is hurt.\n\nA single hit bigger than all his hearts still "
+                   "defeats him."))
         settings_save();
-    if (opt_toggle("Infinite ammo", &g_settings.cheat_ammo, false,
-                   "Bombs, arrows and Magic Powder stay full.\n\nOnly for the bags Link already owns."))
+    if (opt_toggle("Infinite stamina", &g_settings.cheat_stamina, false,
+                   "The stamina gauge never drains: sprint, climb and spin as long as you like."))
         settings_save();
-    if (opt_toggle("Infinite rupees", &g_settings.cheat_rupees, false, "Rupees stay at 999.")) settings_save();
-
-    opt_section("One time");
-    if (opt_button("Max hearts", "Gives all 9 Heart Containers and 32 Pieces of Heart (20 hearts), then refills them.\n\n"
-                                 "The hearts on the HUD update after the next screen change.")) {
-        F<uint16_t>(CONTAINERS) = 0x1FF;
-        F<uint64_t>(PIECES) = 0xFFFFFFFFull;
-        F<int16_t>(HP) = (int16_t)max_hp();
-    }
-    if (opt_button("Refill hearts", "Refills health to full.")) F<int16_t>(HP) = (int16_t)max_hp();
-    if (opt_button("Max ammo capacity", "Upgrades the bomb bag and quiver to 60 and Magic Powder to 40, then fills "
-                                        "them (for the bags Link owns).")) {
-        F<uint8_t>(UPGRADES) |= 0x38;  // bits 3-5: powder 40, bombs 60, arrows 60
-        fill_ammo(BOMBS, 2, 4, 30);
-        fill_ammo(ARROWS, 3, 5, 30);
-        fill_ammo(POWDER, 8, 3, 20);
-    }
-
-    opt_section("Companion");
-    {  // save+0x555D: the follower (verified: setting it spawns that companion at the next screen / room load)
-        static const char *const names[] = {"None", "BowWow", "Marin", "Ghost", "Flying Rooster"};
-        int cur = F<uint8_t>(0x555D);
-        if (cur < 0 || cur > 4) cur = 0;
-        if (opt_choice("Companion", &cur, names, 5, 0,
-                       "Who follows Link. They join at the next screen change.\n\n"
-                       "Story events may expect a specific companion."))
-            F<uint8_t>(0x555D) = (uint8_t)cur;
-    }
+    if (opt_toggle("Infinite rupees", &g_settings.cheat_rupees, false, "Rupees stay at 9,900.")) settings_save();
+    if (opt_toggle("Infinite Beetle flight", &g_settings.cheat_beetle, false,
+                   "The Beetle keeps flying until you call it back."))
+        settings_save();
+    if (opt_toggle("Skyward Strike always charged", &g_settings.cheat_skyward, false,
+                   "Link's sword is always charged: every vertical swing sends a Skyward Strike, with no need to "
+                   "hold it up."))
+        settings_save();
+    if (opt_toggle("Infinite air dash", &g_settings.cheat_dash, false,
+                   "Your Loftwing's dashes are never used up: dash as often as you like."))
+        settings_save();
+    if (opt_toggle("Enemies always drop items", &g_settings.drop_always, false,
+                   "Defeated enemies, grass and pots always drop something from what they can drop, and enemies "
+                   "always drop their monster materials. Drops turned off in the Gameplay tab stay off."))
+        settings_save();
     opt_end();
 }

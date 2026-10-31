@@ -14,7 +14,8 @@ mkdir -p "$S"
 JOBS=$(nproc)
 
 fetch() {  # url sha256 file
-    [ -f "$S/$3" ] || curl -fsSL -o "$S/$3.part" "$1" && { [ -f "$S/$3" ] || mv "$S/$3.part" "$S/$3"; }
+    # (--retry: a CI runner's download can be reset mid-way)
+    [ -f "$S/$3" ] || curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 -o "$S/$3.part" "$1" && { [ -f "$S/$3" ] || mv "$S/$3.part" "$S/$3"; }
     echo "$2  $S/$3" | sha256sum -c --quiet
 }
 unpack() { rm -rf "$S/$2" && mkdir -p "$S/$2" && tar -xf "$S/$1" -C "$S/$2" --strip-components 1; }

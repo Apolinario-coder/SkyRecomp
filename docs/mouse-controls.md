@@ -5,7 +5,8 @@ In the ESC menu, enable **Free camera look** and **Mouse camera and combat** und
 | Input | Action |
 | --- | --- |
 | Mouse movement | Turn the camera. |
-| Left click | Sword slash. Move the mouse before clicking to choose the slash direction; a stationary click produces a horizontal slash. |
+| Hold left click and move | The mouse becomes the sword stick: a flick swings that way (any of 8 directions), circles and holds work like the game's own right-stick gestures. Releasing recentres it. |
+| Left click without moving | Horizontal slash. |
 | Right click | Hold target lock; pressing also sends a shield bash. A shield must be equipped. |
 | Middle click | Sword thrust. |
 | Hold Left Alt or Mouse 4 | Item aiming mode. Mouse movement controls the item's aim instead of the camera or sword. |

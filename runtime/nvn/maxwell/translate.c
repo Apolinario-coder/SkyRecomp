@@ -78,6 +78,11 @@ typedef struct {
     bool glsl;               // emit Vulkan GLSL: dialect-specific constructs here, the rest via glsl_rewrite()
     bool uses_gmem_store;    // STG present: the gmem buffer is not readonly
     uint32_t cbuf_need[18];  // highest constant vec4 index + 1 per cbuf (array size of the GLSL block)
+    // a register holding a texture handle read from the texture bindings, LDC c[2][areg + off] (TEX.B: emit_tex).
+    // With an index register, the LDC also saves the binding's index in bs<handle reg>: the load often overwrites
+    // its own index register (LDC r5, c[2][r5 + 0x20] in the waterfall mist)
+    struct { bool valid; uint8_t areg; uint32_t off; } handle_src[256];
+    uint8_t bs_used[256];
 } Ctx;
 
 static uint64_t bits(uint64_t w, int lo, int n) { return (w >> lo) & ((n == 64) ? ~0ull : ((1ull << n) - 1)); }
@@ -170,6 +175,7 @@ static const char *operand_c_for_ffma(Ctx *c, uint64_t w, char *buf, const char 
 static void set_reg(Ctx *c, int r, const char *expr) {
     if (r == RZ) return;
     c->reg_used[r] = 1;
+    c->handle_src[r].valid = false;
     sp(&c->body, "    r%d = %s;\n", r, expr);
 }
 
@@ -749,15 +755,44 @@ static void emit_texs(Ctx *c, uint64_t w, bool fetch) {
     write_tex_result(c, slot, call, mask, d0, d1, true, !bits(w, 59, 1));  // 0xd0/0xd2: .F16 results
 }
 
-// TEX (full form): coordinates from consecutive registers at gpr8, extra parameters at gpr20.
-static void emit_tex(Ctx *c, uint64_t w, bool bindless) {
-    int d = (int)bits(w, 0, 8), a = (int)bits(w, 8, 8), b = (int)bits(w, 20, 8);
-    uint32_t index = bindless ? 0 : (uint32_t)bits(w, 36, 13);
+// TLD4S: gather one component of the 2x2 texels around (Ra, Rb) of a 2D texture into Rd, Rd+1, Rd2, Rd2+1 (the
+// order GLSL textureGather / Metal gather return). Only the plain form is in the game (custom/Particle_Composite and
+// custom/Downsample_Depth, red component): the depth-compare and offset forms fail.
+static void emit_tld4s(Ctx *c, uint64_t w) {
+    int d0 = (int)bits(w, 0, 8), a = (int)bits(w, 8, 8), b = (int)bits(w, 20, 8), d1 = (int)bits(w, 28, 8);
+    uint32_t index = (uint32_t)bits(w, 36, 13);
+    int comp = (int)bits(w, 52, 2);
+    if (bits(w, 50, 1) || bits(w, 51, 1)) { fail(c, "tld4s dc/aoffi"); return; }
+    int slot = tex_slot(c, index, TEXTYPE_2D, false, false);
+    char call[512];
+    if (c->glsl) sprintf(call, "textureGather(t%d, vec2(%s, %s), %d)", slot, F(R(a)), F(R(b)), comp);
+    else sprintf(call, "t%d.gather(s%d, float2(%s, %s), int2(0), component::%c)", slot, slot, F(R(a)), F(R(b)), "xyzw"[comp]);
+    write_tex_result(c, slot, call, 0xF, d0, d1, true, bits(w, 55, 1));
+}
+
+// TLD4 (full form): the same gather, coordinates from Ra, Ra+1, the written components (mask) packed from Rd on.
+// custom/Particle_Composite gathers each component of a 2D texture this way: the array, depth-compare and offset
+// forms fail.
+static void emit_tld4(Ctx *c, uint64_t w) {
+    int d = (int)bits(w, 0, 8), a = (int)bits(w, 8, 8);
+    uint32_t index = (uint32_t)bits(w, 36, 13), mask = (uint32_t)bits(w, 31, 4);
+    int comp = (int)bits(w, 56, 2);
+    if (bits(w, 28, 3) != 2 || bits(w, 50, 1) || bits(w, 54, 2)) { fail(c, "tld4 dim/dc/offset"); return; }
+    int slot = tex_slot(c, index, TEXTYPE_2D, false, false);
+    char call[512];
+    const char *x = F(R(a)), *y = F(R(a == RZ ? RZ : a + 1));
+    if (c->glsl) sprintf(call, "textureGather(t%d, vec2(%s, %s), %d)", slot, x, y, comp);
+    else sprintf(call, "t%d.gather(s%d, float2(%s, %s), int2(0), component::%c)", slot, slot, x, y, "xyzw"[comp]);
+    write_tex_result(c, slot, call, mask, d, RZ, false, false);
+}
+
+// TEX (full form): coordinates from consecutive registers at gpr8, extra parameters from register b on, the texture
+// binding at byte index * 4 of the texture bindings (cbuf 2).
+static void emit_tex_binding(Ctx *c, uint64_t w, uint32_t index, int b, bool aoffi, int lod_mode) {
+    int d = (int)bits(w, 0, 8), a = (int)bits(w, 8, 8);
     int target = (int)bits(w, 29, 2);
-    bool array = bits(w, 28, 1), dc = bits(w, 50, 1), aoffi = bindless ? bits(w, 36, 1) : bits(w, 54, 1);
+    bool array = bits(w, 28, 1), dc = bits(w, 50, 1);
     uint32_t mask = (uint32_t)bits(w, 31, 4);
-    int lod_mode = bindless ? (int)bits(w, 37, 3) : (int)bits(w, 55, 3);  // 0 none, 1 lz, 2 lb, 3 ll, 6 lba, 7 lla
-    if (bindless) { fail(c, "bindless tex"); return; }
     int type = target == 0 ? (array ? TEXTYPE_1D_ARRAY : TEXTYPE_1D)
              : target == 1 ? (array ? TEXTYPE_2D_ARRAY : TEXTYPE_2D)
              : target == 2 ? TEXTYPE_3D
@@ -818,6 +853,46 @@ static void emit_tex(Ctx *c, uint64_t w, bool bindless) {
     else
         sprintf(call, "t%d.sample(s%d, %s(%s)%s%s%s%s)", slot, slot, vec, coords, array ? ", " : "", layer, lod, off);
     write_tex_result(c, slot, call, mask, d, RZ, false, false);
+}
+
+// TEX / TEX.B. A TEX.B takes its handle from register b (the parameters follow it). The effect shaders (grass-cut
+// leaves) load it from the texture bindings at a per-particle index, LDC c[2][flat varying * 8 + 0x20]: each
+// candidate binding is sampled in its own branch, picked by that index.
+// The leaves pick binding 4 or 5 (32x32 RGB5A3 sprites) of the 8 bound.
+// ponytail: bindings 0-7 only (a higher index samples binding 7); widen BINDLESS_BINDINGS if an effect needs more.
+#define BINDLESS_BINDINGS 8
+static void emit_tex(Ctx *c, uint64_t w, bool bindless) {
+    int b = (int)bits(w, 20, 8);
+    if (!bindless) { emit_tex_binding(c, w, (uint32_t)bits(w, 36, 13), b, bits(w, 54, 1), (int)bits(w, 55, 3)); return; }
+    bool aoffi = bits(w, 36, 1);
+    int lod_mode = (int)bits(w, 37, 3);  // 0 none, 1 lz, 2 lb, 3 ll, 6 lba, 7 lla
+    if (b == RZ || !c->handle_src[b].valid) { fail(c, "bindless tex"); return; }
+    int ar = c->handle_src[b].areg;
+    uint32_t off = c->handle_src[b].off;
+    if (ar == RZ) { emit_tex_binding(c, w, off / 4, b + 1, aoffi, lod_mode); return; }
+    sp(&c->body, "    {\n    uint bslot = bs%d;\n", b);
+    for (int k = 0; k < BINDLESS_BINDINGS; k++) {
+        if (k < BINDLESS_BINDINGS - 1) sp(&c->body, "    %sif (bslot == %du) {\n", k ? "} else " : "", k);
+        else sp(&c->body, "    } else {\n");
+        emit_tex_binding(c, w, (0x20 + 8 * k) / 4, b + 1, aoffi, lod_mode);
+        if (c->tex_slot[(0x20 + 8 * k) / 4]) c->info->tex[c->tex_slot[(0x20 + 8 * k) / 4] - 1].bindless = true;
+    }
+    sp(&c->body, "    }\n");
+    // LARECOMP_BINDLESS_TINT=1 (debug): the result is a solid colour per picked binding - 0 red, 1 green, 2 blue,
+    // 3 yellow, 4 magenta, 5 cyan, 6 white, 7+ orange - to see which texture an effect's particles really sample
+    static int tint = -1;
+    if (tint < 0) tint = getenv("LARECOMP_BINDLESS_TINT") != NULL;
+    if (tint) {
+        int d = (int)bits(w, 0, 8), n = 0;
+        uint32_t mask = (uint32_t)bits(w, 31, 4);
+        sp(&c->body, "    { float4 tc = bslot == 0u ? float4(1, 0, 0, 1) : bslot == 1u ? float4(0, 1, 0, 1) : bslot == 2u ? "
+                     "float4(0, 0, 1, 1) : bslot == 3u ? float4(1, 1, 0, 1) : bslot == 4u ? float4(1, 0, 1, 1) : bslot == 5u ? "
+                     "float4(0, 1, 1, 1) : bslot == 6u ? float4(1, 1, 1, 1) : float4(1, 0.5, 0, 1);\n");
+        for (int comp = 0; comp < 4; comp++)
+            if ((mask >> comp) & 1 && d != RZ) sp(&c->body, "      r%d = as_type<uint>(tc[%d]);\n", d + n++, comp);
+        sp(&c->body, "    }\n");
+    }
+    sp(&c->body, "    }\n");
 }
 
 // ------------------------------------------------------------------ instruction translation
@@ -902,12 +977,21 @@ static void emit_insn(Ctx *c, uint64_t w, uint32_t pc) {
         int n = sz == 5 ? 2 : 1;
         char rb[16];
         const char *dyn = a == RZ ? NULL : reg(c, a, rb);
+        if (idx == 2 && d != RZ && dyn) {  // the binding index, before the load can overwrite its register
+            c->bs_used[d] = 1;
+            sp(&c->body, "    bs%d = (%s + %uu - 32u) >> 3;\n", d, dyn, (uint32_t)off);
+        }
         for (int i = 0; i < n; i++) {
             char cb[256];
             cbuf_ref(c, idx, off + 4 * i, dyn, cb);
             if (!dyn && (off + 4 * i) & 0) {}
             if (dyn) c->info->cbuf_size[idx] = 0x10000;
             set_reg(c, d + i, cb);
+        }
+        if (idx == 2 && d != RZ) {  // a texture binding's handle, for a TEX.B
+            c->handle_src[d].valid = true;
+            c->handle_src[d].areg = (uint8_t)a;
+            c->handle_src[d].off = (uint32_t)off;
         }
     } else if (OPM(0xd000000000000000ull, 0xf600000000000000ull)) {  // TEXS
         emit_texs(c, w, false);
@@ -917,6 +1001,10 @@ static void emit_insn(Ctx *c, uint64_t w, uint32_t pc) {
         emit_tex(c, w, false);
     } else if (OPM(0xdeb8000000000000ull, 0xfff8000000000000ull)) {  // TEX.B (bindless)
         emit_tex(c, w, true);
+    } else if (OPM(0xdf00000000000000ull, 0xffc0000000000000ull)) {  // TLD4S (gather)
+        emit_tld4s(c, w);
+    } else if (OPM(0xc838000000000000ull, 0xfc38000000000000ull)) {  // TLD4 (gather)
+        emit_tld4(c, w);
     } else if (OPM(0xdf48000000000000ull, 0xfff8000000000000ull)) {  // TXQ
         uint32_t index = (uint32_t)bits(w, 36, 13);
         int qt = (int)bits(w, 22, 6);
@@ -1874,6 +1962,8 @@ static ShaderInfo *glsl_finish(Ctx *c, bool any_branch, bool dbg) {
     }
     for (int i = 0; i < 256; i++)
         if (c->reg_used[i]) sp(&s, "  uint r%d = 0u;\n", i);
+    for (int i = 0; i < 256; i++)
+        if (c->bs_used[i]) sp(&s, "  uint bs%d = 0u;\n", i);
     for (int i = 0; i < 7; i++)
         if (c->pred_used[i]) sp(&s, "  bool p%d = false;\n", i);
     if (c->uses_cc) sp(&s, "  uint cc = 0u; bool ccz = false, ccs = false;\n");
@@ -2079,6 +2169,11 @@ ShaderInfo *maxwell_translate(const uint8_t *blob, size_t max_size, int stage, c
         }
         sp(&args, ", device uchar *gmem [[buffer(%d)]]", GMEM_BUFFER_INDEX);
     }
+    // NVN alpha comparison (as glsl_finish; Metal has no fixed-function alpha test either): discard against the
+    // reference in rscale[65].y
+    bool alpha_test = stage == STAGE_FRAGMENT && key && key->alpha_func > 0 && key->alpha_func < 8 &&
+                      (c->omap_target & 8) && key->rt_kind[0] == 0;
+    if (alpha_test) c->uses_rscale = true;
     if (c->uses_rscale && stage != STAGE_VERTEX) {
         sp(&args, ", constant float4 *rscale [[buffer(18)]]");
         info->uses_rscale = true;
@@ -2113,6 +2208,8 @@ ShaderInfo *maxwell_translate(const uint8_t *blob, size_t max_size, int stage, c
     free(args.buf);
     for (int i = 0; i < 256; i++)
         if (c->reg_used[i]) sp(&s, "  uint r%d = 0;\n", i);
+    for (int i = 0; i < 256; i++)
+        if (c->bs_used[i]) sp(&s, "  uint bs%d = 0u;\n", i);
     for (int i = 0; i < 7; i++)
         if (c->pred_used[i]) sp(&s, "  bool p%d = false;\n", i);
     if (c->uses_cc) sp(&s, "  uint cc = 0; bool ccz = false, ccs = false;\n");
@@ -2156,6 +2253,11 @@ ShaderInfo *maxwell_translate(const uint8_t *blob, size_t max_size, int stage, c
         if (tint)
             sp(&s, "  if (ltint[0].w > 0.0f) { float3 g = o.c0.rgb; float l = dot(g, float3(0.299f, 0.587f, 0.114f));\n"
                    "    o.c0.rgb = mix(g, ltint[0].rgb * pow(l, ltint[1].w) + ltint[1].rgb * l, ltint[0].w); }\n");
+        if (alpha_test) {  // (the tint leaves alpha alone)
+            static const char *const cmp[] = {NULL, NULL, "<", "==", "<=", ">", "!=", ">="};
+            if (key->alpha_func == 1) sp(&s, "  discard_fragment();\n");
+            else sp(&s, "  if (!(o.c0.a %s rscale[65].y)) discard_fragment();\n", cmp[key->alpha_func]);
+        }
         if (c->omap_depth) {
             if (c->reg_used[r + 1]) sp(&s, "  o.depth = as_type<float>(r%d);\n", r + 1);
             else sp(&s, "  o.depth = in.pos.z;\n");

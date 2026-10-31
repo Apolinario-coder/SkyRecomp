@@ -4,6 +4,7 @@
 
 #include "../kernel.h"
 #include "nvn.h"
+#include "../settings.h"
 
 void renderer_sync(void);
 
@@ -519,6 +520,24 @@ NVN(nvnSamplerGetDebugID) { RET(A(0)); }
 // ================================================================== descriptor pools
 NvnDescPool *g_texture_pools[64], *g_sampler_pools[64];
 RT_ON_RESET(desc_pools_reset) { memset(g_texture_pools, 0, sizeof g_texture_pools); memset(g_sampler_pools, 0, sizeof g_sampler_pools); }
+
+float nvn_sampler_aniso(const NvnSamplerDesc *d) {
+    float a = d->max_aniso;
+    if (g_settings.aniso > a && (d->min_filter == 3 || d->min_filter == 5) && !d->compare_mode) a = (float)g_settings.aniso;
+    return a;
+}
+
+// (called before each sampler lookup, on the render thread)
+void nvn_samplers_follow_aniso(void (*free_backend)(void *)) {
+    static int applied = -1;
+    if (g_settings.aniso == applied) return;
+    applied = g_settings.aniso;
+    for (int i = 0; i < 64 && g_sampler_pools[i]; i++) {
+        NvnSamplerDesc *e = g_sampler_pools[i]->entries;
+        for (int k = 0; k < g_sampler_pools[i]->count; k++)
+            if (e[k].backend) { free_backend(e[k].backend); e[k].backend = NULL; }
+    }
+}
 
 static NvnDescPool *desc_pool_init(uint64_t guest, uint64_t pool, uint64_t off, int count, size_t entry, NvnDescPool **reg) {
     NvnDescPool *d = calloc(1, sizeof *d);

@@ -125,6 +125,8 @@ static void pick_device(void) {
     free(qp);
     if (g_vk.qfam == UINT32_MAX) FATAL("no graphics+present queue\n");
     LOG("[vk] using %s\n", g_vk.props.deviceName);
+    extern void perfmon_set_gpu_hint(const char *n);
+    perfmon_set_gpu_hint(g_vk.props.deviceName);  // (runtime/perfmon.c: the overlay's GPU, NVML's pick)
 }
 
 static bool g_fault_ext;
@@ -153,6 +155,24 @@ void vk_device_fault_report(void) {
             (unsigned long long)vend[i].vendorFaultData);
 }
 
+void vk_pipeline_cache_save(void);
+static void vk_pipeline_cache_save_(void);
+
+// Saves the pipeline cache every minute while it grows, not only at exit, so a crash or a killed process keeps the
+// session's pipelines (arg: the size loaded at startup)
+static int pcache_saver(void *arg) {
+    size_t last = *(size_t *)arg;
+    for (;;) {
+        SDL_Delay(60000);
+        size_t sz = 0;
+        if (vkGetPipelineCacheData(g_vk.dev, g_vk.pcache, &sz, NULL) == VK_SUCCESS && sz > last) {
+            vk_pipeline_cache_save();
+            last = sz;
+        }
+    }
+    return 0;
+}
+
 static void create_device(void) {
     uint32_t ne = 0;
     vkEnumerateDeviceExtensionProperties(g_vk.phys, NULL, &ne, NULL);
@@ -172,9 +192,25 @@ static void create_device(void) {
     g_fault_ext = fault;
     free(ep);
 
-    // features the backend relies on (all present on current desktop drivers)
-    VkPhysicalDeviceFeatures2 have = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
+    // What the device has of the features below. Asking for one it lacks fails vkCreateDevice with
+    // VK_ERROR_FEATURE_NOT_PRESENT (-8: Intel Iris Xe / UHD, Adreno X1-85; #46, #59, #60), so the optional ones are
+    // asked for only where present; dynamicRendering, synchronization2 and timelineSemaphore are needed.
+    VkPhysicalDeviceVertexAttributeDivisorFeaturesEXT hdiv = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VERTEX_ATTRIBUTE_DIVISOR_FEATURES_EXT};
+    VkPhysicalDeviceCustomBorderColorFeaturesEXT hcbc = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_CUSTOM_BORDER_COLOR_FEATURES_EXT, .pNext = g_vk.divisor ? &hdiv : NULL};
+    VkPhysicalDeviceVulkan13Features h13 = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+                                            .pNext = g_vk.custom_border ? (void *)&hcbc : g_vk.divisor ? (void *)&hdiv : NULL};
+    VkPhysicalDeviceVulkan12Features h12 = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES, .pNext = &h13};
+    VkPhysicalDeviceVulkan11Features h11 = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES, .pNext = &h12};
+    VkPhysicalDeviceFaultFeaturesEXT hff = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FAULT_FEATURES_EXT, .pNext = &h11};
+    VkPhysicalDeviceFeatures2 have = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, .pNext = fault ? (void *)&hff : (void *)&h11};
     vkGetPhysicalDeviceFeatures2(g_vk.phys, &have);
+    g_vk.divisor = g_vk.divisor && hdiv.vertexAttributeInstanceRateDivisor;
+    g_vk.custom_border = g_vk.custom_border && hcbc.customBorderColors && hcbc.customBorderColorWithoutFormat;
+    g_vk.mirror_clamp = h12.samplerMirrorClampToEdge;  // (else mirrored repeat: textures.c)
+    if (!h13.dynamicRendering || !h13.synchronization2 || !h12.timelineSemaphore)
+        LOG("[vk] warning: no dynamicRendering / synchronization2 / timelineSemaphore (Vulkan 1.3): this GPU can't run it\n");
     VkPhysicalDeviceVertexAttributeDivisorFeaturesEXT div = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VERTEX_ATTRIBUTE_DIVISOR_FEATURES_EXT,
         .vertexAttributeInstanceRateDivisor = VK_TRUE, .vertexAttributeInstanceRateZeroDivisor = VK_FALSE};
@@ -183,17 +219,20 @@ static void create_device(void) {
         .customBorderColorWithoutFormat = VK_TRUE, .pNext = g_vk.divisor ? &div : NULL};
     VkPhysicalDeviceVulkan13Features f13 = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
                                             .dynamicRendering = VK_TRUE, .synchronization2 = VK_TRUE,
-                                            .shaderDemoteToHelperInvocation = VK_TRUE, .shaderTerminateInvocation = VK_TRUE,
-                                            .maintenance4 = VK_TRUE,
+                                            .shaderDemoteToHelperInvocation = h13.shaderDemoteToHelperInvocation,
+                                            .shaderTerminateInvocation = h13.shaderTerminateInvocation,
+                                            .maintenance4 = h13.maintenance4,
                                             .pNext = g_vk.custom_border ? (void *)&cbc : g_vk.divisor ? (void *)&div : NULL};
     VkPhysicalDeviceVulkan12Features f12 = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
-                                            .timelineSemaphore = VK_TRUE, .shaderInt8 = VK_TRUE, .samplerMirrorClampToEdge = VK_TRUE,
-                                            .uniformAndStorageBuffer8BitAccess = VK_TRUE, .storageBuffer8BitAccess = VK_TRUE,
-                                            .scalarBlockLayout = VK_TRUE, .pNext = &f13};
+                                            .timelineSemaphore = VK_TRUE, .shaderInt8 = h12.shaderInt8,
+                                            .samplerMirrorClampToEdge = h12.samplerMirrorClampToEdge,
+                                            .uniformAndStorageBuffer8BitAccess = h12.uniformAndStorageBuffer8BitAccess,
+                                            .storageBuffer8BitAccess = h12.storageBuffer8BitAccess,
+                                            .scalarBlockLayout = h12.scalarBlockLayout, .pNext = &f13};
     VkPhysicalDeviceVulkan11Features f11 = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
-                                            .storageBuffer16BitAccess = VK_TRUE, .pNext = &f12};
-    VkPhysicalDeviceFaultFeaturesEXT ff = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FAULT_FEATURES_EXT, .deviceFault = VK_TRUE,
-                                           .pNext = &f11};
+                                            .storageBuffer16BitAccess = h11.storageBuffer16BitAccess, .pNext = &f12};
+    VkPhysicalDeviceFaultFeaturesEXT ff = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FAULT_FEATURES_EXT,
+                                           .deviceFault = hff.deviceFault, .pNext = &f11};
     VkPhysicalDeviceFeatures2 f = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, .pNext = fault ? (void *)&ff : (void *)&f11};
     VkPhysicalDeviceFeatures *b = &f.features, *h = &have.features;
     b->independentBlend = h->independentBlend;
@@ -253,9 +292,19 @@ static void create_device(void) {
         VK_CHECK(vkCreatePipelineCache(g_vk.dev, &pc, NULL, &g_vk.pcache));
     }
     free(data);
+    static size_t loaded;
+    loaded = sz;
+    SDL_DetachThread(SDL_CreateThread(pcache_saver, "pcache", &loaded));
 }
 
 void vk_pipeline_cache_save(void) {
+    static SDL_SpinLock lock;  // the exit handler and pcache_saver
+    SDL_LockSpinlock(&lock);
+    vk_pipeline_cache_save_();
+    SDL_UnlockSpinlock(&lock);
+}
+
+static void vk_pipeline_cache_save_(void) {
     size_t sz = 0;
     if (vkGetPipelineCacheData(g_vk.dev, g_vk.pcache, &sz, NULL) != VK_SUCCESS || !sz) return;
     void *data = malloc(sz);
@@ -580,6 +629,19 @@ void backend_present(NvnTexture *t) {
     g_frame_counter++;
     extern void vk_pace_frame(void);
     vk_pace_frame();  // (exec.c: the game's 30 fps mode when frames don't fit 60)
+    extern void perfmon_frame(void);
+    extern void perfmon_set_gpu_mem(float game_mb, float total_mb);
+    perfmon_frame();  // (runtime/perfmon.c: the performance overlay's frame times)
+    if (total_frames % 30 == 0 && g_vk.vma) {  // the game's device-local allocations (VMA's count), and those heaps' size
+        VmaBudget b[VK_MAX_MEMORY_HEAPS];
+        const VkPhysicalDeviceMemoryProperties *mp;
+        vmaGetHeapBudgets(g_vk.vma, b);
+        vmaGetMemoryProperties(g_vk.vma, &mp);
+        uint64_t used = 0, size = 0;
+        for (uint32_t i = 0; i < mp->memoryHeapCount; i++)
+            if (mp->memoryHeaps[i].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) used += b[i].usage, size += mp->memoryHeaps[i].size;
+        perfmon_set_gpu_mem(used / 1048576.0f, size / 1048576.0f);
+    }
     extern void input_frame(uint64_t frame);
     input_frame(total_frames);
     static long slow_ms = -1;

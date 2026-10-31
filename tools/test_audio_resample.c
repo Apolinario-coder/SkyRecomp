@@ -115,12 +115,80 @@ static void check_splitters(void) {
     puts("audio: variable splitter records, stale header and bounds passed");
 }
 
+static void check_formats(void) {
+    // Every PCM sample format decodes to the same int16 stream as PCM16 (stereo, so the interleave stride is checked)
+    enum { COUNT = 64 };
+    int16_t ref[COUNT * 2];
+    for (int i = 0; i < COUNT * 2; i++) ref[i] = (int16_t)(i * 1021 - 32768);
+    uint8_t buf[COUNT * 2 * 4];
+    for (int fmt = 1; fmt <= 5; fmt++) {
+        for (int i = 0; i < COUNT * 2; i++) {
+            int32_t v = ref[i] * 65536 + 0x7fff;  // low bits below the int16 range must be dropped, not rounded up
+            float f = ref[i] / 32767.f;
+            switch (fmt) {
+            case 1: buf[i] = (uint8_t)(ref[i] >> 8); break;
+            case 2: memcpy(buf + i * 2, &ref[i], 2); break;
+            case 3: memcpy(buf + i * 3, (uint8_t *)&v + 1, 3); break;
+            case 4: memcpy(buf + i * 4, &v, 4); break;
+            case 5: memcpy(buf + i * 4, &f, 4); break;
+            }
+        }
+        static const int bps[6] = {0, 1, 2, 3, 4, 4};
+        Voice voice = {.fmt = (uint8_t)fmt, .chans = 2};
+        voice.wb[0] = (WaveBuf){.addr = (uintptr_t)buf, .size = (uint64_t)COUNT * 2 * bps[fmt], .end = COUNT};
+        for (int ch = 0; ch < 2; ch++) {
+            ChanState cs = {.valid = {1}};
+            int16_t out[COUNT];
+            assert(decode_voice(&voice, ch, &cs, out, COUNT) == COUNT);
+            for (int i = 0; i < COUNT; i++) {
+                int want = fmt == 1 ? ref[i * 2 + ch] & ~0xff : ref[i * 2 + ch];
+                if (abs(out[i] - want) > (fmt == 5)) fprintf(stderr, "fmt %d ch %d [%d]: %d != %d\n", fmt, ch, i, out[i], want);
+                assert(abs(out[i] - want) <= (fmt == 5));
+            }
+        }
+    }
+    puts("audio: PCM int8/16/24/32/float decode passed");
+}
+
+static void check_depop(void) {
+    // A voice stopped mid-wave must fade from its last level, not step to 0 (the click), and reach exactly 0
+    enum { N = 160, COUNT = 8192 };
+    static int16_t pcm[COUNT];
+    for (int i = 0; i < COUNT; i++) pcm[i] = 16000;
+    Voice voice = {.in_use = 1, .fmt = 2, .chans = 1, .rate = 32000, .pitch = 1,
+                   .volume = 1, .prev_volume = 1, .mix_id = 0, .wb_count = 1};
+    voice.wb[0] = (WaveBuf){.addr = (uintptr_t)pcm, .size = sizeof pcm, .end = COUNT, .sent = 1};
+    ChanState cs = {.valid = {1}};
+    ChanRes resource = {.mix = {1, 1}, .prev = {1, 1}};
+    float mix_buf[MIXBUF_MAX * N] = {0}, out[2 * N];
+    Mix mix = {.used = 1, .volume = 1, .bufs = 2, .buf = mix_buf};
+    Renderer r = {.sample_rate = 32000, .sample_count = N, .voices = 1, .voice = &voice,
+                  .chst = &cs, .chres = &resource, .mix = &mix, .nmix = 1,
+                  .sink_used = 1, .sink_inputs = 2, .sink_input = {0, 1}};
+    render_frame(&r, out);
+    assert(fabsf(out[2 * (N - 1)] - 16000 / 32768.f) < 1e-4f);
+    voice.play_state = 2;  // stop
+    render_frame(&r, out);
+    assert(out[0] > 0.9f * 16000 / 32768.f && out[0] < 16000 / 32768.f);  // one decay step, not silence
+    for (int i = 1; i < 2 * N; i += 2) assert(out[i - 1] == out[i]);    // both channels
+    for (int i = 2; i < 2 * N; i += 2) assert(out[i] <= out[i - 2]);
+    assert(out[2 * (N - 1)] == 0 && mix.depop[0] == 0 && mix.depop[1] == 0);
+    render_frame(&r, out);  // nothing left over
+    for (int i = 0; i < 2 * N; i++) assert(out[i] == 0);
+    puts("audio: depop on stop passed");
+}
+
 int main(void) {
     check_rate(32000, 1, 0, 160);
     check_rate(16000, 1, 0, 80);
     check_rate(32000, 2, 0, 320);
     check_rate(16000, .5f, 2, 160); // SkipPitchAndSampleRateConversion
+    // Sequence notes far above a wave's root key (Ghirahim's thrown daggers: key 103 on a key-60 22 kHz wave, ratio ~8-18)
+    // must still be resampled, not dropped back to 1:1.
+    check_rate(32000, 12, 0, 1920);
     check_splitters();
+    check_formats();
+    check_depop();
     FILE *wav = tmpfile();
     assert(wav);
     wav_header(wav, 1280, 32000);

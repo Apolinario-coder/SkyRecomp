@@ -333,11 +333,14 @@ static float extract_progress(void) {
     return f < 0 ? 0 : f > 0.99f ? 0.99f : f;
 }
 
-// Builds the game code library from the copied exefs (runtime/gamebuild.c), unless a matching one is there already
+// The game code: a prebuilt library this build can load (GAMELIB_NAME with a matching id, next to the exe or in the
+// game folder: runtime/gamelib.c) or else built from the copied files (a few minutes); false = failed (the job line
+// says so). Only gamelib_present decides: a skygame.dll on Linux / macOS, or one for another version, can't be loaded.
 static bool build_game_code(void) {
     if (gamelib_present(g_root.c_str())) return true;
     int cores = SDL_GetNumLogicalCPUCores(), ram_gb = SDL_GetSystemRAM() / 1024;
-    GameBuildOpts o = {build_progress, cores < ram_gb - 2 ? cores : ram_gb - 2 > 1 ? ram_gb - 2 : 1};
+    GameBuildOpts o = {build_progress, cores < ram_gb - 2 ? cores : ram_gb - 2 > 1 ? ram_gb - 2 : 1,
+                       g_settings.game_build == GAME_BUILD_OPTIMIZED};
     char why[256] = "";
     g_build_frac = 0;
     bool ok = gamebuild_run(g_root.c_str(), &o, why, sizeof why);
@@ -406,7 +409,8 @@ static void *extract_thread(void *) {
                 goto done;
             }
 
-            if (file_exists(romfs) && !is_dir(romfs)) {
+            // (never a romfs.bin onto itself: opening it to write empties it before it is read, #81)
+            if (file_exists(romfs) && !is_dir(romfs) && !rt_same_path(romfs.c_str(), (g_root + "/romfs.bin").c_str())) {
                 set_job("Copying game data archive...");
                 FILE *in = fopen(romfs.c_str(), "rb");
                 FILE *out = fopen((g_root + "/romfs.bin").c_str(), "wb");
@@ -418,6 +422,7 @@ static void *extract_thread(void *) {
                 if (in) fclose(in);
                 if (out) fclose(out);
             } else if (file_exists(romfs + "/romfs.bin")) {
+                if (rt_same_path((romfs + "/romfs.bin").c_str(), (g_root + "/romfs.bin").c_str())) goto copied;
                 set_job("Copying game data archive...");
                 FILE *in = fopen((romfs + "/romfs.bin").c_str(), "rb");
                 FILE *out = fopen((g_root + "/romfs.bin").c_str(), "wb");
@@ -445,6 +450,7 @@ static void *extract_thread(void *) {
                 }
             }
 
+        copied:
             if (!build_game_code()) goto done;
         }
     } else {
@@ -487,9 +493,40 @@ static void start_extract(void) {
     }
 }
 
+static void start_setup(void) {  // (Set up game files, Rebuild game code)
+    pthread_mutex_lock(&g_lock);
+    g_busy = true;
+    pthread_mutex_unlock(&g_lock);
+    start_extract();
+}
+
+// The Set up page's choice of how the game code is built (GameBuildOpts.optimized), and Rebuild: only where this copy
+// can build it (a rebuild deletes the library first). Not on Windows: its release ships the library built, so
+// nothing is built there unless it's missing.
+static bool build_choice_shown(void) {
+#ifdef _WIN32
+    return false;
+#else
+    static int v = -1;  // (gamebuild_available looks for the generator and the compiler on disk: once)
+    if (v < 0) v = gamebuild_available();
+    return v;
+#endif
+}
+static const char *const BUILD_NAMES[] = {"Faster build", "Faster game"};
+static const char *const BUILD_DESC =
+    "How the game code is compiled from your game files. Both optimize everything and take a few minutes.\n\nFaster "
+    "build: a file still compiling after 5 minutes (a very slow machine) is restarted without optimization.\n\nFaster "
+    "game: no time limit.";
+
 // ------------------------------------------------------------------ folder dialog (SDL calls back on any thread)
 static void SDLCALL picked(void *, const char *const *files, int) {
-    if (!files || !files[0]) return;
+    if (!files) {  // (the dialog itself failed: no xdg-desktop-portal / zenity, e.g. Batocera - #87)
+        fprintf(stderr, "[launcher] folder dialog: %s\n", SDL_GetError());
+        set_job("This system has no folder dialog.", true,
+                "Start Sky Recomp with SKYRECOMP_GAME_FILES=<your game files folder> set, then choose Start.");
+        return;
+    }
+    if (!files[0]) return;
     pthread_mutex_lock(&g_lock);
     g_src = files[0];
     pthread_mutex_unlock(&g_lock);
@@ -1058,6 +1095,24 @@ static void prelaunch_tab(float sc) {
             ImGui::CloseCurrentPopup();
         ImGui::EndPopup();
     }
+    if (build_choice_shown()) {  // (the choice applies to the next build: Rebuild makes one now)
+        ImGui::Spacing();
+        ImGui::Spacing();
+        heading("Game code");
+        ImGui::SetNextItemWidth(260 * sc);
+        if (ImGui::Combo("##gamebuild", &g_settings.game_build, BUILD_NAMES, 2)) settings_save();
+        ImGui::SameLine();
+        if (ImGui::Button("Rebuild game code")) {  // (deleted first: the start screen then builds it, as Set up does)
+            rt_remove_game_file(g_root.c_str(), GAMELIB_NAME);
+            rt_remove_game_file(g_root.c_str(), GAMELIB_NAME ".id");
+            g_files_deleted = true;
+            start_setup();
+        }
+        ImGui::PushTextWrapPos(0);
+        ImGui::TextDisabled("%s", BUILD_DESC);
+        ImGui::TextDisabled("Rebuild compiles it again from the copied game files, the way chosen here.");
+        ImGui::PopTextWrapPos();
+    }
     ImGui::Spacing();
     ImGui::Spacing();
     heading("System fonts");
@@ -1180,6 +1235,7 @@ extern "C" void launcher_run(const char *root) {
         if (pg && !strcmp(pg + 1, "aspect")) g_settings.aspect_asked = g_settings.menu_tip_seen = false, g_tip_test = true;
     }
 
+    if (const char *t = getenv("SKYRECOMP_GAME_FILES"); t && *t && g_src.empty()) g_src = t;  // (no folder dialog: #87)
     static int runs;  // (test: =once - only the first time, so a "Title screen" reboot lands on the start screen)
     const char *ap = getenv("LARECOMP_LAUNCHER_AUTOPLAY");
     if (ap && status.empty() && !(runs && !strcmp(ap, "once"))) play = true;  // (test: PLAY at once)
@@ -1550,13 +1606,13 @@ extern "C" void launcher_run(const char *root) {
                     first_row();
 
                     opt_section("2. Install & Compile");
-                    if (busy || (src.empty() && !check_copied_files(g_root).empty())) opt_disable_next();
-                    if (opt_action("Set up game files", busy ? "Working..." : "Start", ex_d.c_str(), true)) {
-                        pthread_mutex_lock(&g_lock);
-                        g_busy = true;
-                        pthread_mutex_unlock(&g_lock);
-                        start_extract();
+                    if (build_choice_shown()) {
+                        if (busy) opt_disable_next();
+                        if (opt_choice("Game code", &g_settings.game_build, BUILD_NAMES, 2, GAME_BUILD_FAST, BUILD_DESC))
+                            settings_save();
                     }
+                    if (busy || (src.empty() && !check_copied_files(g_root).empty())) opt_disable_next();
+                    if (opt_action("Set up game files", busy ? "Working..." : "Start", ex_d.c_str(), true)) start_setup();
                     files_gb = -1;
                 } else {
                     opt_section("Ready to Play");

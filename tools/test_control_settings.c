@@ -31,15 +31,14 @@ int main(int argc, char **argv) {
     g_settings.language = 1; settings_game_started(); assert(!settings_language_pending());
     extern bool g_is_skyward;
     g_is_skyward = true;
-    g_settings.language = 10; assert(!strcmp(settings_language_code(), "zh-Hans"));
-    g_settings.language = 11; assert(!strcmp(settings_language_code(), "zh-Hant"));
-    g_is_skyward = false; assert(!strcmp(settings_language_code(), "zh-TW"));
+    g_settings.language = 13; assert(!strcmp(settings_language_code(), "zh-Hans"));  // (zh-CN / zh-TW in the menu, v2.0.2)
+    g_settings.language = 14; assert(!strcmp(settings_language_code(), "zh-Hant"));
     g_settings.language = 1;
     settings_save();
     f = fopen("control-settings.fixture", "r"); assert(f);
     char text[8192] = {0}; assert(fread(text, 1, sizeof text - 1, f) > 0); fclose(f);
     assert(strstr(text, "mouse_controls = 0") && strstr(text, "mouse_sens = ") && strstr(text, "gyro_sens = 0.10") &&
-           strstr(text, "language = ja"));
+           strstr(text, "language = en-US"));
     remove("control-settings.fixture");
     puts("control settings: sensitivity bounds, persistence, pending language and restart acknowledgement passed");
 }
