@@ -95,7 +95,8 @@ static int role_of(const char *name) {
         {"tr_crossBtnBasicR_", L_DRIGHT}, {"tr_crossBtnBasicT_", L_DUP},
         // (not tr_crossBtnBasic_, the HUD d-pad's base: its lit arms above are drawn on their own, and a redrawn base
         // doesn't line up with them)
-        {"tr_lStick_", L_LS}, {"tr_rStick_", L_RS},
+        // (_00: the stick from the front, shown under the layout's "press" arrow; _01: from above, _02-_05 tilted)
+        {"tr_lStick_00", L_LS_CLICK}, {"tr_rStick_00", L_RS_CLICK}, {"tr_lStick_", L_LS}, {"tr_rStick_", L_RS},
         {"th_zBtn_", R_ZL}, {"th_nunchakuBtn_", L_LS}, {"tr_nunchakuBtn_", L_LS}, {"tr_cBtn_", R_L},
         {"tr_basicInfoWinLT_", R_BASICINFO_BG},
         {"Spicy_00^t", R_HERO},  // Ld_Spicy (StartUp.arc): the HUD's Hero Mode icon (the file select uses Spicy_00^f)
