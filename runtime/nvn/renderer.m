@@ -937,7 +937,16 @@ static Prog *get_program(NvnProgram *p, ShaderKey *vkey, ShaderKey *fkey) {
     }
     fkey->vs_out_mask = pr->vi->out_mask;
     pr->fi = maxwell_translate((const uint8_t *)(uintptr_t)p->stages[1].code_addr, fmax, STAGE_FRAGMENT, fkey);
-    if (!pr->fi->msl) { LOG("[shader] FS translate failed: %s\n", pr->fi->error); pr->failed = true; return nil; }
+    if (!pr->fi->msl) {
+        LOG("[shader] FS translate failed: %s (code %llx)\n", pr->fi->error, p->stages[1].code_addr);
+        char path[128];
+        mkdir("build/shaders", 0755);
+        snprintf(path, sizeof path, "build/shaders/fail_%llx_s1_code.bin", p->stages[1].code_addr);
+        FILE *f = fopen(path, "wb");
+        if (f) { fwrite((void *)(uintptr_t)p->stages[1].code_addr, 1, fmax < 0x4000 ? fmax : 0x4000, f); fclose(f); }
+        pr->failed = true;
+        return nil;
+    }
     if (getenv("LARECOMP_SAVE_MSL")) {
         mkdir("build/msl", 0755);
         char path[256];
@@ -1545,7 +1554,7 @@ static void debug_draw(Prog *pr, CmdRec *r, bool indexed) {
         for (int i = 0; i < 16; i++)
             if (st.sbuf[sg][i].addr) LOG(" %c%d(%llx,%llu)", sg ? 'f' : 'v', i, st.sbuf[sg][i].addr, st.sbuf[sg][i].size);
     LOG(" | tex:");
-    for (int i = 0; i < pr->fi->ntex; i++) LOG(" off%u", pr->fi->tex[i].handle_offset);
+    for (int i = 0; i < pr->fi->ntex; i++) LOG(" off%u%s", pr->fi->tex[i].handle_offset, pr->fi->tex[i].bindless ? "B" : "");  // B: a TEX.B candidate
     LOG(" bound:");
     for (int i = 0; i < 32; i++) {
         if (!st.tex[1][i]) continue;
@@ -1669,6 +1678,18 @@ static void draw_inner(CmdRec *r, bool indexed) {
     }
     Prog *pr = get_program(st.program, &vkey, &fkey);
     if (!pr || !pr->ready) { stat_skipped++; return; }
+    {   // LARECOMP_F9_BINDLESS: an F9 dump of the next frame, once, at the first draw of a TEX.B shader (effects too short
+        // to catch by hand: grass-cut leaves)
+        static int armed = -1;
+        if (armed < 0) armed = getenv("LARECOMP_F9_BINDLESS") != NULL;
+        bool bl = false;
+        for (int i = 0; armed && i < pr->fi->ntex; i++) bl |= pr->fi->tex[i].bindless;
+        if (bl) {
+            extern volatile int g_debug_frame_request;
+            g_debug_frame_request = 1;
+            armed = 0;
+        }
+    }
     {   // mirror mode (runtime/hle/mirror.c): the scene's composite into the window image is drawn mirrored - the
         // unblended full-screen draw sampling an image the window's size (the window images also serve as scratch
         // targets earlier in the frame: those draws sample smaller images; the HUD after it blends)
