@@ -1590,6 +1590,17 @@ static void debug_draw(Prog *pr, CmdRec *r, bool indexed) {
     LOG(" | vp %.0f %.0f %.0f %.0f | attrs %#x streams:", st.viewport[0][0], st.viewport[0][1], st.viewport[0][2], st.viewport[0][3], pr->vi->attr_mask);
     for (int i = 0; i < st.nattrib; i++) LOG(" a%d(f%#x s%u o%u)", i, st.attrib[i] & 0xFF, (st.attrib[i] >> 8) & 0x1F, st.attrib[i] >> 13);
     for (int i = 0; i < 12; i++) if (st.vbuf[i].addr) LOG(" vb%d(%llx,%llu,stride %u div %u)", i, st.vbuf[i].addr, st.vbuf[i].size, st.stream[i][0], st.stream[i][1]);
+    for (int a = 1; a <= 2 && a < st.nattrib; a++) {  // the first vertex's attributes 1-2 read as floats (empty buffers)
+        uint32_t at = st.attrib[a], s = (at >> 8) & 0x1F, off = at >> 13;
+        if (s < 16 && st.vbuf[s].addr && off + 12 <= st.vbuf[s].size) {
+            const float *v = (const float *)(uintptr_t)(st.vbuf[s].addr + off);
+            LOG(" v0.a%d(%g %g %g)", a, v[0], v[1], v[2]);
+        }
+    }
+    if (st.ubuf[0][0].addr && st.ubuf[0][0].size >= 16) {  // vertex cb3 row 0 (the camera)
+        const float *m = (const float *)(uintptr_t)st.ubuf[0][0].addr;
+        LOG(" cb3[0](%g %g %g %g)", m[0], m[1], m[2], m[3]);
+    }
     if (st.ubuf[0][0].addr && st.ubuf[0][0].size == 560) {
         const float *f = (const float *)(uintptr_t)st.ubuf[0][0].addr;
         LOG("\n  vs ubo0:");
@@ -1712,6 +1723,15 @@ static void draw_inner(CmdRec *r, bool indexed) {
             extern volatile int g_debug_frame_request;
             g_debug_frame_request = 1;
             armed = 0;
+        }
+        // LARECOMP_F9_FS=<fragment shader code address, hex>: the same, at that shader's first draw (passes that run
+        // only for a moment: Fi's glow map is built while she appears)
+        static uint64_t f9_fs = 1;
+        if (f9_fs == 1) f9_fs = getenv("LARECOMP_F9_FS") ? strtoull(getenv("LARECOMP_F9_FS"), NULL, 16) : 0;
+        if (f9_fs && st.program->stages[1].code_addr == f9_fs) {
+            extern volatile int g_debug_frame_request;
+            g_debug_frame_request = 1;
+            f9_fs = 0;
         }
     }
     {   // mirror mode (runtime/hle/mirror.c): the scene's composite into the window image is drawn mirrored - the
@@ -2425,6 +2445,10 @@ static void copy_texture(const TexRefRec *src, const TexRefRec *dst, uint64_t fl
     snap_reason = "tex2tex"; snapshots_invalidate(NULL);
     NvnTexture *st_ = (NvnTexture *)(uintptr_t)src->tex, *dt = (NvnTexture *)(uintptr_t)dst->tex;
     if (!st_ || !dt) return;
+    if (ENV("LARECOMP_LOG_COPIES"))  // (debug) every texture copy / downsample: what fills a target no pass draws
+        LOG("[copy] frame %llu %ux%u f%#x %llx -> %ux%u f%#x %llx flags %#llx\n", (unsigned long long)renderer_present_count(),
+            st_->width, st_->height, st_->format, (unsigned long long)st_->addr, dt->width, dt->height, dt->format,
+            (unsigned long long)dt->addr, (unsigned long long)flags);
     end_pass();
     id<MTLTexture> s = sampled_texture(st_, &src->view, src->has_view, TEXTYPE_2D);
     renderer_mark_gpu_owned(dt);
