@@ -13,6 +13,9 @@ enum { UPSCALE_BILINEAR = 0, UPSCALE_METALFX = 1 /* macOS */, UPSCALE_FSR1 = 2 /
 #endif
 enum { AA_OFF = 0, AA_SMAA = 1 };
 enum { PERF_OFF = 0, PERF_FPS = 1, PERF_FULL = 2 };  // the performance overlay (runtime/perfmon.c, F10)
+// What a draw does when its shaders or pipeline are still compiling (renderer.m, vulkan/exec.c): hybrid skips only
+// draws that are redrawn every frame and waits for the rest; wait never skips (stutters); async always skips
+enum { SHADERS_HYBRID = 0, SHADERS_WAIT = 1, SHADERS_ASYNC = 2 };
 enum { PROMPTS_AUTO = 0, PROMPTS_NINTENDO = 1, PROMPTS_XBOX = 2, PROMPTS_PLAYSTATION = 3, PROMPTS_KEYBOARD = 4 };
 enum { PROMPT_LOOK_LIGHT = 0, PROMPT_LOOK_DARK = 1 };
 enum { CHAOS_LETTERS_OFF = 0, CHAOS_LETTERS_EXPLORED = 1, CHAOS_LETTERS_MAP = 2 /* explored, all with the Map */ };
@@ -34,6 +37,7 @@ typedef struct {
     bool reverb;         // room reverb effect
     bool movie_audio;
     int perf_overlay;    // PERF_*: off, the frame rate, or the full overlay (F10 cycles them)
+    int shader_compile;  // SHADERS_*: see shader_compile_mode
     bool hd_textures;    // external texture replacements, applied live on Vulkan
     bool reshade;        // load the bundled Windows ReShade layer on the next launch
     int frame_rate;       // 60 or 120; the Skyward Sword simulation step follows this target
@@ -88,4 +92,6 @@ const char *settings_language_code(void);  // SDK code: Skyward Sword uses zh-Ha
 // That code's name for the menu ("Spanish")
 const char *settings_language_name(void);
 void settings_game_started(void);
+// The SHADERS_* mode in effect: the setting, or LARECOMP_SYNC_SHADERS (1 = wait, 0 = async; tests) when set
+int shader_compile_mode(void);
 bool settings_language_pending(void);

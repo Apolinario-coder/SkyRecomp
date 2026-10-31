@@ -14,6 +14,7 @@
 #include "maxwell/shader.h"
 #include "nvn.h"
 #include "renderer.h"
+#include "../settings.h"
 
 static id<MTLDevice> dev;
 static id<MTLCommandBuffer> cmdbuf;
@@ -850,10 +851,16 @@ void shader_cache_warm(void) {
     });
 }
 
-static bool sync_shaders(void) {  // LARECOMP_SYNC_SHADERS: compile on first use, blocking (deterministic tests)
-    static int v = -1;
-    if (v < 0) v = getenv("LARECOMP_SYNC_SHADERS") != NULL;
-    return v;
+// Settings > Video > Shader compilation (shader_compile_mode; as vulkan/exec.c): wait compiles on first use, blocking;
+// async skips draws until their shaders and pipeline are built; hybrid skips only draws that are redrawn every frame
+
+// Whether a draw into `target` waits for its shaders and pipeline. Under hybrid, a landscape target (the scene, its
+// effect buffers, the window image) is redrawn every frame, so its draws are skipped while they build; square or
+// portrait ones (shadow maps, cube faces, atlases) may be drawn once and reused.
+// ponytail: aspect-ratio heuristic, as on Vulkan
+static bool draw_must_wait(NvnTexture *target) {
+    int m = shader_compile_mode();
+    return m == SHADERS_WAIT || (m == SHADERS_HYBRID && !(target && target->width > target->height));
 }
 
 static void compile_program(Prog *pr) {
@@ -876,7 +883,7 @@ static void compile_program(Prog *pr) {
     pr->ready = true;
 }
 
-static Prog *get_program(NvnProgram *p, ShaderKey *vkey, ShaderKey *fkey) {
+static Prog *get_program(NvnProgram *p, ShaderKey *vkey, ShaderKey *fkey, bool wait) {
     shader_cache_warm();
     if (!(p->stage_mask & 1) || !(p->stage_mask & 2)) return nil;
     // fast path: hash of the code addresses and keys
@@ -956,7 +963,7 @@ static Prog *get_program(NvnProgram *p, ShaderKey *vkey, ShaderKey *fkey) {
         f = fopen(path, "w"); fputs(pr->fi->msl, f); fclose(f);
     }
     shader_cache_note(pr->vi->msl, pr->fi->msl);
-    if (sync_shaders()) {
+    if (wait) {
         compile_program(pr);
         return pr->failed ? nil : pr;
     }
@@ -1676,7 +1683,9 @@ static void draw_inner(CmdRec *r, bool indexed) {
         for (int i = 1; i <= 4; i++) if (b[i] >= 0x10 && b[i] <= 0x13) fkey.dual_source = true;
         if (fkey.dual_source) fkey.rt_kind[1] = fkey.rt_kind[0];
     }
-    Prog *pr = get_program(st.program, &vkey, &fkey);
+    bool wait = draw_must_wait(st.rt.ncolor && st.rt.color[0] ? st.rt.color[0] : st.rt.depth);
+    Prog *pr = get_program(st.program, &vkey, &fkey, wait);
+    if (pr && wait) while (!pr->ready && !pr->failed) usleep(50);  // (queued earlier by a draw that skips)
     if (!pr || !pr->ready) { stat_skipped++; return; }
     {   // LARECOMP_F9_BINDLESS: an F9 dump of the next frame, once, at the first draw of a TEX.B shader (effects too short
         // to catch by hand: grass-cut leaves)
@@ -1703,7 +1712,8 @@ static void draw_inner(CmdRec *r, bool indexed) {
         }
         if (mirror_draw(composite)) {  // (the vertex flip mirrors a composite drawn with uvs, the fragment one a
             vkey.flip_x = fkey.flip_x = true;  // composite reading pixel positions; get_program keys on vkey)
-            pr = get_program(st.program, &vkey, &fkey);
+            pr = get_program(st.program, &vkey, &fkey, wait);
+            if (pr && wait) while (!pr->ready && !pr->failed) usleep(50);
             if (!pr || !pr->ready) { stat_skipped++; return; }
         }
     }
@@ -1870,15 +1880,16 @@ static void draw_inner(CmdRec *r, bool indexed) {
     NSMutableDictionary *ready_pipes = g_ready_pipes;  // async pipeline builds finished on Metal's threads
     static id pending;
     if (!ready_pipes) { ready_pipes = g_ready_pipes = [NSMutableDictionary new]; pending = [NSObject new]; }
-    if (pobj == pending) {
+    while (pobj == pending) {  // (a waiting draw polls until Metal's thread finishes the build)
         @synchronized(ready_pipes) {
             id done = ready_pipes[pk];
             if (done) { [ready_pipes removeObjectForKey:pk]; cache[pk] = done; pobj = done; }
         }
-        if (pobj == pending) { stat_skipped++; return; }
+        if (pobj == pending && !wait) { stat_skipped++; return; }
+        if (pobj == pending) usleep(50);
     }
     if (!pobj) {
-        if (sync_shaders()) {
+        if (wait) {
             NSError *err;
             pobj = TIMED_COMPILE([dev newRenderPipelineStateWithDescriptor:pd error:&err]);
             if (!pobj) {

@@ -34,6 +34,7 @@ Settings g_settings = {
     .reverb = true,
     .movie_audio = true,
     .perf_overlay = PERF_OFF,
+    .shader_compile = SHADERS_HYBRID,
     .hd_textures = true,
     .reshade = true,
     .frame_rate = 60,
@@ -163,6 +164,12 @@ void settings_game_started(void) {
     snprintf(game_language, sizeof game_language, "%s", settings_language_code());
     LOG("[language] game starting in %s\n", game_language);
 }
+int shader_compile_mode(void) {
+    const char *e = ENV("LARECOMP_SYNC_SHADERS");
+    if (e) return atoi(e) == 0 && *e ? SHADERS_ASYNC : SHADERS_WAIT;
+    return g_settings.shader_compile;
+}
+
 bool settings_language_pending(void) {
     return game_language[0] && strcmp(game_language, settings_language_code()) != 0;
 }
@@ -207,6 +214,8 @@ void settings_load(void) {
         else if (!strcmp(key, "show_fps")) g_settings.perf_overlay = atoi(val) ? PERF_FPS : PERF_OFF;  // (older files)
         else if (!strcmp(key, "perf_overlay"))
             g_settings.perf_overlay = !strcmp(val, "full") ? PERF_FULL : !strcmp(val, "fps") ? PERF_FPS : PERF_OFF;
+        else if (!strcmp(key, "shader_compile"))
+            g_settings.shader_compile = !strcmp(val, "wait") ? SHADERS_WAIT : !strcmp(val, "async") ? SHADERS_ASYNC : SHADERS_HYBRID;
         else if (!strcmp(key, "frame_rate")) g_settings.frame_rate = atoi(val) == 120 ? 120 : 60;
         else if (!strcmp(key, "game_build")) g_settings.game_build = !strcmp(val, "optimized") ? GAME_BUILD_OPTIMIZED : GAME_BUILD_FAST;
         else if (!strcmp(key, "resolution")) {
@@ -287,6 +296,7 @@ void settings_save(void) {
     fprintf(f, "reverb = %d\n", g_settings.reverb);
     fprintf(f, "movie_audio = %d\n", g_settings.movie_audio);
     fprintf(f, "perf_overlay = %s\n", g_settings.perf_overlay == PERF_FULL ? "full" : g_settings.perf_overlay == PERF_FPS ? "fps" : "off");
+    fprintf(f, "shader_compile = %s\n", g_settings.shader_compile == SHADERS_WAIT ? "wait" : g_settings.shader_compile == SHADERS_ASYNC ? "async" : "hybrid");
     fprintf(f, "frame_rate = %d\n", g_settings.frame_rate);
     fprintf(f, "game_build = %s\n", g_settings.game_build == GAME_BUILD_OPTIMIZED ? "optimized" : "fast");
     fprintf(f, "upscaler = %s\n", g_settings.upscaler == UPSCALE_METALFX ? "metalfx" : g_settings.upscaler == UPSCALE_NIS ? "nis" : g_settings.upscaler == UPSCALE_FSR1 ? "fsr1" : "bilinear");

@@ -574,9 +574,9 @@ static VkSpan guest_copy(uint64_t addr, uint64_t size) {
 }
 
 // ================================================================== worker threads (shader / pipeline builds)
-// Complete first-use compiles before drawing. Skipping draws can omit a shadow-map
-// update (or a compute result) that the game will reuse on subsequent frames.
-// LARECOMP_SYNC_SHADERS=0 opts into the old asynchronous, draw-skipping behaviour.
+// Settings > Video > Shader compilation (shader_compile_mode): wait builds everything inline before drawing; async
+// queues builds here and skips draws until they're ready; hybrid (draw_must_wait) skips only draws that are redrawn
+// every frame, because a skipped shadow-map update or compute result can be reused for many frames.
 typedef struct Job { void (*fn)(void *); void *arg; struct Job *next; } Job;
 static Job *jobs_head, *jobs_tail;
 static pthread_mutex_t jobs_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -597,14 +597,19 @@ static void *worker(void *a) {
     return NULL;
 }
 
-static bool sync_shaders(void) {
-    static int v = -1;
-    if (v < 0) {
-        const char *e = getenv("LARECOMP_SYNC_SHADERS");
-        v = !e || atoi(e) != 0;
-    }
-    return v;
+static bool sync_shaders(void) { return shader_compile_mode() == SHADERS_WAIT; }
+
+// Whether a draw into `target` (NULL: compute) waits for its shaders and pipeline. Under hybrid, a landscape target
+// (the scene, its half/quarter-res effect buffers, the window image) is redrawn every frame, so its draws are skipped
+// while they build; square or portrait ones (shadow maps, cube faces, atlases) may be drawn once and reused.
+// ponytail: aspect-ratio heuristic; track which targets get read before they're redrawn if a skipped draw sticks.
+static bool draw_must_wait(NvnTexture *target) {
+    int m = shader_compile_mode();
+    return m == SHADERS_WAIT || (m == SHADERS_HYBRID && !(target && target->width > target->height));
 }
+
+// A waiting draw whose build was already queued by a skippable one: block until a worker finishes it
+static void wait_built(_Atomic int *state) { while (atomic_load(state) == 0) SDL_DelayNS(50000); }
 
 // Shader translation: one dedicated thread (the translator isn't re-entrant - translate.c's RSC2 string ring - and
 // translating on the game thread cost up to ~90 ms per frame on entering an area). Compiles go on to the workers.
@@ -1177,6 +1182,7 @@ typedef struct {
     VkDescriptorSetLayout set_layout[2];
     VkPipelineLayout layout;
     bool vs_uses_vid;
+    bool inline_build;  // first wanted by a draw that waits (draw_must_wait): translate and compile right away
     _Atomic int state;  // 0 building, 1 ready, 2 failed
 } Prog;
 
@@ -1240,13 +1246,14 @@ static void translate_program(void *arg) {
     p->vs_uses_vid = strstr(p->vi->msl, "gl_VertexIndex") != NULL;
     save_glsl(p->vi->msl, p->code[0], "vs");
     save_glsl(p->fi->msl, p->code[1], "fs");
-    run_job(compile_program, p);
+    if (p->inline_build) compile_program(p);
+    else run_job(compile_program, p);
 }
 
 #define PROG_TAB 4096
 static struct { uint64_t key; Prog *prog; } prog_tab[PROG_TAB];
 
-static Prog *get_program(NvnProgram *np, ShaderKey *vkey, ShaderKey *fkey) {
+static Prog *get_program(NvnProgram *np, ShaderKey *vkey, ShaderKey *fkey, bool wait) {
     if (!(np->stage_mask & 1) || !(np->stage_mask & 2)) return NULL;
     uint64_t h = 0xcbf29ce484222325ull;
     for (int i = 0; i < 2; i++) { uint64_t a = np->stages[i].code_addr; for (int k = 0; k < 8; k++) { h ^= (a >> (k * 8)) & 0xFF; h *= 0x100000001B3ull; } }
@@ -1268,7 +1275,9 @@ static Prog *get_program(NvnProgram *np, ShaderKey *vkey, ShaderKey *fkey) {
     }
     p->vkey = *vkey;
     p->fkey = *fkey;
-    run_translate(translate_program, p);
+    p->inline_build = wait;
+    if (wait) translate_program(p);
+    else run_translate(translate_program, p);
     return p;
 }
 
@@ -2590,7 +2599,8 @@ static CsProg *compute_program(NvnProgram *np) {
         if (!cp->local[i]) cp->local[i] = 1;
     }
     save_glsl(cp->si->msl, ss->code_addr, "cs");
-    run_job(build_compute, cp);
+    if (draw_must_wait(NULL)) build_compute(cp);
+    else run_job(build_compute, cp);
     return cp;
 }
 
@@ -2598,6 +2608,7 @@ static void dispatch_compute(uint32_t gx, uint32_t gy, uint32_t gz) {
     snap_reason = "compute"; snapshots_invalidate(NULL);
     if (!st.program || !gx || !gy || !gz) return;
     CsProg *cp = compute_program(st.program);
+    if (cp && draw_must_wait(NULL)) wait_built(&cp->p.state);
     if (!cp || atomic_load(&cp->p.state) != 1) { stat_skipped++; return; }
     {   // LARECOMP_SKIP_CS=<code address hex> (debug): skip that compute shader's dispatches, to see what it does
         static uint64_t skip = ~0ull;
@@ -2702,7 +2713,9 @@ static void draw_(CmdRec *r, bool indexed) {
             if (b[i] >= 0x10 && b[i] <= 0x13) fkey.dual_source = true;
         if (fkey.dual_source) fkey.rt_kind[1] = fkey.rt_kind[0];
     }
-    Prog *pr = get_program(st.program, &vkey, &fkey);
+    bool wait = draw_must_wait(st.rt.ncolor && st.rt.color[0] ? st.rt.color[0] : st.rt.depth);
+    Prog *pr = get_program(st.program, &vkey, &fkey, wait);
+    if (pr && wait) wait_built(&pr->state);
     if (!pr || atomic_load(&pr->state) != 1) { stat_skipped++; return; }
     g_mirror_w = 0;
     {   // mirror mode (runtime/hle/mirror.c; as renderer.m): the scene's composite into the window image is mirrored
@@ -2716,7 +2729,8 @@ static void draw_(CmdRec *r, bool indexed) {
         }
         if (mirror_draw(composite)) {
             vkey.flip_x = fkey.flip_x = true;
-            pr = get_program(st.program, &vkey, &fkey);
+            pr = get_program(st.program, &vkey, &fkey, wait);
+            if (pr && wait) wait_built(&pr->state);
             if (!pr || atomic_load(&pr->state) != 1) { stat_skipped++; return; }
             g_mirror_w = (float)st.rt.color[0]->width;
         }
@@ -2829,8 +2843,10 @@ static void draw_(CmdRec *r, bool indexed) {
         pp->k = k;
         pipe_tab[pslot].key = ph;
         pipe_tab[pslot].pipe = pp;
-        run_job(build_pipeline, pp);
+        if (wait) build_pipeline(pp);
+        else run_job(build_pipeline, pp);
     }
+    if (wait) wait_built(&pp->state);
     if (atomic_load(&pp->state) != 1) { stat_skipped++; return; }
     ss_enabled();
     if (ss_need(SS_PIPE, ss.pipe == pp->pipe)) { ss.pipe = pp->pipe; vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, pp->pipe); }

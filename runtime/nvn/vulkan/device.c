@@ -155,6 +155,24 @@ void vk_device_fault_report(void) {
             (unsigned long long)vend[i].vendorFaultData);
 }
 
+void vk_pipeline_cache_save(void);
+static void vk_pipeline_cache_save_(void);
+
+// Saves the pipeline cache every minute while it grows, not only at exit, so a crash or a killed process keeps the
+// session's pipelines (arg: the size loaded at startup)
+static int pcache_saver(void *arg) {
+    size_t last = *(size_t *)arg;
+    for (;;) {
+        SDL_Delay(60000);
+        size_t sz = 0;
+        if (vkGetPipelineCacheData(g_vk.dev, g_vk.pcache, &sz, NULL) == VK_SUCCESS && sz > last) {
+            vk_pipeline_cache_save();
+            last = sz;
+        }
+    }
+    return 0;
+}
+
 static void create_device(void) {
     uint32_t ne = 0;
     vkEnumerateDeviceExtensionProperties(g_vk.phys, NULL, &ne, NULL);
@@ -274,9 +292,19 @@ static void create_device(void) {
         VK_CHECK(vkCreatePipelineCache(g_vk.dev, &pc, NULL, &g_vk.pcache));
     }
     free(data);
+    static size_t loaded;
+    loaded = sz;
+    SDL_DetachThread(SDL_CreateThread(pcache_saver, "pcache", &loaded));
 }
 
 void vk_pipeline_cache_save(void) {
+    static SDL_SpinLock lock;  // the exit handler and pcache_saver
+    SDL_LockSpinlock(&lock);
+    vk_pipeline_cache_save_();
+    SDL_UnlockSpinlock(&lock);
+}
+
+static void vk_pipeline_cache_save_(void) {
     size_t sz = 0;
     if (vkGetPipelineCacheData(g_vk.dev, g_vk.pcache, &sz, NULL) != VK_SUCCESS || !sz) return;
     void *data = malloc(sz);

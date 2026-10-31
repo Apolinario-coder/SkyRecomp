@@ -596,6 +596,12 @@ static void tab_display(void) {
     opt_choice("Anti-aliasing", &g_settings.antialias, aa, 2, AA_OFF,
                "Smooths jagged edges of the game image before it is scaled to the window. SMAA: finds the edges and "
                "blends only along them, so textures stay sharp. Most useful at a lower internal resolution.");
+    static const char *shc[] = {"Hybrid", "Wait", "Async"};  // SHADERS_* order
+    opt_choice("Shader compilation (Experimental)", &g_settings.shader_compile, shc, 3, SHADERS_HYBRID,
+               "What happens the first time something needs a new shader. Hybrid: what's drawn every frame appears "
+               "a moment later instead of the game pausing, while shadows and other reused images still wait, so they "
+               "are never wrong. Wait: everything waits, which can stutter. Async: nothing waits, so a shadow can be "
+               "missing until it's redrawn.");
 
     opt_section("Game");
     opt_toggle("Remove blur", &g_settings.blur_removal, false,
